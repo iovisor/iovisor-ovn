@@ -24,7 +24,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mbertrone/iomodules/politoctrl"
+	"github.com/mbertrone/politoctrl"
 )
 
 var listenSocket string
