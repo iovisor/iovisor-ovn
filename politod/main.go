@@ -31,6 +31,7 @@ import (
 
 	"github.com/mbertrone/politoctrl/bpf"
 	"github.com/mbertrone/politoctrl/helper"
+	"github.com/mbertrone/politoctrl/monitor"
 )
 
 var listenSocket string
@@ -129,6 +130,11 @@ func main() {
 	helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
 
 	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
+
+	go monitor.MonitorOvsDb()
+
+	quit := make(chan bool)
+	<-quit
 
 	/*
 		fmt.Printf("id: %s\nfrom: %s\nto: %s\n", l.Id, l.From, l.To)
