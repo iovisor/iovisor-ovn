@@ -14,6 +14,7 @@
 
 package politoctrl
 
+/*
 import (
 	"encoding/json"
 	"net/http"
@@ -121,7 +122,7 @@ func (srv *PolitoCtrlServer) Handler() http.Handler {
 	return srv.handler
 }
 
-func NewServer(dataplaneUri string, port1 string, port2 string) (*PolitoCtrlServer, error) {
+func NewServer(dataplaneUri string) (*PolitoCtrlServer, error) {
 	Info.Println("PolitoCtrl module starting")
 	rtr := mux.NewRouter()
 
@@ -129,9 +130,6 @@ func NewServer(dataplaneUri string, port1 string, port2 string) (*PolitoCtrlServ
 		handler:   rtr,
 		dataplane: NewDataplane(),
 	}
-
-	srv.dataplane.port1 = port1
-	srv.dataplane.port2 = port2
 
 	if err := srv.dataplane.Init(dataplaneUri); err != nil {
 		return nil, err
@@ -143,3 +141,4 @@ func NewServer(dataplaneUri string, port1 string, port2 string) (*PolitoCtrlServ
 
 	return srv, nil
 }
+*/
