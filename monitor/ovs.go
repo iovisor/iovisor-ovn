@@ -39,43 +39,48 @@ func MonitorOvsDb() {
 	initial, _ := ovs.MonitorAll("Open_vSwitch", "")
 	populateCache(*initial)
 
-	startOvsDbMonitor(ovs)
+	ovsMonitor(ovs)
 	<-quit
 
 	return
 }
 
-func startOvsDbMonitor(ovs *libovsdb.OvsdbClient) {
-	//	go processInput(ovs)
+func PrintRow(row libovsdb.Row) {
+	for key, value := range row.Fields {
+		log.Debugf("%20s : %s\n", key, value)
+	}
+}
+
+func ovsMonitor(ovs *libovsdb.OvsdbClient) {
 	for {
 		select {
 		case currUpdate := <-update:
-			log.Infof("ovs db update received\n")
 			for table, tableUpdate := range currUpdate.Updates {
-				log.Debugf("update table: %s\n", table)
-				//if table == "Bridge" {
+				log.Noticef("update table: %s\n", table)
 				for uuid, row := range tableUpdate.Rows {
-					log.Debugf("update uuid : %s\n", uuid)
-					newRow := row.New
+					log.Noticef("UUID     : %s\n", uuid)
 
-					if _, ok := newRow.Fields["name"]; ok {
-						name := newRow.Fields["name"].(string)
-						log.Debugf("update name : %s\n", name)
-						/*
-						         				if name == "stop" {
-						   								fmt.Println("Bridge stop detected : ", uuid)
-						   								ovs.Disconnect()
-						   								quit <- true
-						   							}
-						*/
-					}
+					newRow := row.New
+					PrintRow(newRow)
+
 				}
-				//}
 			}
 		}
 	}
-
 }
+
+/*
+  if _, ok := newRow.Fields["name"]; ok {
+    name := newRow.Fields["name"].(string)
+    log.Debugf("update name : %s\n", name)
+*/
+/*
+   if name == "stop" {
+     fmt.Println("Bridge stop detected : ", uuid)
+     ovs.Disconnect()
+     quit <- true
+   }
+*/
 
 func populateCache(updates libovsdb.TableUpdates) {
 	for table, tableUpdate := range updates.Updates {

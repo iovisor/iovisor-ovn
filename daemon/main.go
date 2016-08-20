@@ -25,12 +25,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	l "github.com/op/go-logging"
 
 	"github.com/mbertrone/politoctrl/bpf"
 	"github.com/mbertrone/politoctrl/helper"
-	"github.com/mbertrone/politoctrl/monitor"
 )
 
 var listenSocket string
@@ -41,20 +41,20 @@ var format = l.MustStringFormatter(`%{color}%{time:15:04:05.000} %{shortfunc} â–
 
 func init() {
 	const (
-		hoverDefault = "http://localhost:5002"
-		hoverHelp    = "Local hover URL"
-		//listenSocketDefault = "127.0.0.1:5002"
-		//listenSocketHelp    = "address:port to listen for updates"
+		hoverDefault        = ""
+		hoverHelp           = "Local hover URL"
+		listenSocketDefault = "127.0.0.1:5001"
+		listenSocketHelp    = "address:port to listen for updates"
 	)
 	flag.StringVar(&hoverUrl, "hover", hoverDefault, hoverHelp)
-	//	flag.StringVar(&listenSocket, "listen", listenSocketDefault, listenSocketHelp)
+	flag.StringVar(&listenSocket, "listen", listenSocketDefault, listenSocketHelp)
 	flag.BoolVar(&helpFlag, "h", false, "print this help")
 
 	flag.Usage = func() {
 		//TODO manage multiple hover clients
-		fmt.Printf("Usage: %s -hover http://localhost:5002\n", filepath.Base(os.Args[0]))
+		fmt.Printf("Usage: %s -hover http://localhost:5000\n", filepath.Base(os.Args[0]))
 		fmt.Printf(" -hover   URL       %s (default=%s)\n", hoverHelp, hoverDefault)
-		//	fmt.Printf(" -listen  ADDR:PORT %s (default=%s)\n", listenSocketHelp, listenSocketDefault)
+		fmt.Printf(" -listen  ADDR:PORT %s (default=%s)\n", listenSocketHelp, listenSocketDefault)
 	}
 }
 
@@ -89,7 +89,7 @@ func main() {
 		os.Exit(0)
 	}
 	if len(hoverUrl) == 0 {
-		fmt.Println("missing argument -hover")
+		Log.Error("missing argument -hover")
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -100,40 +100,37 @@ func main() {
 	dataplane := helper.NewDataplane()
 
 	if err := dataplane.Init(hoverUrl); err != nil {
-		Log.Errorf("unable to conect to Hover %s\n%s\n", hoverUrl, err)
+		Log.Error("unable to conect to Hover %s\n%s\n", hoverUrl, err)
 		os.Exit(1)
 	}
-
-	go monitor.MonitorOvsDb()
 
 	_, sw := helper.ModulePOST(dataplane, "bpf", "DummySwitch", bpf.DummySwitch2count)
 	/*	_, l1 := */ helper.LinkPOST(dataplane, "i:veth1_", sw.Id)
 	/*	_, l2 := */ helper.LinkPOST(dataplane, "i:veth2_", sw.Id)
 	/*	_, l3 := */ helper.LinkPOST(dataplane, "i:veth3_", sw.Id)
 
-	//	time.Sleep(time.Second * 8)
+	time.Sleep(time.Second * 8)
 
-	helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
+	_, kv := helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
 
-	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
+	fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
 
-	helper.TableEntryPUT(dataplane, sw.Id, "count", "0x1", "0x9")
+	err, kv := helper.TableEntryPUT(dataplane, sw.Id, "count", "0x1", "0x9")
+	if err != nil {
+		fmt.Printf("%s\n", err)
+	}
+	fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
 
-	//	fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
+	_, kv = helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
 
-	helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
+	fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
 
-	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
+	_, kv = helper.TableEntryDELETE(dataplane, sw.Id, "count", "0x1")
 
-	helper.TableEntryDELETE(dataplane, sw.Id, "count", "0x1")
+	fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
+	_, kv = helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
 
-	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
-	helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
-
-	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
-
-	quit := make(chan bool)
-	<-quit
+	fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
 
 	/*
 		fmt.Printf("id: %s\nfrom: %s\nto: %s\n", l.Id, l.From, l.To)
@@ -160,8 +157,36 @@ func main() {
 		time.Sleep(time.Second * 2)
 		helper.LinkDELETE(dataplane, l3.Id)
 		time.Sleep(time.Second * 2)
-
-		helper.ModuleDELETE(dataplane, sw.Id)
 	*/
+	//		helper.ModuleDELETE(dataplane, sw.Id)
 
+	/*
+		for i := 0; i < 10; i++ {
+			reader := bufio.NewReader(os.Stdin)
+			fmt.Print("$ ")
+			text, _ := reader.ReadString('\n')
+			fmt.Println(text)
+			fmt.Println(common.Version)
+			cli.Parse(text)
+
+		}
+
+		//non mi serve un nuovo server!
+		//mi serve per ora un singolo dataplane
+
+		//poi loop cmdline
+
+		srv, err := politoctrl.NewServer(hoverUrl)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+
+		politoctrl.Info.Printf("polito-ctrl Server listening on %s\n", listenSocket)
+		http.ListenAndServe(listenSocket, srv.Handler())
+		//class that manages cli requests
+		//infinite loop
+		//a := "ciao"
+	*/
 }
