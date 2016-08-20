@@ -105,6 +105,8 @@ func main() {
 	}
 
 	go monitor.MonitorOvsDb()
+	go monitor.MonitorOvnNb()
+	go monitor.MonitorOvnSb()
 
 	_, sw := helper.ModulePOST(dataplane, "bpf", "DummySwitch", bpf.DummySwitch2count)
 	/*	_, l1 := */ helper.LinkPOST(dataplane, "i:veth1_", sw.Id)
@@ -112,25 +114,26 @@ func main() {
 	/*	_, l3 := */ helper.LinkPOST(dataplane, "i:veth3_", sw.Id)
 
 	//	time.Sleep(time.Second * 8)
+	/*
+		helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
 
-	helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
+		//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
 
-	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
+		helper.TableEntryPUT(dataplane, sw.Id, "count", "0x1", "0x9")
 
-	helper.TableEntryPUT(dataplane, sw.Id, "count", "0x1", "0x9")
+		//	fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
 
-	//	fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
+		helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
 
-	helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
+		//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
 
-	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
+		helper.TableEntryDELETE(dataplane, sw.Id, "count", "0x1")
 
-	helper.TableEntryDELETE(dataplane, sw.Id, "count", "0x1")
+		//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
+		helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
 
-	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
-	helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
-
-	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
+		//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
+	*/
 
 	quit := make(chan bool)
 	<-quit
