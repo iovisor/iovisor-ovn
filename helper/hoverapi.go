@@ -5,8 +5,6 @@ import (
 	"net/http"
 )
 
-//var log = l.MustGetLogger("politoctrl")
-
 type Dataplane struct {
 	client  *http.Client
 	baseUrl string

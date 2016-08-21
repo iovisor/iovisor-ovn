@@ -45,10 +45,13 @@ func MonitorOvnNb() {
 }
 
 func ovnNbMonitor(h *MonitorHandler) {
-
 	for {
 		select {
 		case currUpdate := <-h.update:
+			//manage case of new update from db
+
+			//for debug purposes, print the new rows added or modified
+			//a copy of the whole db is in cache.
 
 			for table, tableUpdate := range currUpdate.Updates {
 				log.Noticef("update table: %s\n", table)
