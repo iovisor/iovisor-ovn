@@ -2,7 +2,7 @@
 
 ---
 ## Architecture
-
+```
 cli interface (politoctrl commandline)
 |
 |monitor(ovs; ovn Nb, Sb) ------------//----------> OVN Architerture
@@ -24,7 +24,9 @@ helper(wrapper for Hover Apis)
 hover
 |
 in-kernel dataplane impl
----
+
+```
+
 
 ## politod
 
@@ -57,4 +59,3 @@ Polito Ctrl (*politod*) must have a library package of helper, to perform variou
 
 from cli (*politoctrl*) or ovn-monitor I receive a request.
 This request is routed into the engine, that performs the request to hover.
----
