@@ -15,8 +15,7 @@
 //Bertrone Matteo - Polytechnic of Turin - 20-07-2016 first modify
 //08-08-2016 - Testing simple module dummt switch
 //18-08-2016 - Helper to talk with Hover & Logger
-//TODO Cmdline
-//TODO OVN Manager
+//21-08/2016 - Monitor  OVN databases
 
 package main
 
@@ -28,10 +27,10 @@ import (
 
 	l "github.com/op/go-logging"
 
-	"github.com/mbertrone/politoctrl/bpf"
 	"github.com/mbertrone/politoctrl/common"
 	"github.com/mbertrone/politoctrl/helper"
 	"github.com/mbertrone/politoctrl/monitor"
+	"github.com/mbertrone/politoctrl/testenv"
 )
 
 var listenSocket string
@@ -58,96 +57,44 @@ func init() {
 	}
 }
 
+//Start Polito Controller Daemon
 func main() {
 
-	//Start Polito Controller
-	//Parse Cmdline args
-	//TODO start without one simgle hover, but can change hover(s) connections
-
+	//Init Logger
 	common.LogInit()
 
+	//Parse Cmdline args
 	flag.Parse()
 	if helpFlag {
 		flag.Usage()
 		os.Exit(0)
 	}
+
+	//TODO start without one simgle hover, but can change hover(s) connections
 	if len(hoverUrl) == 0 {
 		fmt.Println("missing argument -hover")
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	//Connect to hover and initialize HoverDataplane
 	//TODO manage multiple hosts (arrays/maps oh HoverDataplane)
-
 	dataplane := helper.NewDataplane()
 
+	//Connect to hover and initialize HoverDataplane
 	if err := dataplane.Init(hoverUrl); err != nil {
 		Log.Errorf("unable to conect to Hover %s\n%s\n", hoverUrl, err)
 		os.Exit(1)
 	}
 
+	//Start monitoring ovn/s databases
 	go monitor.MonitorOvsDb()
 	go monitor.MonitorOvnNb()
 	go monitor.MonitorOvnSb()
 
-	_, sw := helper.ModulePOST(dataplane, "bpf", "DummySwitch", bpf.DummySwitch2count)
-	/*	_, l1 := */ helper.LinkPOST(dataplane, "i:veth1_", sw.Id)
-	/*	_, l2 := */ helper.LinkPOST(dataplane, "i:veth2_", sw.Id)
-	/*	_, l3 := */ helper.LinkPOST(dataplane, "i:veth3_", sw.Id)
+	//simple test enviroment (see testenv/env.go)
+	go testenv.TestEnv(dataplane)
 
-	//	time.Sleep(time.Second * 8)
-	/*
-		helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
-
-		//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
-
-		helper.TableEntryPUT(dataplane, sw.Id, "count", "0x1", "0x9")
-
-		//	fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
-
-		helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
-
-		//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
-
-		helper.TableEntryDELETE(dataplane, sw.Id, "count", "0x1")
-
-		//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
-		helper.TableEntryGET(dataplane, sw.Id, "count", "0x1")
-
-		//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
-	*/
-
+	//wait forever. if main is killed, Go kills all other goroutines
 	quit := make(chan bool)
 	<-quit
-
-	/*
-		fmt.Printf("id: %s\nfrom: %s\nto: %s\n", l.Id, l.From, l.To)
-		errore, m := helper.ModuleListGET(dataplane)
-		fmt.Printf("e:%s\n", errore)
-
-		o, _ := json.Marshal(m.ListModules)
-		fmt.Println(string(o))
-	*/
-
-	/*
-		err, l := helper.LinkGET(dataplane, l1.Id)
-		if err != nil {
-			fmt.Printf("error: %s\n", err)
-		}
-		out, _ := json.Marshal(l)
-		fmt.Println(string(out))
-	*/
-
-	/*
-		helper.LinkDELETE(dataplane, l1.Id)
-		time.Sleep(time.Second * 2)
-		helper.LinkDELETE(dataplane, l2.Id)
-		time.Sleep(time.Second * 2)
-		helper.LinkDELETE(dataplane, l3.Id)
-		time.Sleep(time.Second * 2)
-
-		helper.ModuleDELETE(dataplane, sw.Id)
-	*/
-
 }
