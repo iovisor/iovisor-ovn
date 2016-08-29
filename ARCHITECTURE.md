@@ -3,17 +3,17 @@
 ---
 ## Architecture
 ```
-cli interface (politoctrl commandline)
+cli interface (iovisor-ovn commandline)
 |
 |monitor(ovs; ovn Nb, Sb) ------------//----------> OVN Architerture
 ||
-||logger (to print output of politod)
+||logger (to print output of daemon)
 |||
-*politod (daemon)*
+*iovisor-ovn (daemon)*
 |
 |bpf modules repository
 ||
-engine/orchestator ------------ db (local database)
+engine (main logic)------------ db (local database)
 |
 helper(wrapper for Hover Apis)
 |
@@ -28,9 +28,9 @@ in-kernel dataplane impl
 ```
 
 
-## politod
+## daemon
 
-Polito Daemon is the running daemon that coordinates all other modules.
+Daemon is the running daemon that coordinates all other modules.
 
 ##  bpf
 
@@ -55,7 +55,7 @@ Some Examples
 ---
 # Overview
 
-Polito Ctrl (*politod*) must have a library package of helper, to perform various requests to Hover(s).
+Polito Ctrl (*daemon*) must have a library package of helper, to perform various requests to Hover(s).
 
-from cli (*politoctrl*) or ovn-monitor I receive a request.
+from cli (*iovisor-ovn*) or ovn-monitor I receive a request.
 This request is routed into the engine, that performs the request to hover.
