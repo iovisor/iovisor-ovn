@@ -27,10 +27,10 @@ import (
 
 	l "github.com/op/go-logging"
 
-	"github.com/mbertrone/politoctrl/common"
-	"github.com/mbertrone/politoctrl/helper"
-	"github.com/mbertrone/politoctrl/monitor"
-	"github.com/mbertrone/politoctrl/testenv"
+	"github.com/netgroup-polito/iovisor-ovn/common"
+	"github.com/netgroup-polito/iovisor-ovn/helper"
+	"github.com/netgroup-polito/iovisor-ovn/monitor"
+	"github.com/netgroup-polito/iovisor-ovn/testenv"
 )
 
 var listenSocket string

@@ -1,8 +1,8 @@
 package testenv
 
 import (
-	"github.com/mbertrone/politoctrl/bpf"
-	"github.com/mbertrone/politoctrl/helper"
+	"github.com/netgroup-polito/iovisor-ovn/bpf"
+	"github.com/netgroup-polito/iovisor-ovn/helper"
 )
 
 func TestEnv(dataplane *helper.Dataplane) {
