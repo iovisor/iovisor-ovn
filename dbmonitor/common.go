@@ -1,4 +1,4 @@
-package monitor
+package dbmonitor
 
 import (
 	"reflect"

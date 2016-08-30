@@ -1,4 +1,4 @@
-package monitor
+package dbmonitor
 
 import "github.com/socketplane/libovsdb"
 

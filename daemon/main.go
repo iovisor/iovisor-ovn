@@ -27,9 +27,10 @@ import (
 
 	l "github.com/op/go-logging"
 
+	"github.com/netgroup-polito/iovisor-ovn/cli"
 	"github.com/netgroup-polito/iovisor-ovn/common"
-	"github.com/netgroup-polito/iovisor-ovn/helper"
-	"github.com/netgroup-polito/iovisor-ovn/monitor"
+	"github.com/netgroup-polito/iovisor-ovn/dbmonitor"
+	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/testenv"
 )
 
@@ -78,7 +79,7 @@ func main() {
 	}
 
 	//TODO manage multiple hosts (arrays/maps oh HoverDataplane)
-	dataplane := helper.NewDataplane()
+	dataplane := hoverctl.NewDataplane()
 
 	//Connect to hover and initialize HoverDataplane
 	if err := dataplane.Init(hoverUrl); err != nil {
@@ -87,12 +88,15 @@ func main() {
 	}
 
 	//Start monitoring ovn/s databases
-	go monitor.MonitorOvsDb()
-	go monitor.MonitorOvnNb()
-	go monitor.MonitorOvnSb()
+	go dbmonitor.MonitorOvsDb()
+	go dbmonitor.MonitorOvnNb()
+	go dbmonitor.MonitorOvnSb()
 
 	//simple test enviroment (see testenv/env.go)
 	go testenv.TestEnv(dataplane)
+
+	//start simple cli
+	go cli.Cli(dataplane)
 
 	//wait forever. if main is killed, Go kills all other goroutines
 	quit := make(chan bool)

@@ -15,7 +15,7 @@ cli interface (iovisor-ovn commandline)
 ||
 engine (main logic)------------ db (local database)
 |
-helper(wrapper for Hover Apis)
+hoverctl(wrapper for Hover Apis)
 |
 |
 //
@@ -39,7 +39,7 @@ Contains all ebpf code
 ## common
 Contains common utilities
 
-## helper
+## hoverctl
 
 Contains hover api wrapper
 
@@ -55,7 +55,7 @@ Some Examples
 ---
 # Overview
 
-Polito Ctrl (*daemon*) must have a library package of helper, to perform various requests to Hover(s).
+Polito Ctrl (*daemon*) must have a library package of hoverctl, to perform various requests to Hover(s).
 
 from cli (*iovisor-ovn*) or ovn-monitor I receive a request.
 This request is routed into the engine, that performs the request to hover.

@@ -29,7 +29,7 @@ struct metadata {
 	// The values are preserved across modules.
 	struct type_value data[4];
 
-	// A field reserved for use by the wrapper and helper functions.
+	// A field reserved for use by the wrapper and hoverctl functions.
 	u32 is_egress:1;
 	u32 flags:31;
 

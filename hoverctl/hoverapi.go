@@ -1,4 +1,4 @@
-package helper
+package hoverctl
 
 import (
 	_ "net"
