@@ -45,6 +45,9 @@ func MonitorOvnSb() {
 }
 
 func ovnSbMonitor(h *MonitorHandler) {
+	printTable := make(map[string]int)
+	printTable["Port_Binding"] = 1
+	//printTable["Logical_Switch_Port"] = 1
 
 	for {
 		select {
@@ -55,12 +58,15 @@ func ovnSbMonitor(h *MonitorHandler) {
 			//a copy of the whole db is in cache.
 
 			for table, tableUpdate := range currUpdate.Updates {
-				log.Noticef("update table: %s\n", table)
-				for uuid, row := range tableUpdate.Rows {
-					log.Noticef("UUID     : %s\n", uuid)
+				if _, ok := printTable[table]; ok {
 
-					newRow := row.New
-					PrintRow(newRow)
+					log.Noticef("update table: %s\n", table)
+					for uuid, row := range tableUpdate.Rows {
+						log.Noticef("UUID     : %s\n", uuid)
+
+						newRow := row.New
+						PrintRow(newRow)
+					}
 				}
 			}
 		}

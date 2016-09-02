@@ -16,6 +16,12 @@ func MonitorOvnNb() {
 	ovnnbdb_sock := "/home/matteo/ovs/tutorial/sandbox/ovnnb_db.sock"
 	ovnnb, err := libovsdb.ConnectWithUnixSocket(ovnnbdb_sock)
 
+	// By default libovsdb connects to 127.0.0.0:6400.
+	//ovnnb, err := libovsdb.Connect("", 0)
+
+	// If you prefer to connect to OVS in a specific location :
+	//ovnnb, err := libovsdb.Connect("127.0.0.1", 6641)
+
 	handler.db = ovnnb
 
 	if err != nil {
@@ -45,6 +51,10 @@ func MonitorOvnNb() {
 }
 
 func ovnNbMonitor(h *MonitorHandler) {
+	printTable := make(map[string]int)
+	printTable["Logical_Switch"] = 1
+	printTable["Logical_Switch_Port"] = 1
+
 	for {
 		select {
 		case currUpdate := <-h.update:
@@ -54,12 +64,14 @@ func ovnNbMonitor(h *MonitorHandler) {
 			//a copy of the whole db is in cache.
 
 			for table, tableUpdate := range currUpdate.Updates {
-				log.Noticef("update table: %s\n", table)
-				for uuid, row := range tableUpdate.Rows {
-					log.Noticef("UUID     : %s\n", uuid)
+				if _, ok := printTable[table]; ok {
+					log.Noticef("update table: %s\n", table)
+					for uuid, row := range tableUpdate.Rows {
+						log.Noticef("UUID     : %s\n", uuid)
 
-					newRow := row.New
-					PrintRow(newRow)
+						newRow := row.New
+						PrintRow(newRow)
+					}
 				}
 			}
 		}
