@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	l "github.com/op/go-logging"
 
@@ -95,6 +96,7 @@ func main() {
 	//simple test enviroment (see testenv/env.go)
 	go testenv.TestEnv(dataplane)
 
+	time.Sleep(500 * time.Millisecond)
 	//start simple cli
 	go cli.Cli(dataplane)
 

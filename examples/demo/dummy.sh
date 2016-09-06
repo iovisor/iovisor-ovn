@@ -39,7 +39,7 @@ ovn-nbctl lsp-add sw0 sw0-port2
 # for these ports to be able to communicate each other as defined by
 # the OVN logical topology.
 read -r line
-ovs-vsctl --no-wait add-port br-int veth1_ -- set Interface veth1_ external_ids:iface-id=sw0-port1
+ovs-vsctl  add-port br-int veth1_ -- set Interface veth1_ external_ids:iface-id=sw0-port1
 
 read -r line
-ovs-vsctl --no-wait add-port br-int veth2_ -- set Interface veth2_ external_ids:iface-id=sw0-port2
+ovs-vsctl  add-port br-int veth2_ -- set Interface veth2_ external_ids:iface-id=sw0-port2
