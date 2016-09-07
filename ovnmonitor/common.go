@@ -1,4 +1,4 @@
-package dbmonitor
+package ovnmonitor
 
 import (
 	"reflect"

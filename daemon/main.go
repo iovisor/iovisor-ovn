@@ -30,7 +30,7 @@ import (
 
 	"github.com/netgroup-polito/iovisor-ovn/cli"
 	"github.com/netgroup-polito/iovisor-ovn/common"
-	"github.com/netgroup-polito/iovisor-ovn/dbmonitor"
+	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/testenv"
 )
@@ -89,9 +89,9 @@ func main() {
 	}
 
 	//Start monitoring ovn/s databases
-	go dbmonitor.MonitorOvsDb()
-	go dbmonitor.MonitorOvnNb()
-	go dbmonitor.MonitorOvnSb()
+	go ovnmonitor.MonitorOvsDb()
+	go ovnmonitor.MonitorOvnNb()
+	go ovnmonitor.MonitorOvnSb()
 
 	//simple test enviroment (see testenv/env.go)
 	go testenv.TestEnv(dataplane)

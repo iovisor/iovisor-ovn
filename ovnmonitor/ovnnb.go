@@ -1,9 +1,8 @@
-package dbmonitor
+package ovnmonitor
 
 import "github.com/socketplane/libovsdb"
-import "strconv"
 
-func MonitorOvsDb() {
+func MonitorOvnNb() {
 
 	//handler: one for each monitor instance
 	handler := MonitorHandler{}
@@ -14,56 +13,52 @@ func MonitorOvsDb() {
 	cache := make(map[string]map[string]libovsdb.Row)
 	handler.cache = &cache
 
-	//ovsdb_sock := "/home/matteo/ovs/tutorial/sandbox/db.sock"
-	//ovs, err := libovsdb.ConnectWithUnixSocket(ovsdb_sock)
+	//Sandbox Environment
+	ovnnbdb_sock := "/home/matteo/ovs/tutorial/sandbox/ovnnb_db.sock"
+	ovnnb, err := libovsdb.ConnectWithUnixSocket(ovnnbdb_sock)
 
-	// By default libovsdb connects to 127.0.0.0:6400.
-	//ovs, err := libovsdb.Connect("", 0)
+	//Openstack Real Environment
+	// ip := "127.0.0.1"
+	// port := 6641
+	// ovnnbdb_sock := ip + ":" + strconv.Itoa(port)
+	// ovnnb, err := libovsdb.Connect(ip, port)
 
-	// If you prefer to connect to OVS in a specific location :
-	ip := "127.0.0.1"
-	port := 6640
-	ovsdb_sock := ip + ":" + strconv.Itoa(port)
-	ovs, err := libovsdb.Connect(ip, port)
-
-	handler.db = ovs
+	handler.db = ovnnb
 
 	if err != nil {
-		log.Errorf("unable to Connect to %s - %s\n", ovsdb_sock, err)
+		log.Errorf("unable to Connect to %s - %s\n", ovnnbdb_sock, err)
 		return
 	}
 
-	log.Noticef("starting ovs local monitor @ %s\n", ovsdb_sock)
+	log.Noticef("starting ovn nb db monitor @ %s\n", ovnnbdb_sock)
 
 	var notifier MyNotifier
 	notifier.handler = &handler
-	ovs.Register(notifier)
+	ovnnb.Register(notifier)
 
-	var ovsDb_name = "Open_vSwitch"
-	initial, err := handler.db.MonitorAll(ovsDb_name, "")
+	//TODO change db
+	var ovnNbDb_name = "OVN_Northbound"
+	initial, err := ovnnb.MonitorAll(ovnNbDb_name, "")
 	if err != nil {
-		log.Errorf("unable to Monitor %s - %s\n", ovsDb_name, err)
+		log.Errorf("unable to Monitor %s - %s\n", ovnNbDb_name, err)
 		return
 	}
 	PopulateCache(&handler, *initial)
 
-	ovsMonitor(&handler)
+	ovnNbMonitor(&handler)
 	<-handler.quit
 
 	return
 }
 
-func ovsMonitor(h *MonitorHandler) {
+func ovnNbMonitor(h *MonitorHandler) {
 	printTable := make(map[string]int)
-	printTable["Interface"] = 1
-	printTable["Port"] = 1
-	printTable["Bridge"] = 1
+	printTable["Logical_Switch"] = 1
+	printTable["Logical_Switch_Port"] = 1
 
 	for {
 		select {
 		case currUpdate := <-h.update:
-			//PrintCache(h)
-
 			//manage case of new update from db
 
 			//for debug purposes, print the new rows added or modified

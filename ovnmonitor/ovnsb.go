@@ -1,9 +1,8 @@
-package dbmonitor
+package ovnmonitor
 
 import "github.com/socketplane/libovsdb"
-import "strconv"
 
-func MonitorOvnNb() {
+func MonitorOvnSb() {
 
 	//handler: one for each monitor instance
 	handler := MonitorHandler{}
@@ -14,47 +13,48 @@ func MonitorOvnNb() {
 	cache := make(map[string]map[string]libovsdb.Row)
 	handler.cache = &cache
 
-	//ovnnbdb_sock := "/home/matteo/ovs/tutorial/sandbox/ovnnb_db.sock"
-	//ovnnb, err := libovsdb.ConnectWithUnixSocket(ovnnbdb_sock)
+	//Sandbox Environment
+	ovnsbdb_sock := "/home/matteo/ovs/tutorial/sandbox/ovnsb_db.sock"
+	ovnsb, err := libovsdb.ConnectWithUnixSocket(ovnsbdb_sock)
 
-	// If you prefer to connect to OVS in a specific location :
-	ip := "127.0.0.1"
-	port := 6641
-	ovnnbdb_sock := ip + ":" + strconv.Itoa(port)
-	ovnnb, err := libovsdb.Connect(ip,port)
+	// //Openstack Real Environment
+	// ip := "127.0.0.1"
+	// port := 6642
+	// ovnsbdb_sock := ip + ":" + strconv.Itoa(port)
+	// ovnsb, err := libovsdb.Connect(ip, port)
 
-	handler.db = ovnnb
+	handler.db = ovnsb
 
 	if err != nil {
-		log.Errorf("unable to Connect to %s - %s\n", ovnnbdb_sock, err)
+		log.Errorf("unable to Connect to %s - %s\n", ovnsbdb_sock, err)
 		return
 	}
 
-	log.Noticef("starting ovn nb db monitor @ %s\n", ovnnbdb_sock)
+	log.Noticef("starting ovn sb db monitor @ %s\n", ovnsbdb_sock)
 
 	var notifier MyNotifier
 	notifier.handler = &handler
-	ovnnb.Register(notifier)
+	ovnsb.Register(notifier)
 
 	//TODO change db
-	var ovnNbDb_name = "OVN_Northbound"
-	initial, err := ovnnb.MonitorAll(ovnNbDb_name, "")
+	var ovnSbDb_name = "OVN_Southbound"
+	initial, err := ovnsb.MonitorAll(ovnSbDb_name, "")
 	if err != nil {
-		log.Errorf("unable to Monitor %s - %s\n", ovnNbDb_name, err)
+		log.Errorf("unable to Monitor %s - %s\n", ovnSbDb_name, err)
 		return
 	}
 	PopulateCache(&handler, *initial)
 
-	ovnNbMonitor(&handler)
+	ovnSbMonitor(&handler)
 	<-handler.quit
 
 	return
 }
 
-func ovnNbMonitor(h *MonitorHandler) {
+func ovnSbMonitor(h *MonitorHandler) {
 	printTable := make(map[string]int)
-	printTable["Logical_Switch"] = 1
-	printTable["Logical_Switch_Port"] = 1
+	printTable["Port_Binding"] = 1
+	printTable["Chassis"] = 1
 
 	for {
 		select {
@@ -66,6 +66,7 @@ func ovnNbMonitor(h *MonitorHandler) {
 
 			for table, tableUpdate := range currUpdate.Updates {
 				if _, ok := printTable[table]; ok {
+
 					log.Noticef("update table: %s\n", table)
 					for uuid, row := range tableUpdate.Rows {
 						log.Noticef("UUID     : %s\n", uuid)
