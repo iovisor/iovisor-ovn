@@ -11,10 +11,11 @@ import (
 var log = l.MustGetLogger("politoctrl")
 
 type MonitorHandler struct {
-	quit   chan bool
-	update chan *libovsdb.TableUpdates
-	cache  *map[string]map[string]libovsdb.Row
-	db     *libovsdb.OvsdbClient
+	Quit      chan bool
+	Update    chan *libovsdb.TableUpdates
+	Bufupdate chan string
+	Cache     *map[string]map[string]libovsdb.Row
+	Db        *libovsdb.OvsdbClient
 }
 
 func PrintRow(row libovsdb.Row) {
@@ -25,7 +26,7 @@ func PrintRow(row libovsdb.Row) {
 
 //DUMP ALL THE DB
 func PrintCache(h *MonitorHandler) {
-	var cache = *h.cache
+	var cache = *h.Cache
 	log.Noticef("print all tables in cache\n")
 	for tableName, table := range cache {
 		log.Noticef("%20s:%s\n", "TABLE", tableName)
@@ -36,11 +37,26 @@ func PrintCache(h *MonitorHandler) {
 	}
 }
 
+//Print a table
+func PrintCacheTable(h *MonitorHandler, tab string) {
+	var cache = *h.Cache
+	log.Noticef("print table %s\n", tab)
+	for tableName, table := range cache {
+		if tableName == tab {
+			log.Noticef("%20s:%s\n", "TABLE", tableName)
+			for uuid, row := range table {
+				log.Noticef("%20s:%s\n", "UUID", uuid)
+				PrintRow(row)
+			}
+		}
+	}
+}
+
 //TODO
 //DUMP TABLE X
 
 func PopulateCache(h *MonitorHandler, updates libovsdb.TableUpdates) {
-	var cache = *h.cache
+	var cache = *h.Cache
 	for table, tableUpdate := range updates.Updates {
 		if _, ok := cache[table]; !ok {
 			cache[table] = make(map[string]libovsdb.Row)
@@ -62,7 +78,7 @@ type MyNotifier struct {
 
 func (n MyNotifier) Update(context interface{}, tableUpdates libovsdb.TableUpdates /*, h *MonitorHandler*/) {
 	PopulateCache(n.handler, tableUpdates)
-	n.handler.update <- &tableUpdates
+	n.handler.Update <- &tableUpdates
 }
 func (n MyNotifier) Locked([]interface{}) {
 }

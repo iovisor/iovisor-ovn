@@ -8,10 +8,14 @@ func MonitorOvnSb() {
 	handler := MonitorHandler{}
 
 	//channel to notificate someone with new TableUpdates
-	handler.update = make(chan *libovsdb.TableUpdates)
+	handler.Update = make(chan *libovsdb.TableUpdates)
 	//cache contan a map between string and libovsdb.Row
+
+	//channel buffered to notify the logic of new changes
+	handler.Bufupdate = make(chan string, 10000)
+
 	cache := make(map[string]map[string]libovsdb.Row)
-	handler.cache = &cache
+	handler.Cache = &cache
 
 	//Sandbox Environment
 	ovnsbdb_sock := "/home/matteo/ovs/tutorial/sandbox/ovnsb_db.sock"
@@ -23,7 +27,7 @@ func MonitorOvnSb() {
 	// ovnsbdb_sock := ip + ":" + strconv.Itoa(port)
 	// ovnsb, err := libovsdb.Connect(ip, port)
 
-	handler.db = ovnsb
+	handler.Db = ovnsb
 
 	if err != nil {
 		log.Errorf("unable to Connect to %s - %s\n", ovnsbdb_sock, err)
@@ -46,7 +50,7 @@ func MonitorOvnSb() {
 	PopulateCache(&handler, *initial)
 
 	ovnSbMonitor(&handler)
-	<-handler.quit
+	<-handler.Quit
 
 	return
 }
@@ -58,7 +62,7 @@ func ovnSbMonitor(h *MonitorHandler) {
 
 	for {
 		select {
-		case currUpdate := <-h.update:
+		case currUpdate := <-h.Update:
 			//manage case of new update from db
 
 			//for debug purposes, print the new rows added or modified

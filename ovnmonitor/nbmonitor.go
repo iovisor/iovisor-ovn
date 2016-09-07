@@ -1,17 +1,25 @@
 package ovnmonitor
 
-import "github.com/socketplane/libovsdb"
+import (
+	"github.com/socketplane/libovsdb"
+)
 
+//start to monitor Ovn Nb databases
+//For now, only one db, in future db string passedasparameter
 func MonitorOvnNb() {
 
 	//handler: one for each monitor instance
 	handler := MonitorHandler{}
 
 	//channel to notificate someone with new TableUpdates
-	handler.update = make(chan *libovsdb.TableUpdates)
+	handler.Update = make(chan *libovsdb.TableUpdates)
+
+	//channel buffered to notify the logic of new changes
+	handler.Bufupdate = make(chan string, 10000)
+
 	//cache contan a map between string and libovsdb.Row
 	cache := make(map[string]map[string]libovsdb.Row)
-	handler.cache = &cache
+	handler.Cache = &cache
 
 	//Sandbox Environment
 	ovnnbdb_sock := "/home/matteo/ovs/tutorial/sandbox/ovnnb_db.sock"
@@ -23,7 +31,7 @@ func MonitorOvnNb() {
 	// ovnnbdb_sock := ip + ":" + strconv.Itoa(port)
 	// ovnnb, err := libovsdb.Connect(ip, port)
 
-	handler.db = ovnnb
+	handler.Db = ovnnb
 
 	if err != nil {
 		log.Errorf("unable to Connect to %s - %s\n", ovnnbdb_sock, err)
@@ -45,8 +53,10 @@ func MonitorOvnNb() {
 	}
 	PopulateCache(&handler, *initial)
 
+	//Receive all update & populate cache
+	go NbLogicInit(&handler)
 	ovnNbMonitor(&handler)
-	<-handler.quit
+	<-handler.Quit
 
 	return
 }
@@ -58,7 +68,7 @@ func ovnNbMonitor(h *MonitorHandler) {
 
 	for {
 		select {
-		case currUpdate := <-h.update:
+		case currUpdate := <-h.Update:
 			//manage case of new update from db
 
 			//for debug purposes, print the new rows added or modified
@@ -66,6 +76,9 @@ func ovnNbMonitor(h *MonitorHandler) {
 
 			for table, tableUpdate := range currUpdate.Updates {
 				if _, ok := printTable[table]; ok {
+					//Notify nblogic to update db structures!
+					h.Bufupdate <- table
+
 					log.Noticef("update table: %s\n", table)
 					for uuid, row := range tableUpdate.Rows {
 						log.Noticef("UUID     : %s\n", uuid)

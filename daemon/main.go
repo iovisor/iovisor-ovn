@@ -30,8 +30,8 @@ import (
 
 	"github.com/netgroup-polito/iovisor-ovn/cli"
 	"github.com/netgroup-polito/iovisor-ovn/common"
-	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
 	"github.com/netgroup-polito/iovisor-ovn/testenv"
 )
 
@@ -59,7 +59,7 @@ func init() {
 	}
 }
 
-//Start Polito Controller Daemon
+//Start iovisor-ovn Daemon
 func main() {
 
 	//Init Logger

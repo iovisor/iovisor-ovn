@@ -8,10 +8,14 @@ func MonitorOvsDb() {
 	handler := MonitorHandler{}
 
 	//channel to notificate someone with new TableUpdates
-	handler.update = make(chan *libovsdb.TableUpdates)
+	handler.Update = make(chan *libovsdb.TableUpdates)
+
+	//channel buffered to notify the logic of new changes
+	handler.Bufupdate = make(chan string, 10000)
+
 	//cache contan a map between string and libovsdb.Row
 	cache := make(map[string]map[string]libovsdb.Row)
-	handler.cache = &cache
+	handler.Cache = &cache
 
 	// Sandbox Real Environment
 	ovsdb_sock := "/home/matteo/ovs/tutorial/sandbox/db.sock"
@@ -23,7 +27,7 @@ func MonitorOvsDb() {
 	// ovsdb_sock := ip + ":" + strconv.Itoa(port)
 	// ovs, err := libovsdb.Connect(ip, port)
 
-	handler.db = ovs
+	handler.Db = ovs
 
 	if err != nil {
 		log.Errorf("unable to Connect to %s - %s\n", ovsdb_sock, err)
@@ -37,7 +41,7 @@ func MonitorOvsDb() {
 	ovs.Register(notifier)
 
 	var ovsDb_name = "Open_vSwitch"
-	initial, err := handler.db.MonitorAll(ovsDb_name, "")
+	initial, err := handler.Db.MonitorAll(ovsDb_name, "")
 	if err != nil {
 		log.Errorf("unable to Monitor %s - %s\n", ovsDb_name, err)
 		return
@@ -45,7 +49,7 @@ func MonitorOvsDb() {
 	PopulateCache(&handler, *initial)
 
 	ovsMonitor(&handler)
-	<-handler.quit
+	<-handler.Quit
 
 	return
 }
@@ -58,7 +62,7 @@ func ovsMonitor(h *MonitorHandler) {
 
 	for {
 		select {
-		case currUpdate := <-h.update:
+		case currUpdate := <-h.Update:
 			//PrintCache(h)
 
 			//manage case of new update from db
