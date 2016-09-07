@@ -1,6 +1,7 @@
 package dbmonitor
 
 import "github.com/socketplane/libovsdb"
+import "strconv"
 
 func MonitorOvnNb() {
 
@@ -13,14 +14,14 @@ func MonitorOvnNb() {
 	cache := make(map[string]map[string]libovsdb.Row)
 	handler.cache = &cache
 
-	ovnnbdb_sock := "/home/matteo/ovs/tutorial/sandbox/ovnnb_db.sock"
-	ovnnb, err := libovsdb.ConnectWithUnixSocket(ovnnbdb_sock)
-
-	// By default libovsdb connects to 127.0.0.0:6400.
-	//ovnnb, err := libovsdb.Connect("", 0)
+	//ovnnbdb_sock := "/home/matteo/ovs/tutorial/sandbox/ovnnb_db.sock"
+	//ovnnb, err := libovsdb.ConnectWithUnixSocket(ovnnbdb_sock)
 
 	// If you prefer to connect to OVS in a specific location :
-	//ovnnb, err := libovsdb.Connect("127.0.0.1", 6641)
+	ip := "127.0.0.1"
+	port := 6641
+	ovnnbdb_sock := ip + ":" + strconv.Itoa(port)
+	ovnnb, err := libovsdb.Connect(ip,port)
 
 	handler.db = ovnnb
 
