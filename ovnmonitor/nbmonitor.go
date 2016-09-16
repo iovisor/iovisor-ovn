@@ -74,18 +74,18 @@ func ovnNbMonitor(h *MonitorHandler) {
 			//for debug purposes, print the new rows added or modified
 			//a copy of the whole db is in cache.
 
-			for table, tableUpdate := range currUpdate.Updates {
+			for table, _ /*tableUpdate*/ := range currUpdate.Updates {
 				if _, ok := printTable[table]; ok {
 					//Notify nblogic to update db structures!
 					h.Bufupdate <- table
 
-					log.Noticef("update table: %s\n", table)
-					for uuid, row := range tableUpdate.Rows {
-						log.Noticef("UUID     : %s\n", uuid)
-
-						newRow := row.New
-						PrintRow(newRow)
-					}
+					// log.Noticef("update table: %s\n", table)
+					// for uuid, row := range tableUpdate.Rows {
+					// 	log.Noticef("UUID     : %s\n", uuid)
+					//
+					// 	newRow := row.New
+					// 	PrintRow(newRow)
+					// }
 				}
 			}
 		}

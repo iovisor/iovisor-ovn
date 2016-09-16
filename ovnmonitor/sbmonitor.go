@@ -57,8 +57,8 @@ func MonitorOvnSb() {
 
 func ovnSbMonitor(h *MonitorHandler) {
 	printTable := make(map[string]int)
-	printTable["Port_Binding"] = 1
-	printTable["Chassis"] = 1
+	// printTable["Port_Binding"] = 1
+	// printTable["Chassis"] = 1
 
 	for {
 		select {
