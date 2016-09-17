@@ -11,11 +11,12 @@ import (
 var log = l.MustGetLogger("politoctrl")
 
 type MonitorHandler struct {
-	Quit      chan bool
-	Update    chan *libovsdb.TableUpdates
-	Bufupdate chan string
-	Cache     *map[string]map[string]libovsdb.Row
-	Db        *libovsdb.OvsdbClient
+	Quit         chan bool
+	Update       chan *libovsdb.TableUpdates
+	Bufupdate    chan string
+	BufupdateOvs chan string
+	Cache        *map[string]map[string]libovsdb.Row
+	Db           *libovsdb.OvsdbClient
 }
 
 func PrintRow(row libovsdb.Row) {
@@ -51,9 +52,6 @@ func PrintCacheTable(h *MonitorHandler, tab string) {
 		}
 	}
 }
-
-//TODO
-//DUMP TABLE X
 
 func PopulateCache(h *MonitorHandler, updates libovsdb.TableUpdates) {
 	var cache = *h.Cache

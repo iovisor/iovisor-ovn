@@ -11,7 +11,7 @@ func MonitorOvsDb() {
 	handler.Update = make(chan *libovsdb.TableUpdates)
 
 	//channel buffered to notify the logic of new changes
-	handler.Bufupdate = make(chan string, 10000)
+	handler.BufupdateOvs = make(chan string, 10000)
 
 	//cache contan a map between string and libovsdb.Row
 	cache := make(map[string]map[string]libovsdb.Row)
@@ -48,6 +48,7 @@ func MonitorOvsDb() {
 	}
 	PopulateCache(&handler, *initial)
 
+	go OvsLogicInit(&handler)
 	ovsMonitor(&handler)
 	<-handler.Quit
 
@@ -57,8 +58,8 @@ func MonitorOvsDb() {
 func ovsMonitor(h *MonitorHandler) {
 	printTable := make(map[string]int)
 	printTable["Interface"] = 1
-	printTable["Port"] = 1
-	printTable["Bridge"] = 1
+	//printTable["Port"] = 1
+	//printTable["Bridge"] = 1
 
 	for {
 		select {
@@ -70,15 +71,18 @@ func ovsMonitor(h *MonitorHandler) {
 			//for debug purposes, print the new rows added or modified
 			//a copy of the whole db is in cache.
 
-			for table, tableUpdate := range currUpdate.Updates {
+			for table, _ /*tableUpdate*/ := range currUpdate.Updates {
 				if _, ok := printTable[table]; ok {
-					log.Noticef("update table: %s\n", table)
-					for uuid, row := range tableUpdate.Rows {
-						log.Noticef("UUID     : %s\n", uuid)
+					//Notify ovslogic to update db structs!
+					h.BufupdateOvs <- table
 
-						newRow := row.New
-						PrintRow(newRow)
-					}
+					// log.Noticef("update table: %s\n", table)
+					// for uuid, row := range tableUpdate.Rows {
+					// 	log.Noticef("UUID     : %s\n", uuid)
+					//
+					// 	newRow := row.New
+					// 	PrintRow(newRow)
+					// }
 				}
 			}
 		}
