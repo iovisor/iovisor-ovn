@@ -9,6 +9,7 @@ import (
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 )
 
+//TestEnv Launches a defined configuration at daemon startup
 func TestEnv(dataplane *hoverctl.Dataplane) {
 
 	//testSwitch2(dataplane)

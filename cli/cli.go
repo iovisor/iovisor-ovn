@@ -10,11 +10,10 @@ import (
 )
 
 func Cli(dataplane *hoverctl.Dataplane) {
-	for i := 0; i < 10000; i++ {
+	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("cli@iov-ovn$")
 		text, _ := reader.ReadString('\n')
-		//fmt.Println(text)
 
 		switch text {
 		case "test\n":
