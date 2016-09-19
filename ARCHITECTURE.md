@@ -1,61 +1,49 @@
-# Polito Controller
+# IOVisor-OVN
 
 ---
 ## Architecture
-```
-cli interface (iovisor-ovn commandline)
-|
-|monitor(ovs; ovn Nb, Sb) ------------//----------> OVN Architerture
-||
-||logger (to print output of daemon)
-|||
-*iovisor-ovn (daemon)*
-|
-|bpf modules repository
-||
-engine (main logic)------------ db (local database)
-|
-hoverctl(wrapper for Hover Apis)
-|
-|
-//
-|
-|
-hover
-|
-in-kernel dataplane impl
 
-```
+![IOVisor-OVN architecture](docs/architecture.png)
 
+IOVisor-OVN sits on side of the traditional OVN architecture, it intercepts the
+contents of the different databases and based on an implemented logic it deploys
+the required network services using the IOVisor technology.
 
-## daemon
+## IOVisor-OVN daemon
 
 Daemon is the running daemon that coordinates all other modules.
+The deamon is a central system that coordinates the deployment of network services
+based on the contents of the OVN databases.
 
-##  bpf
+It is composed of different elements:
 
-Contains all ebpf code
+### OVN Monitor
 
-## common
-Contains common utilities
+Uses the [libovsdb](https://github.com/socketplane/libovsdb) to monitor all the
+databases of OVN. (northbound, southbound and the local ovsdb on each compute node)
 
-## hoverctl
+### Logger
 
-Contains hover api wrapper
+It is a simple system that prints and if configured saves all the logs into a file.
 
-## monitor
+### CLI
 
-Using libovsdb monitors ovs, ovn sb,nb
+The command line interface allows to the user to interact with the system.
+It is specially usefull for troubleshooting and debugging purposes
 
+### Main Logic
 
-# Examples
+This module implements the logic for deploying the network services accross the
+different compute nodes.
 
-Some Examples
+It receives a new service network request, process it and then uses the hover ctrl
+interface to deply those services in the different compute nodes.
 
----
-# Overview
+### Hover ctrl
 
-Polito Ctrl (*daemon*) must have a library package of hoverctl, to perform various requests to Hover(s).
+The hovel ctrl is a wrapper that sends command to the hover instances using the
+a REST api.
 
-from cli (*iovisor-ovn*) or ovn-monitor I receive a request.
-This request is routed into the engine, that performs the request to hover.
+### IOModule Repo
+
+This module is a database that contains the implementation of the different IOModules.
