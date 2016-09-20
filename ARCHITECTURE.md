@@ -29,21 +29,21 @@ It is a simple system that prints and if configured saves all the logs into a fi
 ### CLI
 
 The command line interface allows to the user to interact with the system.
-It is specially usefull for troubleshooting and debugging purposes
+It is specially useful for troubleshooting and debugging purposes
 
 ### Main Logic
 
-This module implements the logic for deploying the network services accross the
+This module implements the logic for deploying the network services across the
 different compute nodes.
 
 It receives a new service network request, process it and then uses the hover ctrl
-interface to deply those services in the different compute nodes.
+interface to deploy those services in the different compute nodes.
 
 ### Hover ctrl
 
-The hovel ctrl is a wrapper that sends command to the hover instances using the
-a REST api.
+The hover ctrl is a wrapper that sends command to the hover instances using
+a RESTful API.
 
 ### IOModule Repo
 
-This module is a database that contains the implementation of the different IOModules.
+This module is a local Repository that contains the implementation of the different IOModules.

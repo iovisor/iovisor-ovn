@@ -2,8 +2,10 @@
 
 ## What is IOVisor-OVN?
 IOVisor-OVN project aims to extend the current [OVN](https://github.com/openvswitch/ovs/)
-architecture in order to provide the required OVN network services using the
-[IOVisor](https://www.iovisor.org/) technology.
+backend with [IOVisor](https://www.iovisor.org/) technology: create a new data plane that is semantically equivalent to the original OVS-based one, but based on IOVisor, that encloses eBPF and XDP technologies.
+
+##Architecture
+
 
 ## Repository Organization
 
@@ -21,12 +23,12 @@ Contains common utilities
 
 Contains hover api wrapper
 
-* monitor
+* ovnmonitor
 
 Using libovsdb monitors ovs, ovn sb,nb
 
 * Examples
 
-Some Examples
+Some Examples, demos and useful files
 
 ### Documentation is under construction
