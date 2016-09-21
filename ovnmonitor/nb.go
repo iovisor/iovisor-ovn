@@ -8,6 +8,8 @@ type Nb_Database struct {
 type Logical_Switch_Item struct {
 	Name      string
 	PortsUUID map[string]string
+	ModuleId  string
+	//Enabled   bool
 }
 
 type Logical_Switch_Port_Item struct {
@@ -18,12 +20,14 @@ type Logical_Switch_Port_Item struct {
 
 //return the name of the switch a port belongs to
 func PortLookup(nb *Nb_Database, portName string) string {
-	//TODO implement
-	uuid := nb.Logical_Switch_Port[portName].UUID
-	for _, lsptr := range nb.Logical_Switch {
-		ls := *lsptr
-		if _, ok := ls.PortsUUID[uuid]; ok {
-			return ls.Name
+
+	if port, ok := nb.Logical_Switch_Port[portName]; ok {
+		uuid := port.UUID
+		for _, lsptr := range nb.Logical_Switch {
+			ls := *lsptr
+			if _, ok := ls.PortsUUID[uuid]; ok {
+				return ls.Name
+			}
 		}
 	}
 	return ""

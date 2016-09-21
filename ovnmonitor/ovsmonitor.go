@@ -2,7 +2,7 @@ package ovnmonitor
 
 import "github.com/socketplane/libovsdb"
 
-func MonitorOvsDb() {
+func MonitorOvsDb() (h *MonitorHandler) {
 
 	//handler: one for each monitor instance
 	handler := MonitorHandler{}
@@ -12,6 +12,9 @@ func MonitorOvsDb() {
 
 	//channel buffered to notify the logic of new changes
 	handler.BufupdateOvs = make(chan string, 10000)
+
+	//Channel buffered to notify the logic fo new changes
+	handler.MainLogicNotification = make(chan string, 100)
 
 	//cache contan a map between string and libovsdb.Row
 	cache := make(map[string]map[string]libovsdb.Row)
@@ -49,13 +52,13 @@ func MonitorOvsDb() {
 	PopulateCache(&handler, *initial)
 
 	go OvsLogicInit(&handler)
-	ovsMonitor(&handler)
-	<-handler.Quit
-
+	go ovsMonitorFilter(&handler)
+	//<-handler.Quit
+	h = &handler
 	return
 }
 
-func ovsMonitor(h *MonitorHandler) {
+func ovsMonitorFilter(h *MonitorHandler) {
 	printTable := make(map[string]int)
 	printTable["Interface"] = 1
 	//printTable["Port"] = 1

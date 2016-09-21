@@ -1,10 +1,14 @@
 package ovnmonitor
 
+import "github.com/socketplane/libovsdb"
+
 func OvsLogicInit(h *MonitorHandler) *Ovs_Database {
 	//Init Northbound Database Struct
 	ovs := Ovs_Database{}
 	ovs.Interface = make(map[string]*Interface_Item)
 	//Launch goroutine to react to new nb events on buffered channel
+	//*h.ovsDatabase = &ovs
+	h.OvsDatabase = &ovs
 	go OvsLogic(h, &ovs)
 	return &ovs
 }
@@ -31,8 +35,21 @@ func OvsLogic(h *MonitorHandler, ovs *Ovs_Database) {
 
 					/*****Interface ITEM********/
 					name := row.Fields["name"].(string)
-					external_ids := row.Fields["external_ids"]
-					log.Warningf("external_ids:%s\n", external_ids)
+					//external_ids := row.Fields["external_ids"]
+					ifaceIDstr := ""
+
+					if extIDs, ok := row.Fields["external_ids"]; ok {
+						extIDMap := extIDs.(libovsdb.OvsMap).GoMap
+						if ifaceID, ok := extIDMap["iface-id"]; ok {
+							ifaceIDstr = ifaceID.(string)
+							//PrintTypeDebug(ifaceID)
+							//log.Errorf("%s", ifaceID)
+							//log.Errorf("%s\n", ifaceID)
+						}
+					}
+
+					//PrintTypeDebug(external_ids)
+					//log.Debugf("external_ids:%s\n", external_ids)
 
 					if iface, ok := ovs.Interface[name]; ok {
 						/*****Logical_Switch name PRESENT IN MAP *******/
@@ -40,9 +57,11 @@ func OvsLogic(h *MonitorHandler, ovs *Ovs_Database) {
 
 						iface.Name = name
 						//TODO iface.external_ids
+						iface.IfaceId = ifaceIDstr
 						//PortsToMap(ports, &logicalSwitch.PortsUUID)
 
 						log.Warningf("IF(update):%+v\n", iface)
+						h.MainLogicNotification <- "IF (update)"
 					} else {
 						/*****Logical_Switch name *NOT* PRESENT IN MAP *******/
 						//Create Logical_Switch in map
@@ -53,9 +72,12 @@ func OvsLogic(h *MonitorHandler, ovs *Ovs_Database) {
 						iface.Name = name
 						//logicalSwitch.PortsUUID = make(map[string]string)
 						//PortsToMap(ports, &logicalSwitch.PortsUUID)
+						iface.IfaceId = ifaceIDstr
+						iface.Up = false
 
 						ovs.Interface[name] = &iface
 						log.Warningf("IF(  add ):%+v\n", iface)
+						h.MainLogicNotification <- "IF (added)"
 					}
 				}
 			}

@@ -5,6 +5,9 @@ type Ovs_Database struct {
 }
 
 type Interface_Item struct {
-	Name         string
-	External_Ids map[string]string
+	Name string
+	//we should have to check if it's br-int or not ... in the other logic
+	//External_Ids map[string]string
+	IfaceId string
+	Up      bool
 }

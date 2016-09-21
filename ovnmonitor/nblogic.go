@@ -32,6 +32,8 @@ func NbLogicInit(h *MonitorHandler) *Nb_Database {
 	nb.Logical_Switch = make(map[string]*Logical_Switch_Item)
 	nb.Logical_Switch_Port = make(map[string]*Logical_Switch_Port_Item)
 	//Launch goroutine to react to new nb events on buffered channel
+	//	*h.NbDatabase = &nb
+	h.NbDatabase = &nb
 	go NbLogic(h, &nb)
 	return &nb
 }
@@ -68,6 +70,7 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 						PortsToMap(ports, &logicalSwitch.PortsUUID)
 
 						log.Warningf("LS(update):%+v\n", logicalSwitch)
+						//h.MainLogicNotification <- "LS update"
 					} else {
 						/*****Logical_Switch name *NOT* PRESENT IN MAP *******/
 						//Create Logical_Switch in map
@@ -81,6 +84,7 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 
 						nb.Logical_Switch[name] = &logicalSwitch
 						log.Warningf("LS(  add ):%+v\n", logicalSwitch)
+						//h.MainLogicNotification <- "LS add"
 					}
 				}
 
@@ -111,6 +115,7 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 						//PortsToMap(ports, &logicalSwitch.Ports)
 
 						log.Warningf("LP(update):%+v\n", logicalSwitchPort)
+						//h.MainLogicNotification <- "LP update"
 					} else {
 						/*****Logical_Switch_Port name *NOT* PRESENT IN MAP *******/
 						//Create Logical_Switch_Port in map
@@ -128,6 +133,7 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 
 						nb.Logical_Switch_Port[name] = &logicalSwitchPort
 						log.Warningf("LP(  add ):%+v\n", logicalSwitchPort)
+						//h.MainLogicNotification <- "LP add"
 					}
 
 					log.Debugf("Port Lookup: %s -> switch: %s\n", name, PortLookup(nb, name))

@@ -3,6 +3,7 @@ package ovnmonitor
 import (
 	"reflect"
 
+	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	l "github.com/op/go-logging"
 
 	"github.com/socketplane/libovsdb"
@@ -10,13 +11,23 @@ import (
 
 var log = l.MustGetLogger("politoctrl")
 
+type HandlerHandler struct {
+	Nb        *MonitorHandler
+	Sb        *MonitorHandler
+	Ovs       *MonitorHandler //Sould be array
+	Dataplane *hoverctl.Dataplane
+}
+
 type MonitorHandler struct {
-	Quit         chan bool
-	Update       chan *libovsdb.TableUpdates
-	Bufupdate    chan string
-	BufupdateOvs chan string
-	Cache        *map[string]map[string]libovsdb.Row
-	Db           *libovsdb.OvsdbClient
+	Quit                  chan bool
+	Update                chan *libovsdb.TableUpdates //All Tables updates from ovsdblib
+	Bufupdate             chan string                 //Only Filtered Tables names
+	BufupdateOvs          chan string
+	MainLogicNotification chan string //debug porposes string, only notification string to main logic!
+	Cache                 *map[string]map[string]libovsdb.Row
+	Db                    *libovsdb.OvsdbClient
+	NbDatabase            *Nb_Database
+	OvsDatabase           *Ovs_Database
 }
 
 func PrintRow(row libovsdb.Row) {

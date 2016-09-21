@@ -6,7 +6,7 @@ import (
 
 //start to monitor Ovn Nb databases
 //For now, only one db, in future db string passedasparameter
-func MonitorOvnNb() {
+func MonitorOvnNb() (h *MonitorHandler) {
 
 	//handler: one for each monitor instance
 	handler := MonitorHandler{}
@@ -16,6 +16,9 @@ func MonitorOvnNb() {
 
 	//channel buffered to notify the logic of new changes
 	handler.Bufupdate = make(chan string, 10000)
+
+	//Channel buffered to notify the logic fo new changes
+	handler.MainLogicNotification = make(chan string, 100)
 
 	//cache contan a map between string and libovsdb.Row
 	cache := make(map[string]map[string]libovsdb.Row)
@@ -55,13 +58,13 @@ func MonitorOvnNb() {
 
 	//Receive all update & populate cache
 	go NbLogicInit(&handler)
-	ovnNbMonitor(&handler)
-	<-handler.Quit
-
+	go ovnNbMonitorFilter(&handler)
+	//	<-handler.Quit
+	h = &handler
 	return
 }
 
-func ovnNbMonitor(h *MonitorHandler) {
+func ovnNbMonitorFilter(h *MonitorHandler) {
 	printTable := make(map[string]int)
 	printTable["Logical_Switch"] = 1
 	printTable["Logical_Switch_Port"] = 1

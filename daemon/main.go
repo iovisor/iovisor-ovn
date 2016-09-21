@@ -12,7 +12,7 @@ import (
 	"github.com/netgroup-polito/iovisor-ovn/cli"
 	"github.com/netgroup-polito/iovisor-ovn/common"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
-	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
+	"github.com/netgroup-polito/iovisor-ovn/mainlogic"
 	"github.com/netgroup-polito/iovisor-ovn/testenv"
 )
 
@@ -69,10 +69,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	//Start monitoring ovn/s databases
-	go ovnmonitor.MonitorOvsDb()
-	go ovnmonitor.MonitorOvnNb()
-	go ovnmonitor.MonitorOvnSb()
+	//
+	// //Start monitoring ovn/s databases
+	// go ovnmonitor.MonitorOvsDb()
+	// go ovnmonitor.MonitorOvnNb()
+	// go ovnmonitor.MonitorOvnSb()
+
+	//Montiors started here!
+	mainlogic.MainLogic(dataplane)
 
 	//simple test enviroment (see testenv/env.go)
 	go testenv.TestEnv(dataplane)
