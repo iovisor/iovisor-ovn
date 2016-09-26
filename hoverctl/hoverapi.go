@@ -25,16 +25,12 @@ func (d *Dataplane) Init(baseUrl string) error {
 	return nil
 }
 
-type ModuleEntry struct {
+type Module struct {
 	Id          string                 `json:"id"`
 	ModuleType  string                 `json:"module_type"`
 	DisplayName string                 `json:"display_name"`
 	Perm        string                 `json:"permissions"`
 	Config      map[string]interface{} `json:"config"`
-}
-
-type ModuleList struct {
-	ListModules []ModuleEntry
 }
 
 type ExternalInterface struct {

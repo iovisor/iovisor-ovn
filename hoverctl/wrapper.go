@@ -186,7 +186,7 @@ func LinkDELETE(d *Dataplane, linkId string) (error, LinkEntry) {
 /*
 	AddModule(d,"bpf","myModulòeName",bpf.Modulename)
 */
-func ModulePOST(d *Dataplane, moduleType string, displayName string, code string) (error, ModuleEntry) {
+func ModulePOST(d *Dataplane, moduleType string, displayName string, code string) (error, Module) {
 	log.Infof("module POST %s\n", displayName)
 
 	req := map[string]interface{}{
@@ -196,7 +196,7 @@ func ModulePOST(d *Dataplane, moduleType string, displayName string, code string
 			"code": code,
 		},
 	}
-	var module ModuleEntry
+	var module Module
 	err := d.sendObject("POST", "/modules/", req, &module)
 	if err != nil {
 		log.Warning(err)
@@ -208,11 +208,11 @@ func ModulePOST(d *Dataplane, moduleType string, displayName string, code string
 	return nil, module
 }
 
-func ModuleGET(d *Dataplane, moduleId string) (error, ModuleEntry) {
+func ModuleGET(d *Dataplane, moduleId string) (error, Module) {
 	log.Infof("module GET %s \n", moduleId)
 
 	req := map[string]interface{}{}
-	var module ModuleEntry
+	var module Module
 	err := d.sendObject("GET", "/modules/"+moduleId, req, &module)
 	if err != nil {
 		log.Warning(err)
@@ -224,11 +224,11 @@ func ModuleGET(d *Dataplane, moduleId string) (error, ModuleEntry) {
 	return nil, module
 }
 
-func ModuleDELETE(d *Dataplane, moduleId string) (error, ModuleEntry) {
+func ModuleDELETE(d *Dataplane, moduleId string) (error, Module) {
 	log.Infof("module DELETE %s\n", moduleId)
 
 	req := map[string]interface{}{}
-	var module ModuleEntry
+	var module Module
 	err := d.sendObject("DELETE", "/modules/"+moduleId, req, &module)
 	if err != nil {
 		log.Warning(err)
@@ -240,21 +240,50 @@ func ModuleDELETE(d *Dataplane, moduleId string) (error, ModuleEntry) {
 	return nil, module
 }
 
-//TODO Check
-func ModuleListGET(d *Dataplane) (error, ModuleList) {
+/*it returns map[module-id]module provided by hover
+eg. map["m:12345ab"] = module {}
+*/
+func ModuleListGET(d *Dataplane) (error, map[string]Module) {
 	log.Info("getting modules list")
+	modules := map[string]Module{}
 
-	//req := map[string]interface{}{}
-	var moduleList ModuleList
-	err := d.sendObject("GET", "/modules/", nil /*req*/, &moduleList)
+	resp, e := d.client.Get(d.baseUrl + "/modules/")
+
+	if e != nil {
+		return e, modules
+	}
+	defer resp.Body.Close()
+
+	var data []map[string]interface{}
+
+	err := json.NewDecoder(resp.Body).Decode(&data)
 	if err != nil {
-		log.Warning(err)
-		return err, moduleList
+		log.Errorf("%s\n", err)
+		return err, modules
 	}
 
-	log.Debug("getting modules list OK\n")
+	for i := range data {
+		m := Module{}
+		item := data[i]
 
-	return nil, moduleList
+		id, _ := item["id"].(string)
+		m.Id = id
+		module_type, _ := item["module_type"].(string)
+		m.ModuleType = module_type
+		display_name, _ := item["display_name"].(string)
+		m.DisplayName = display_name
+		permissions, _ := item["permissions"].(string)
+		m.Perm = permissions
+		m.Config, _ = item["config"].(map[string]interface{})
+
+		modules[id] = m
+
+		log.Debugf("module-id:%15s   DisplayName: %s \n", id, display_name)
+	}
+
+	//log.Noticef("%+v\n", modules)
+	log.Debug("getting modules list OK\n")
+	return nil, modules
 }
 
 /*it returns map[iface-name]iface provided by hover
@@ -287,10 +316,8 @@ func ExternalInterfacesListGET(d *Dataplane) (error, map[string]ExternalInterfac
 		external_interfaces[name] = ext_iface
 	}
 
-	log.Noticef("%+v\n", external_interfaces)
-
+	//log.Noticef("%+v\n", external_interfaces)
 	log.Debug("getting modules list OK\n")
-
 	return nil, external_interfaces
 }
 
