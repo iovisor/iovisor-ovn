@@ -13,7 +13,6 @@ import (
 	"github.com/netgroup-polito/iovisor-ovn/common"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/mainlogic"
-	"github.com/netgroup-polito/iovisor-ovn/testenv"
 )
 
 var listenSocket string
@@ -63,23 +62,20 @@ func main() {
 	//TODO manage multiple hosts (arrays/maps oh HoverDataplane)
 	dataplane := hoverctl.NewDataplane()
 
+	//Init Bpf loadc files
+	//bpf.Init()
+
 	//Connect to hover and initialize HoverDataplane
 	if err := dataplane.Init(hoverUrl); err != nil {
 		Log.Errorf("unable to conect to Hover %s\n%s\n", hoverUrl, err)
 		os.Exit(1)
 	}
 
-	//
-	// //Start monitoring ovn/s databases
-	// go ovnmonitor.MonitorOvsDb()
-	// go ovnmonitor.MonitorOvnNb()
-	// go ovnmonitor.MonitorOvnSb()
+	//simple test enviroment (see testenv/env.go)
+	//go testenv.TestEnv(dataplane)
 
 	//Montiors started here!
 	mainlogic.MainLogic(dataplane)
-
-	//simple test enviroment (see testenv/env.go)
-	go testenv.TestEnv(dataplane)
 
 	time.Sleep(500 * time.Millisecond)
 	//start simple cli

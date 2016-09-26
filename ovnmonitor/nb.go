@@ -6,9 +6,11 @@ type Nb_Database struct {
 }
 
 type Logical_Switch_Item struct {
-	Name      string
-	PortsUUID map[string]string
-	ModuleId  string
+	Name       string
+	PortsUUID  map[string]string
+	ModuleId   string
+	PortsArray [9]int
+	PortsCount int
 	//Enabled   bool
 }
 
@@ -31,6 +33,15 @@ func PortLookup(nb *Nb_Database, portName string) string {
 		}
 	}
 	return ""
+}
+
+func FindFirtsFreeLogicalPort(logicalSwitch *Logical_Switch_Item) int {
+	for i := 0; i < 9; i++ {
+		if logicalSwitch.PortsArray[i] == 0 {
+			return i
+		}
+	}
+	return 0
 }
 
 //Immediate Lookup @ Logical_Switch name

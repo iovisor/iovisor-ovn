@@ -1,7 +1,9 @@
 package mainlogic
 
 import (
-	"github.com/mbertrone/politoctrl/bpf"
+	"strconv"
+
+	"github.com/netgroup-polito/iovisor-ovn/bpf"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
 	l "github.com/op/go-logging"
@@ -29,50 +31,70 @@ func MainLogic(dataplane *hoverctl.Dataplane) {
 	for {
 		select {
 		case ovsString := <-ovsHandler.MainLogicNotification:
-			LogicalMapping(ovsString, &globalHandler)
+			LogicalMappingOvs(ovsString, &globalHandler)
 		}
 	}
 
 }
 
-func LogicalMapping(s string, hh *ovnmonitor.HandlerHandler) {
-	log.Debugf("%s\n", s)
+/*mapping events of ovs local db*/
+func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
+	//log.Debugf("Ovs Event:%s\n", s)
 
-	for ifacename, iface := range hh.Ovs.OvsDatabase.Interface {
-		if iface.Up {
-			log.Debugf("(%s)IFACE UP -> DO NOTHING\n", ifacename)
+	for ifaceName, iface := range hh.Ovs.OvsDatabase.Interface {
+		if ifaceName != "br-int" {
+			if iface.Up {
+				//Up is a logical internal state in iovisor--ovn controller
+				//it means that the corresponding iomodule is up and the interface connected
+				//log.Debugf("(%s)IFACE UP -> DO NOTHING\n", ifaceName)
+			} else {
+				log.Debugf("(%s)IFACE DOWN, not still mapped to an IOModule\n", ifaceName)
+				//Check if interface name belongs to some logical switch
+				logicalSwitchName := ovnmonitor.PortLookup(hh.Nb.NbDatabase, iface.IfaceId)
+				log.Noticef("(%s) port||external-ids:iface-id(%s)-> SWITCH NAME: %s\n", iface.Name, iface.IfaceId, logicalSwitchName)
+				if logicalSwitchName != "" {
+					//log.Noticef("Switch:%s\n", switchName)
+					if logicalSwitch, ok := hh.Nb.NbDatabase.Logical_Switch[logicalSwitchName]; ok {
+						if logicalSwitch.ModuleId == "" {
+							log.Noticef("CREATE NEW SWITCH\n")
 
-		} else {
-			log.Debugf("(%s)IFACE DOWN\n", ifacename)
-			//Check if interface name belongs to some logical switch
-			switchName := ovnmonitor.PortLookup(hh.Nb.NbDatabase, iface.IfaceId)
-			log.Noticef("(%s) port||external-ids:iface-id(%s)-> SWITCH NAME: %s\n", iface.Name, iface.IfaceId, switchName)
-			if switchName != "" {
-				//log.Noticef("Switch:%s\n", switchName)
-				if sw, ok := hh.Nb.NbDatabase.Logical_Switch[switchName]; ok {
-					if sw.ModuleId == "" {
-						log.Noticef("CREATE NEW SWITCH\n")
+							_, switchHover := hoverctl.ModulePOST(hh.Dataplane, "bpf", "Switch8", bpf.Switch)
+							logicalSwitch.ModuleId = switchHover.Id
 
-						_, swi := hoverctl.ModulePOST(hh.Dataplane, "bpf", "DummySwitch2", bpf.DummySwitch2)
-						sw.ModuleId = swi.Id
+							_, linkHover := hoverctl.LinkPOST(hh.Dataplane, "i:"+iface.Name, switchHover.Id)
+							log.Noticef("CREATE LINK from:%s to:%s id:%s\n", linkHover.From, linkHover.To, linkHover.Id)
+							if linkHover.Id != "" {
+								iface.Up = true
+							}
 
-						_, l1 := hoverctl.LinkPOST(hh.Dataplane, "i:"+iface.Name, swi.Id)
-						log.Noticef("CREATE LINK from:%s to:%s id:%s\n", l1.From, l1.To, l1.Id)
-						if l1.Id != "" {
-							iface.Up = true
+							_, external_interfaces := hoverctl.ExternalInterfacesListGET(hh.Dataplane)
+
+							portNumber := ovnmonitor.FindFirtsFreeLogicalPort(logicalSwitch)
+
+							hoverctl.TableEntryPUT(hh.Dataplane, switchHover.Id, "ports", strconv.Itoa(portNumber), external_interfaces[iface.Name].Id)
+							logicalSwitch.PortsArray[portNumber] = 1
+							logicalSwitch.PortsCount++
+							//Link port (in future lookup hypervisor)
+						} else {
+							//log.Debugf("SWITCH already present!%s\n", sw.ModuleId)
+							//Only Link module
+							_, linkHover := hoverctl.LinkPOST(hh.Dataplane, "i:"+iface.Name, logicalSwitch.ModuleId)
+							log.Noticef("CREATE LINK from:%s to:%s id:%s\n", linkHover.From, linkHover.To, linkHover.Id) //TODO Check if crashes
+							if linkHover.Id != "" {
+								iface.Up = true
+							}
+							_, external_interfaces := hoverctl.ExternalInterfacesListGET(hh.Dataplane)
+
+							portNumber := ovnmonitor.FindFirtsFreeLogicalPort(logicalSwitch)
+
+							hoverctl.TableEntryPUT(hh.Dataplane, logicalSwitch.ModuleId, "ports", strconv.Itoa(portNumber), external_interfaces[iface.Name].Id)
+							logicalSwitch.PortsArray[portNumber] = 1
+							logicalSwitch.PortsCount++
+
 						}
-						//Link port (in future lookup hypervisor)
 					} else {
-						//log.Debugf("SWITCH already present!%s\n", sw.ModuleId)
-						//Only Link module
-						_, l1 := hoverctl.LinkPOST(hh.Dataplane, "i:"+iface.Name, sw.ModuleId)
-						log.Noticef("CREATE LINK from:%s to:%s id:%s\n", l1.From, l1.To, l1.Id) //TODO Check if crashes
-						if l1.Id != "" {
-							iface.Up = true
-						}
+						log.Errorf("No Switch in Nb referring to //%s//\n", logicalSwitchName)
 					}
-				} else {
-					log.Errorf("No Switch in Nb referring to //%s//\n", switchName)
 				}
 			}
 		}
