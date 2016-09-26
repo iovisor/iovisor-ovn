@@ -1,9 +1,3 @@
-//TODO
-/*
-Module 4 print
-GEt Lists
-*/
-
 package hoverctl
 
 import (
@@ -86,46 +80,6 @@ func (d *Dataplane) sendObject(method string, url string, requestObj interface{}
 	return err
 }
 
-func (d *Dataplane) sendObjectJ(method string, url string, requestObj interface{}) (err error, jsonStr []byte) {
-	b, er := json.Marshal(requestObj)
-	if er != nil {
-		log.Warning("error during json marshal.")
-		return er, jsonStr
-	}
-
-	var resp *http.Response
-	var e error
-	var req *http.Request
-
-	switch method {
-	case "", "POST":
-		resp, e = d.client.Post(d.baseUrl+url, "application/json", bytes.NewReader(b))
-	case "GET":
-		resp, e = d.client.Get(d.baseUrl + url)
-	default:
-		req, e = http.NewRequest(method, d.baseUrl+url, bytes.NewReader(b))
-		if err != nil {
-			log.Errorf("%s\n", err)
-		}
-		resp, e = d.client.Do(req)
-	}
-
-	if e != nil {
-		log.Error(e)
-		return e, jsonStr
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		jsonStr = []byte{}
-		if jsonStr, err = ioutil.ReadAll(resp.Body); err != nil {
-			log.Error(string(jsonStr))
-		}
-		return fmt.Errorf("module server returned %s", resp.Status), jsonStr
-	}
-
-	return err, jsonStr
-}
-
 /*---------LINKS---------------*/
 
 /*
@@ -184,7 +138,7 @@ func LinkDELETE(d *Dataplane, linkId string) (error, LinkEntry) {
 /*------------MODULES-----------*/
 
 /*
-	AddModule(d,"bpf","myModulòeName",bpf.Modulename)
+	ModulePOST(d,"bpf","myModulòeName",bpf.Modulename)
 */
 func ModulePOST(d *Dataplane, moduleType string, displayName string, code string) (error, Module) {
 	log.Infof("module POST %s\n", displayName)
@@ -248,7 +202,6 @@ func ModuleListGET(d *Dataplane) (error, map[string]Module) {
 	modules := map[string]Module{}
 
 	resp, e := d.client.Get(d.baseUrl + "/modules/")
-
 	if e != nil {
 		return e, modules
 	}
@@ -275,9 +228,7 @@ func ModuleListGET(d *Dataplane) (error, map[string]Module) {
 		permissions, _ := item["permissions"].(string)
 		m.Perm = permissions
 		m.Config, _ = item["config"].(map[string]interface{})
-
 		modules[id] = m
-
 		log.Debugf("module-id:%15s   DisplayName: %s \n", id, display_name)
 	}
 
@@ -285,6 +236,8 @@ func ModuleListGET(d *Dataplane) (error, map[string]Module) {
 	log.Debug("getting modules list OK\n")
 	return nil, modules
 }
+
+/*------------EXTERNAL-INTERFACES-----------*/
 
 /*it returns map[iface-name]iface provided by hover
 eg. map[veth1] = iface {Name:veth1, Id:42}
@@ -294,7 +247,6 @@ func ExternalInterfacesListGET(d *Dataplane) (error, map[string]ExternalInterfac
 	external_interfaces := map[string]ExternalInterface{}
 
 	resp, e := d.client.Get(d.baseUrl + "/external_interfaces/")
-
 	if e != nil {
 		return e, external_interfaces
 	}
@@ -323,11 +275,6 @@ func ExternalInterfacesListGET(d *Dataplane) (error, map[string]ExternalInterfac
 
 /*-----------TABLES-------------*/
 
-/*------------MODULES-----------*/
-
-/*
-	AddModule(d,"bpf","myModulòeName",bpf.Modulename)
-*/
 func TableEntryPUT(d *Dataplane, moduleId string, tableId string, entryId string, entryValue string) (error, ModuleTableEntry) {
 	log.Infof("table entry PUT /modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId+" {%s,%s}\n", entryId, entryValue)
 
@@ -344,7 +291,6 @@ func TableEntryPUT(d *Dataplane, moduleId string, tableId string, entryId string
 
 	log.Debugf("table entry PUT /modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId+" {%s,%s} OK\n", moduleTableEntry.Key, moduleTableEntry.Value)
 
-	//	politoctrl.Info.Printf("key: %s value: %s\n", moduleTableEntry.Key, moduleTableEntry.Value)
 	return nil, moduleTableEntry
 }
 
