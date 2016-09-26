@@ -86,6 +86,46 @@ func (d *Dataplane) sendObject(method string, url string, requestObj interface{}
 	return err
 }
 
+func (d *Dataplane) sendObjectJ(method string, url string, requestObj interface{}) (err error, jsonStr []byte) {
+	b, er := json.Marshal(requestObj)
+	if er != nil {
+		log.Warning("error during json marshal.")
+		return er, jsonStr
+	}
+
+	var resp *http.Response
+	var e error
+	var req *http.Request
+
+	switch method {
+	case "", "POST":
+		resp, e = d.client.Post(d.baseUrl+url, "application/json", bytes.NewReader(b))
+	case "GET":
+		resp, e = d.client.Get(d.baseUrl + url)
+	default:
+		req, e = http.NewRequest(method, d.baseUrl+url, bytes.NewReader(b))
+		if err != nil {
+			log.Errorf("%s\n", err)
+		}
+		resp, e = d.client.Do(req)
+	}
+
+	if e != nil {
+		log.Error(e)
+		return e, jsonStr
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		jsonStr = []byte{}
+		if jsonStr, err = ioutil.ReadAll(resp.Body); err != nil {
+			log.Error(string(jsonStr))
+		}
+		return fmt.Errorf("module server returned %s", resp.Status), jsonStr
+	}
+
+	return err, jsonStr
+}
+
 /*---------LINKS---------------*/
 
 /*
@@ -215,6 +255,43 @@ func ModuleListGET(d *Dataplane) (error, ModuleList) {
 	log.Debug("getting modules list OK\n")
 
 	return nil, moduleList
+}
+
+/*it returns map[iface-name]iface provided by hover
+eg. map[veth1] = iface {Name:veth1, Id:42}
+*/
+func ExternalInterfacesListGET(d *Dataplane) (error, map[string]ExternalInterface) {
+	log.Info("getting external_interfaces list")
+	external_interfaces := map[string]ExternalInterface{}
+
+	resp, e := d.client.Get(d.baseUrl + "/external_interfaces/")
+
+	if e != nil {
+		return e, external_interfaces
+	}
+	defer resp.Body.Close()
+
+	var data []map[string]interface{}
+
+	err := json.NewDecoder(resp.Body).Decode(&data)
+	if err != nil {
+		log.Errorf("%s\n", err)
+		return err, external_interfaces
+	}
+
+	for i := range data {
+		item := data[i]
+		name, _ := item["name"].(string)
+		id, _ := item["id"].(string)
+		ext_iface := ExternalInterface{id, name}
+		external_interfaces[name] = ext_iface
+	}
+
+	log.Noticef("%+v\n", external_interfaces)
+
+	log.Debug("getting modules list OK\n")
+
+	return nil, external_interfaces
 }
 
 /*-----------TABLES-------------*/

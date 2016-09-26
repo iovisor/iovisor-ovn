@@ -37,6 +37,11 @@ type ModuleList struct {
 	ListModules []ModuleEntry
 }
 
+type ExternalInterface struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+}
+
 type LinkEntry struct {
 	Id   string `json:"id"`
 	From string `json:"from"`
