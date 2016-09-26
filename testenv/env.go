@@ -1,13 +1,16 @@
 package testenv
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/netgroup-polito/iovisor-ovn/bpf"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+
+	l "github.com/op/go-logging"
 )
+
+var log = l.MustGetLogger("politoctrl")
 
 //TestEnv Launches a defined configuration at daemon startup
 func TestEnv(dataplane *hoverctl.Dataplane) {
@@ -16,7 +19,9 @@ func TestEnv(dataplane *hoverctl.Dataplane) {
 
 	//testSwitch2count(dataplane)
 
-	//testSwitch3(dataplane)
+	//TestSwitch3(dataplane)
+
+	TestSwitch5(dataplane)
 
 }
 
@@ -43,6 +48,36 @@ func TestSwitch3(dataplane *hoverctl.Dataplane) {
 	/*	_, l1 := */ hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
 	/*	_, l2 := */ hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
 	/*	_, l3 := */ hoverctl.LinkPOST(dataplane, "i:veth3_", sw.Id)
+}
+
+//8 ports switch implementation with 5 ports attached
+//veth12345_ <-> Switch
+func TestSwitch5(dataplane *hoverctl.Dataplane) {
+	log.Noticef("TestSwitch5: create a Switch with 8 ports, and connect vethx_ (1,2,3,4,5) to the switch\n")
+
+	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "Switch", bpf.Switch)
+	/*	_, l1 := */ hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
+	/*	_, l2 := */ hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
+	/*	_, l3 := */ hoverctl.LinkPOST(dataplane, "i:veth3_", sw.Id)
+	/*  _, l4 := */ hoverctl.LinkPOST(dataplane, "i:veth4_", sw.Id)
+	/*	_, l3 := */ hoverctl.LinkPOST(dataplane, "i:veth5_", sw.Id)
+
+	_, external_interfaces := hoverctl.ExternalInterfacesListGET(dataplane)
+	log.Debugf("%+v\n", external_interfaces)
+
+	hoverctl.TableEntryPUT(dataplane, sw.Id, "ports", "0x1", external_interfaces["veth1_"].Id)
+	hoverctl.TableEntryPUT(dataplane, sw.Id, "ports", "0x2", external_interfaces["veth2_"].Id)
+	hoverctl.TableEntryPUT(dataplane, sw.Id, "ports", "0x3", external_interfaces["veth3_"].Id)
+	hoverctl.TableEntryPUT(dataplane, sw.Id, "ports", "0x4", external_interfaces["veth4_"].Id)
+	hoverctl.TableEntryPUT(dataplane, sw.Id, "ports", "0x5", external_interfaces["veth5_"].Id)
+
+	hoverctl.TableEntryGET(dataplane, sw.Id, "ports", "0x1")
+	hoverctl.TableEntryGET(dataplane, sw.Id, "ports", "0x2")
+	hoverctl.TableEntryGET(dataplane, sw.Id, "ports", "0x3")
+	hoverctl.TableEntryGET(dataplane, sw.Id, "ports", "0x4")
+	hoverctl.TableEntryGET(dataplane, sw.Id, "ports", "0x5")
+
+	hoverctl.ModuleListGET(dataplane)
 }
 
 //2 ports switch test implementation & pkt count
@@ -90,9 +125,6 @@ func printLink(l hoverctl.LinkEntry) {
 }
 
 func printListModules(dataplane *hoverctl.Dataplane) {
-	errore, m := hoverctl.ModuleListGET(dataplane)
-	fmt.Printf("e:%s\n", errore)
-
-	o, _ := json.Marshal(m.ListModules)
-	fmt.Println(string(o))
+	// errore, m := hoverctl.ModuleListGET(dataplane)
+	// if errore!=nil {log.Errorf("e:%s\n", errore)}
 }
