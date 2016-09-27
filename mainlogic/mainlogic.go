@@ -7,6 +7,7 @@ import (
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
 	l "github.com/op/go-logging"
+	"time"
 )
 
 var log = l.MustGetLogger("politoctrl")
@@ -61,6 +62,9 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 						if logicalSwitch.ModuleId == "" {
 							log.Noticef("CREATE NEW SWITCH\n")
 
+							time.Sleep(3500 * time.Millisecond)
+
+
 							_, switchHover := hoverctl.ModulePOST(hh.Dataplane, "bpf", "Switch8", bpf.Switch)
 							logicalSwitch.ModuleId = switchHover.Id
 
@@ -81,6 +85,9 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 						} else {
 							//log.Debugf("SWITCH already present!%s\n", sw.ModuleId)
 							//Only Link module
+
+							time.Sleep(3500 * time.Millisecond)
+
 							_, linkHover := hoverctl.LinkPOST(hh.Dataplane, "i:"+iface.Name, logicalSwitch.ModuleId)
 							log.Noticef("CREATE LINK from:%s to:%s id:%s\n", linkHover.From, linkHover.To, linkHover.Id) //TODO Check if crashes
 							if linkHover.Id != "" {
