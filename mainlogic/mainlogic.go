@@ -18,7 +18,7 @@ func MainLogic(dataplane *hoverctl.Dataplane) {
 	ovsHandler := ovnmonitor.MonitorOvsDb()
 
 	go ovnmonitor.MonitorOvnSb()
-	log.Debugf("%+v\n%+v\n", ovsHandler, nbHandler)
+	//log.Debugf("%+v\n%+v\n", ovsHandler, nbHandler)
 
 	globalHandler := ovnmonitor.HandlerHandler{}
 	globalHandler.Nb = nbHandler
@@ -27,14 +27,17 @@ func MainLogic(dataplane *hoverctl.Dataplane) {
 	//Here I have to multiplex & demultiplex (maybe it's better if i use a final var or something like that.)
 
 	//for now I only consider ovs notifications
-
-	for {
-		select {
-		case ovsString := <-ovsHandler.MainLogicNotification:
-			LogicalMappingOvs(ovsString, &globalHandler)
+	if ovsHandler != nil {
+		for {
+			select {
+			case ovsString := <-ovsHandler.MainLogicNotification:
+				LogicalMappingOvs(ovsString, &globalHandler)
+			}
 		}
-	}
 
+	} else {
+		log.Errorf("MainLogic not started!\n")
+	}
 }
 
 /*mapping events of ovs local db*/

@@ -75,7 +75,7 @@ func main() {
 	//go testenv.TestEnv(dataplane)
 
 	//Montiors started here!
-	mainlogic.MainLogic(dataplane)
+	go mainlogic.MainLogic(dataplane)
 
 	time.Sleep(500 * time.Millisecond)
 	//start simple cli
