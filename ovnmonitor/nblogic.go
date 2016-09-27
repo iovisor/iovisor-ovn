@@ -69,7 +69,7 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 						logicalSwitch.Name = name
 						PortsToMap(ports, &logicalSwitch.PortsUUID)
 
-						log.Warningf("LS(update):%+v\n", logicalSwitch)
+						log.Noticef("LS(update):%+v\n", logicalSwitch)
 						//h.MainLogicNotification <- "LS update"
 					} else {
 						/*****Logical_Switch name *NOT* PRESENT IN MAP *******/
@@ -83,7 +83,7 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 						PortsToMap(ports, &logicalSwitch.PortsUUID)
 
 						nb.Logical_Switch[name] = &logicalSwitch
-						log.Warningf("LS(  add ):%+v\n", logicalSwitch)
+						log.Noticef("LS(  add ):%+v\n", logicalSwitch)
 						//h.MainLogicNotification <- "LS add"
 					}
 				}
@@ -101,7 +101,7 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 
 					/*****Logical_Switch_Port ITEM********/
 					name := row.Fields["name"].(string)
-					addresses := row.Fields["addresses"]
+					//addresses := row.Fields["addresses"]
 
 					if logicalSwitchPort, ok := nb.Logical_Switch_Port[name]; ok {
 						/*****Logical_Switch_Port name PRESENT IN MAP *******/
@@ -110,11 +110,11 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 						logicalSwitchPort.Name = name
 						logicalSwitchPort.UUID = uuid
 						//Addresses to slice
-						PrintTypeDebug(addresses)
+						//PrintTypeDebug(addresses)
 
 						//PortsToMap(ports, &logicalSwitch.Ports)
 
-						log.Warningf("LP(update):%+v\n", logicalSwitchPort)
+						//log.Noticef("LP(update):%+v\n", logicalSwitchPort)
 						//h.MainLogicNotification <- "LP update"
 					} else {
 						/*****Logical_Switch_Port name *NOT* PRESENT IN MAP *******/
@@ -128,11 +128,11 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 						//logicalSwitchPort.Addresses =// make(map[string]string)
 						//PortsToMap(ports, &logicalSwitch.Ports)
 						//Addresses to slice
-						PrintTypeDebug(addresses)
+						//PrintTypeDebug(addresses)
 						//logicalSwitchPort.Addresses = ovsStringSetToSlice(addresses)
 
 						nb.Logical_Switch_Port[name] = &logicalSwitchPort
-						log.Warningf("LP(  add ):%+v\n", logicalSwitchPort)
+						log.Noticef("LP(  add ):%+v\n", logicalSwitchPort)
 						//h.MainLogicNotification <- "LP add"
 					}
 

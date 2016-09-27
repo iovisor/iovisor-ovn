@@ -36,7 +36,7 @@ func PortLookup(nb *Nb_Database, portName string) string {
 }
 
 func FindFirtsFreeLogicalPort(logicalSwitch *Logical_Switch_Item) int {
-	for i := 0; i < 9; i++ {
+	for i := 1; i < 9; i++ {
 		if logicalSwitch.PortsArray[i] == 0 {
 			return i
 		}
