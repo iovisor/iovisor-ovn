@@ -135,6 +135,44 @@ func LinkDELETE(d *Dataplane, linkId string) (error, LinkEntry) {
 	return nil, link
 }
 
+func LinkListGet(d *Dataplane) (error, map[string]LinkEntry) {
+	log.Info("getting links list")
+	links := map[string]LinkEntry{}
+
+	resp, e := d.client.Get(d.baseUrl + "/links/")
+	if e != nil {
+		return e, links
+	}
+	defer resp.Body.Close()
+
+	var data []map[string]interface{}
+
+	err := json.NewDecoder(resp.Body).Decode(&data)
+	if err != nil {
+		log.Errorf("%s\n", err)
+		return err, links
+	}
+
+	for i := range data {
+		l := LinkEntry{}
+		item := data[i]
+
+		id, _ := item["id"].(string)
+		l.Id = id
+		from, _ := item["from"].(string)
+		l.From = from
+		to, _ := item["to"].(string)
+		l.To = to
+		links[id] = l
+		//log.Debugf("link-id:%15s   from: %10s  to: %10s\n", id, from, to)
+	}
+
+	//log.Noticef("%+v\n", modules)
+	log.Debug("getting links list OK\n")
+	return nil, links
+
+}
+
 /*------------MODULES-----------*/
 
 /*
@@ -229,7 +267,7 @@ func ModuleListGET(d *Dataplane) (error, map[string]Module) {
 		m.Perm = permissions
 		m.Config, _ = item["config"].(map[string]interface{})
 		modules[id] = m
-		log.Debugf("module-id:%15s   DisplayName: %s \n", id, display_name)
+		//log.Debugf("module-id:%15s   DisplayName: %s \n", id, display_name)
 	}
 
 	//log.Noticef("%+v\n", modules)
