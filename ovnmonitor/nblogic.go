@@ -69,7 +69,7 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 						logicalSwitch.Name = name
 						PortsToMap(ports, &logicalSwitch.PortsUUID)
 
-						log.Noticef("LS(update):%+v\n", logicalSwitch)
+						//log.Noticef("LS(update):%+v\n", logicalSwitch)
 						//h.MainLogicNotification <- "LS update"
 					} else {
 						/*****Logical_Switch name *NOT* PRESENT IN MAP *******/
@@ -83,7 +83,7 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 						PortsToMap(ports, &logicalSwitch.PortsUUID)
 
 						nb.Logical_Switch[name] = &logicalSwitch
-						log.Noticef("LS(  add ):%+v\n", logicalSwitch)
+						log.Noticef("LogicalSwitch ADDED:\n%+v\n", logicalSwitch)
 						//h.MainLogicNotification <- "LS add"
 					}
 				}
@@ -132,11 +132,11 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 						//logicalSwitchPort.Addresses = ovsStringSetToSlice(addresses)
 
 						nb.Logical_Switch_Port[name] = &logicalSwitchPort
-						log.Noticef("LP(  add ):%+v\n", logicalSwitchPort)
+						log.Noticef("Logical Port ADDED:\n%+v\n", logicalSwitchPort)
 						//h.MainLogicNotification <- "LP add"
 					}
 
-					log.Debugf("Port Lookup: %s -> switch: %s\n", name, PortLookup(nb, name))
+					//log.Debugf("Port Lookup: %s -> switch: %s\n", name, PortLookup(nb, name))
 				}
 			}
 		}

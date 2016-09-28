@@ -60,7 +60,7 @@ func OvsLogic(h *MonitorHandler, ovs *Ovs_Database) {
 						iface.IfaceId = ifaceIDstr
 						//PortsToMap(ports, &logicalSwitch.PortsUUID)
 
-						log.Warningf("IF(update):%+v\n", iface)
+						//log.Warningf("IF(update):%+v\n", iface)
 						h.MainLogicNotification <- "IF (update)"
 					} else {
 						/*****Logical_Switch name *NOT* PRESENT IN MAP *******/
@@ -76,7 +76,7 @@ func OvsLogic(h *MonitorHandler, ovs *Ovs_Database) {
 						iface.Up = false
 
 						ovs.Interface[name] = &iface
-						log.Warningf("IF(  add ):%+v\n", iface)
+						//log.Warningf("IF(  add ):%+v\n", iface)
 						h.MainLogicNotification <- "IF (added)"
 					}
 				}

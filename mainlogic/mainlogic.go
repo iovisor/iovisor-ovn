@@ -3,11 +3,12 @@ package mainlogic
 import (
 	"strconv"
 
+	"time"
+
 	"github.com/netgroup-polito/iovisor-ovn/bpf"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
 	l "github.com/op/go-logging"
-	"time"
 )
 
 var log = l.MustGetLogger("politoctrl")
@@ -52,10 +53,10 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 				//it means that the corresponding iomodule is up and the interface connected
 				//log.Debugf("(%s)IFACE UP -> DO NOTHING\n", ifaceName)
 			} else {
-				log.Debugf("(%s)IFACE DOWN, not still mapped to an IOModule\n", ifaceName)
+				//log.Debugf("(%s)IFACE DOWN, not still mapped to an IOModule\n", ifaceName)
 				//Check if interface name belongs to some logical switch
 				logicalSwitchName := ovnmonitor.PortLookup(hh.Nb.NbDatabase, iface.IfaceId)
-				log.Noticef("(%s) port||external-ids:iface-id(%s)-> SWITCH NAME: %s\n", iface.Name, iface.IfaceId, logicalSwitchName)
+				//log.Noticef("(%s) port||external-ids:iface-id(%s)-> SWITCH NAME: %s\n", iface.Name, iface.IfaceId, logicalSwitchName)
 				if logicalSwitchName != "" {
 					//log.Noticef("Switch:%s\n", switchName)
 					if logicalSwitch, ok := hh.Nb.NbDatabase.Logical_Switch[logicalSwitchName]; ok {
@@ -63,7 +64,6 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 							log.Noticef("CREATE NEW SWITCH\n")
 
 							time.Sleep(3500 * time.Millisecond)
-
 
 							_, switchHover := hoverctl.ModulePOST(hh.Dataplane, "bpf", "Switch8", bpf.Switch)
 							logicalSwitch.ModuleId = switchHover.Id
