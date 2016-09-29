@@ -47,6 +47,16 @@ func Cli(dataplane *hoverctl.Dataplane) {
 						switch len(args) {
 						case 2:
 							fmt.Printf("2-> table get\n")
+							_, modules := hoverctl.ModuleListGET(dataplane)
+							for moduleName, _ := range modules {
+								fmt.Printf("**MODULE** -> %s\n", moduleName)
+								_, tables := hoverctl.TableListGET(dataplane, moduleName)
+								for _, tablename := range tables {
+									fmt.Printf("Table *%s*\n", tablename)
+									_, table := hoverctl.TableGET(dataplane, moduleName, tablename)
+									hoverctl.TablePrint(table)
+								}
+							}
 						case 3:
 							fmt.Printf("3-> table get <module-id>\n")
 							_, tables := hoverctl.TableListGET(dataplane, args[2])
