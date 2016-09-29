@@ -27,20 +27,22 @@ func Cli(dataplane *hoverctl.Dataplane) {
 				fmt.Printf("test...\n")
 				//testenv.TestSwitch2ifc(dataplane, "i:veth1_", "i:veth2_")
 			case "interfaces", "i":
-				fmt.Printf("Interfaces:\n")
+				fmt.Printf("\nInterfaces\n\n")
 				_, external_interfaces := hoverctl.ExternalInterfacesListGET(dataplane)
 				hoverctl.ExternalInterfacesListPrint(external_interfaces)
 				// fmt.Printf("%+v\n", external_interfaces)
 			case "modules", "m":
-				fmt.Printf("Modules:\n")
+				//fmt.Printf("\nModules\n")
 				if len(args) >= 2 {
 					switch args[1] {
 					case "get":
 						switch len(args) {
 						case 2:
+							fmt.Printf("\nModules GET\n\n")
 							_, modules := hoverctl.ModuleListGET(dataplane)
 							hoverctl.ModuleListPrint(modules)
 						case 3:
+							fmt.Printf("\nModules GET\n\n")
 							_, module := hoverctl.ModuleGET(dataplane, args[2])
 							hoverctl.ModulePrint(module)
 						default:
@@ -49,6 +51,7 @@ func Cli(dataplane *hoverctl.Dataplane) {
 					case "post":
 						switch len(args) {
 						case 3:
+							fmt.Printf("\nModules POST\n\n")
 							if args[2] == "switch" {
 								_, module := hoverctl.ModulePOST(dataplane, "bpf", "Switch", bpf.Switch)
 								hoverctl.ModulePrint(module)
@@ -61,6 +64,7 @@ func Cli(dataplane *hoverctl.Dataplane) {
 					case "delete":
 						switch len(args) {
 						case 3:
+							fmt.Printf("\nModules DELETE\n\n")
 							hoverctl.ModuleDELETE(dataplane, args[2])
 						default:
 							PrintModulesUsage()
@@ -78,15 +82,17 @@ func Cli(dataplane *hoverctl.Dataplane) {
 			// 	hoverctl.ModuleListPrint(modules)
 			// fmt.Printf("%+v\n", modules)
 			case "links", "l":
-				fmt.Printf("Links:\n")
+				//fmt.Printf("Links:\n")
 				if len(args) >= 2 {
 					switch args[1] {
 					case "get":
 						switch len(args) {
 						case 2:
+							fmt.Printf("\nLinks GET\n\n")
 							_, links := hoverctl.LinkListGet(dataplane)
 							hoverctl.LinkListPrint(links)
 						case 3:
+							fmt.Printf("\nLinks GET\n\n")
 							_, link := hoverctl.LinkGET(dataplane, args[2])
 							hoverctl.LinkPrint(link)
 						default:
@@ -95,6 +101,7 @@ func Cli(dataplane *hoverctl.Dataplane) {
 					case "post":
 						switch len(args) {
 						case 4:
+							fmt.Printf("\nLinks POST\n\n")
 							_, link := hoverctl.LinkPOST(dataplane, args[2], args[3])
 							hoverctl.LinkPrint(link)
 						default:
@@ -103,6 +110,7 @@ func Cli(dataplane *hoverctl.Dataplane) {
 					case "delete":
 						switch len(args) {
 						case 3:
+							fmt.Printf("\nLinks DELETE\n\n")
 							hoverctl.LinkDELETE(dataplane, args[2])
 						default:
 							PrintLinksUsage()
@@ -120,7 +128,7 @@ func Cli(dataplane *hoverctl.Dataplane) {
 					case "get":
 						switch len(args) {
 						case 2:
-							fmt.Printf("2-> table get\n")
+							fmt.Printf("\nTable GET\n\n")
 							_, modules := hoverctl.ModuleListGET(dataplane)
 							for moduleName, _ := range modules {
 								fmt.Printf("**MODULE** -> %s\n", moduleName)
@@ -132,7 +140,7 @@ func Cli(dataplane *hoverctl.Dataplane) {
 								}
 							}
 						case 3:
-							fmt.Printf("3-> table get <module-id>\n")
+							fmt.Printf("\nTable GET\n\n")
 							_, tables := hoverctl.TableListGET(dataplane, args[2])
 							for _, tablename := range tables {
 								fmt.Printf("Table *%s*\n", tablename)
@@ -140,11 +148,11 @@ func Cli(dataplane *hoverctl.Dataplane) {
 								hoverctl.TablePrint(table)
 							}
 						case 4:
-							fmt.Printf("4-> table get <module-id> <table-id>\n")
+							fmt.Printf("\nTable GET\n\n")
 							_, table := hoverctl.TableGET(dataplane, args[2], args[3])
 							hoverctl.TablePrint(table)
 						case 5:
-							fmt.Printf("5-> table get <module-id> <table-id> <entry-key>\n")
+							fmt.Printf("\nTable GET\n\n")
 							_, tableEntry := hoverctl.TableEntryGET(dataplane, args[2], args[3], args[4])
 							hoverctl.TableEntryPrint(tableEntry)
 						default:
@@ -152,6 +160,7 @@ func Cli(dataplane *hoverctl.Dataplane) {
 						}
 					case "put":
 						if len(args) == 6 {
+							fmt.Printf("\nTable PUT\n\n")
 							_, tableEntry := hoverctl.TableEntryPUT(dataplane, args[2], args[3], args[4], args[5])
 							hoverctl.TableEntryPrint(tableEntry)
 						} else {
@@ -159,6 +168,7 @@ func Cli(dataplane *hoverctl.Dataplane) {
 						}
 					case "delete":
 						if len(args) == 5 {
+							fmt.Printf("\nTable DELETE\n\n")
 							hoverctl.TableEntryDELETE(dataplane, args[2], args[3], args[4])
 						} else {
 							PrintTableUsage()
@@ -174,10 +184,11 @@ func Cli(dataplane *hoverctl.Dataplane) {
 
 			case "":
 			default:
-				fmt.Println("invalid command")
+				fmt.Println("\nInvalid Command\n\n")
 				PrintHelp()
 			}
 		}
+		fmt.Printf("\n")
 	}
 }
 
@@ -189,35 +200,41 @@ func TrimSuffix(s, suffix string) string {
 }
 
 func PrintTableUsage() {
-	fmt.Printf("Table Usage:\n")
-	fmt.Printf("table get\n")
-	fmt.Printf("table get <module-id>\n")
-	fmt.Printf("table get <module-id> <table-id>\n")
-	fmt.Printf("table get <module-id> <table-id> <entry-key>\n")
-	fmt.Printf("table put <module-id> <table-id> <entry-key> <entry-value>\n")
-	fmt.Printf("table delete <module-id> <table-id> <entry-key> <entry-value>\n")
+	fmt.Printf("\nTable Usage\n\n")
+	fmt.Printf("	table get\n")
+	fmt.Printf("	table get <module-id>\n")
+	fmt.Printf("	table get <module-id> <table-id>\n")
+	fmt.Printf("	table get <module-id> <table-id> <entry-key>\n")
+	fmt.Printf("	table put <module-id> <table-id> <entry-key> <entry-value>\n")
+	fmt.Printf("	table delete <module-id> <table-id> <entry-key> <entry-value>\n")
 }
 
 func PrintLinksUsage() {
-	fmt.Printf("Links Usage:\n")
-	fmt.Printf("links get\n")
-	fmt.Printf("links get <link-id>\n")
-	fmt.Printf("links post <from> <to>\n")
-	fmt.Printf("links delete <link-id>\n")
+	fmt.Printf("\nLinks Usage\n\n")
+	fmt.Printf("	links get\n")
+	fmt.Printf("	links get <link-id>\n")
+	fmt.Printf("	links post <from> <to>\n")
+	fmt.Printf("	links delete <link-id>\n")
 }
 
 func PrintModulesUsage() {
-	fmt.Printf("Modules Usage:\n")
-	fmt.Printf("modules get\n")
-	fmt.Printf("modules get <module-id>\n")
-	fmt.Printf("modules post <module-name>\n")
-	fmt.Printf("modules delete <module-id>\n")
+	fmt.Printf("\nModules Usage\n\n")
+	fmt.Printf("	modules get\n")
+	fmt.Printf("	modules get <module-id>\n")
+	fmt.Printf("	modules post <module-name>\n")
+	fmt.Printf("	modules delete <module-id>\n")
 }
 
 func PrintHelp() {
+	fmt.Printf("\n")
+	fmt.Printf("IOVisor-OVN Command Line Interface HELP\n\n")
 	fmt.Printf("	interfaces, i    prints /external_interfaces/\n")
 	fmt.Printf("	modules, m       prints /modules/\n")
 	fmt.Printf("	links, l         prints /links/\n")
-	fmt.Printf("	table, t         prints tables\n")
-	fmt.Printf("\n	help, h             print help\n")
+	fmt.Printf("	table, t         prints tables\n\n")
+	fmt.Printf("	help, h          print help\n")
+	fmt.Printf("\n")
+	PrintModulesUsage()
+	PrintLinksUsage()
+	PrintTableUsage()
 }
