@@ -1,0 +1,89 @@
+ovn@openstack-ovn-1:~/iovisor-ovn/examples/demo$ ./0_run_hoverd.sh
+INF: 2016/09/28 02:40:53 IOVisor HTTP Daemon starting...
+DBG: 2016/09/28 02:40:53 server.go:217: Patch panel modules table loaded: map[leaf_size:4 key_desc:"int" leaf_desc:"int" name:modules fd:4 key_size:4]
+DBG: 2016/09/28 02:40:53 netlink_monitor.go:98: link lo master 0
+DBG: 2016/09/28 02:40:53 netlink_monitor.go:98: link enp0s3 master 0
+DBG: 2016/09/28 02:40:53 graph.go:245: AddNode b:virbr0 0
+DBG: 2016/09/28 02:40:53 netlink_monitor.go:98: link virbr0-nic master 0
+DBG: 2016/09/28 02:40:53 netlink_monitor.go:98: link ovs-system master 0
+DBG: 2016/09/28 02:40:53 netlink_monitor.go:98: link br-int master 0
+
+/*ADD veth1_ etc and everything seems to work*/
+DBG: 2016/09/28 02:40:53 netlink_monitor.go:98: link veth1_ master 0
+DBG: 2016/09/28 02:40:53 netlink_monitor.go:98: link veth2_ master 0
+DBG: 2016/09/28 02:40:53 netlink_monitor.go:98: link veth3_ master 0
+DBG: 2016/09/28 02:40:53 netlink_monitor.go:98: link veth4_ master 0
+DBG: 2016/09/28 02:40:53 netlink_monitor.go:98: link veth5_ master 0
+DBG: 2016/09/28 02:40:53 netlink_monitor.go:74: NewNetlinkMonitor DONE
+INF: 2016/09/28 02:40:53 NetlinkMonitor=0xc82010a1e0
+INF: 2016/09/28 02:40:53 Hover Server listening on 127.0.0.1:5002
+
+/*Openstack  adds 2 taps -> and the state of the ports changes a lot of times before became stable!*/
+DBG: 2016/09/28 02:41:36 netlink_monitor.go:98: link tap3f467ca7-84 master 0
+DBG: 2016/09/28 02:41:36 netlink_monitor.go:98: link tap3f467ca7-84 master 0
+DBG: 2016/09/28 02:41:36 netlink_monitor.go:98: link tap3f467ca7-84 master 0
+DBG: 2016/09/28 02:41:36 netlink_monitor.go:98: link tap3f467ca7-84 master 5
+ERR: 2016/09/28 02:41:36 Newlink failed master change unsupported non-bridge master
+DBG: 2016/09/28 02:41:36 netlink_monitor.go:98: link tap3f467ca7-84 master 5
+ERR: 2016/09/28 02:41:36 Newlink failed master change unsupported non-bridge master
+DBG: 2016/09/28 02:41:36 netlink_monitor.go:98: link tap3f467ca7-84 master 5
+ERR: 2016/09/28 02:41:36 Newlink failed master change unsupported non-bridge master
+DBG: 2016/09/28 02:41:36 netlink_monitor.go:98: link tap3f467ca7-84 master 5
+ERR: 2016/09/28 02:41:36 Newlink failed master change unsupported non-bridge master
+DBG: 2016/09/28 02:41:36 netlink_monitor.go:98: link tap3f467ca7-84 master 5
+ERR: 2016/09/28 02:41:36 Newlink failed master change unsupported non-bridge master
+DBG: 2016/09/28 02:41:36 netlink_monitor.go:98: link tap3f467ca7-84 master 5
+ERR: 2016/09/28 02:41:36 Newlink failed master change unsupported non-bridge master
+DBG: 2016/09/28 02:41:38 netlink_monitor.go:98: link tap12134abe-d1 master 0
+DBG: 2016/09/28 02:41:38 netlink_monitor.go:98: link tap12134abe-d1 master 0
+DBG: 2016/09/28 02:41:38 netlink_monitor.go:98: link tap12134abe-d1 master 0
+DBG: 2016/09/28 02:41:38 netlink_monitor.go:98: link tap12134abe-d1 master 5
+ERR: 2016/09/28 02:41:38 Newlink failed master change unsupported non-bridge master
+DBG: 2016/09/28 02:41:38 netlink_monitor.go:98: link tap12134abe-d1 master 5
+ERR: 2016/09/28 02:41:38 Newlink failed master change unsupported non-bridge master
+DBG: 2016/09/28 02:41:38 netlink_monitor.go:98: link tap12134abe-d1 master 5
+ERR: 2016/09/28 02:41:38 Newlink failed master change unsupported non-bridge master
+DBG: 2016/09/28 02:41:38 netlink_monitor.go:98: link tap12134abe-d1 master 5
+ERR: 2016/09/28 02:41:38 Newlink failed master change unsupported non-bridge master
+DBG: 2016/09/28 02:41:38 netlink_monitor.go:98: link tap12134abe-d1 master 5
+ERR: 2016/09/28 02:41:38 Newlink failed master change unsupported non-bridge master
+DBG: 2016/09/28 02:41:38 netlink_monitor.go:98: link tap12134abe-d1 master 5
+ERR: 2016/09/28 02:41:38 Newlink failed master change unsupported non-bridge master
+DBG: 2016/09/28 02:41:39 graph.go:245: AddNode 1stub: 1
+DBG: 2016/09/28 02:41:40 graph.go:250: RemoveNode 1stub: 1
+DBG: 2016/09/28 02:41:40 graph.go:245: AddNode m:7f539527 1
+INF: 2016/09/28 02:41:40 POST /modules/ 200
+DBG: 2016/09/28 02:41:40 graph.go:245: AddNode i:tap3f467ca7-84 2
+INF: 2016/09/28 02:41:40 Provisioning i:tap3f467ca7-84 (2)
+INF: 2016/09/28 02:41:40 Provisioning m:7f539527 (1)
+INF: 2016/09/28 02:41:40 visit: id=2 :: fd=14 :: i:tap3f467ca7-84 :: 34
+INF: 2016/09/28 02:41:40     1: m:7f539527 {[0x10001 0x0 0x0 0x0]}
+INF: 2016/09/28 02:41:40 visit: 1 :: m:7f539527
+INF: 2016/09/28 02:41:40     1: i:tap3f467ca7-84{[0x10002 0x0 0x0 0x0]}
+INF: 2016/09/28 02:41:40 POST /links/ 200
+INF: 2016/09/28 02:41:40 GET /external_interfaces/ 200
+INF: 2016/09/28 02:41:40 PUT /modules/m:7f539527/tables/ports/entries/1 200
+DBG: 2016/09/28 02:41:42 netlink_monitor.go:98: link tap12134abe-d1 master 5
+ERR: 2016/09/28 02:41:42 Newlink failed master change unsupported non-bridge master
+DBG: 2016/09/28 02:41:43 netlink_monitor.go:98: link tap3f467ca7-84 master 5
+ERR: 2016/09/28 02:41:43 Newlink failed master change unsupported non-bridge master
+DBG: 2016/09/28 02:41:43 graph.go:245: AddNode i:tap12134abe-d1 3
+INF: 2016/09/28 02:41:43 Provisioning i:tap3f467ca7-84 (2)
+INF: 2016/09/28 02:41:43 Provisioning m:7f539527 (1)
+INF: 2016/09/28 02:41:43 Provisioning i:tap12134abe-d1 (3)
+INF: 2016/09/28 02:41:43 visit: id=3 :: fd=15 :: i:tap12134abe-d1 :: 35
+INF: 2016/09/28 02:41:43     1: m:7f539527 {[0x20001 0x0 0x0 0x0]}
+INF: 2016/09/28 02:41:43 visit: id=2 :: fd=14 :: i:tap3f467ca7-84 :: 34
+INF: 2016/09/28 02:41:43     1: m:7f539527 {[0x10001 0x0 0x0 0x0]}
+INF: 2016/09/28 02:41:43 visit: 1 :: m:7f539527
+INF: 2016/09/28 02:41:43     1: i:tap3f467ca7-84{[0x10002 0x0 0x0 0x0]}
+INF: 2016/09/28 02:41:43     2: i:tap12134abe-d1{[0x10003 0x0 0x0 0x0]}
+INF: 2016/09/28 02:41:43 POST /links/ 200
+INF: 2016/09/28 02:41:43 GET /external_interfaces/ 200
+INF: 2016/09/28 02:41:43 PUT /modules/m:7f539527/tables/ports/entries/2 200
+INF: 2016/09/28 02:47:33 GET /external_interfaces/ 200
+INF: 2016/09/28 02:47:58 GET /links/ 200
+INF: 2016/09/28 02:48:29 GET /modules/ 200
+INF: 2016/09/28 02:48:29 GET /modules/ 200
+DBG: 2016/09/28 05:09:39 netlink_monitor.go:98: link enp0s3 master 0
+DBG: 2016/09/28 05:09:39 netlink_monitor.go:98: link enp0s3 master 0
