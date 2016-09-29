@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/netgroup-polito/iovisor-ovn/bpf"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 )
 
@@ -32,9 +33,50 @@ func Cli(dataplane *hoverctl.Dataplane) {
 				// fmt.Printf("%+v\n", external_interfaces)
 			case "modules", "m":
 				fmt.Printf("Modules:\n")
-				_, modules := hoverctl.ModuleListGET(dataplane)
-				hoverctl.ModuleListPrint(modules)
-				// fmt.Printf("%+v\n", modules)
+				if len(args) >= 2 {
+					switch args[1] {
+					case "get":
+						switch len(args) {
+						case 2:
+							_, modules := hoverctl.ModuleListGET(dataplane)
+							hoverctl.ModuleListPrint(modules)
+						case 3:
+							_, module := hoverctl.ModuleGET(dataplane, args[2])
+							hoverctl.ModulePrint(module)
+						default:
+							PrintModulesUsage()
+						}
+					case "post":
+						switch len(args) {
+						case 3:
+							if args[2] == "switch" {
+								_, module := hoverctl.ModulePOST(dataplane, "bpf", "Switch", bpf.Switch)
+								hoverctl.ModulePrint(module)
+							} else {
+								//TODO Print modules list
+							}
+						default:
+							PrintModulesUsage()
+						}
+					case "delete":
+						switch len(args) {
+						case 3:
+							hoverctl.ModuleDELETE(dataplane, args[2])
+						default:
+							PrintModulesUsage()
+						}
+					default:
+						PrintModulesUsage()
+					}
+				} else {
+					PrintModulesUsage()
+				}
+
+			// case "modules", "m":
+			// 	fmt.Printf("Modules:\n")
+			// 	_, modules := hoverctl.ModuleListGET(dataplane)
+			// 	hoverctl.ModuleListPrint(modules)
+			// fmt.Printf("%+v\n", modules)
 			case "links", "l":
 				fmt.Printf("Links:\n")
 				if len(args) >= 2 {
@@ -160,8 +202,16 @@ func PrintLinksUsage() {
 	fmt.Printf("Links Usage:\n")
 	fmt.Printf("links get\n")
 	fmt.Printf("links get <link-id>\n")
-	fmt.Printf("links delete <link-id>\n")
 	fmt.Printf("links post <from> <to>\n")
+	fmt.Printf("links delete <link-id>\n")
+}
+
+func PrintModulesUsage() {
+	fmt.Printf("Modules Usage:\n")
+	fmt.Printf("modules get\n")
+	fmt.Printf("modules get <module-id>\n")
+	fmt.Printf("modules post <module-name>\n")
+	fmt.Printf("modules delete <module-id>\n")
 }
 
 func PrintHelp() {
