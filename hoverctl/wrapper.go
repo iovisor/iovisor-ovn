@@ -86,7 +86,7 @@ func (d *Dataplane) sendObject(method string, url string, requestObj interface{}
 	LinkModule(Dataplane,from,to)
   LinkModule(d,i:veth0,m:12345ab)
 */
-func LinkPOST(d *Dataplane, from string, to string) (error, LinkEntry) {
+func LinkPOST(d *Dataplane, from string, to string) (error, Link) {
 	log.Infof("link POST %s <--> %s\n", from, to)
 
 	request := map[string]interface{}{
@@ -94,7 +94,7 @@ func LinkPOST(d *Dataplane, from string, to string) (error, LinkEntry) {
 		"to":   to,
 	}
 
-	var link LinkEntry
+	var link Link
 	err := d.sendObject("POST", "/links/", request, &link)
 	if err != nil {
 		log.Warning(err)
@@ -105,12 +105,12 @@ func LinkPOST(d *Dataplane, from string, to string) (error, LinkEntry) {
 	return nil, link
 }
 
-func LinkGET(d *Dataplane, linkId string) (error, LinkEntry) {
+func LinkGET(d *Dataplane, linkId string) (error, Link) {
 	log.Infof("link GET %s\n", linkId)
 
 	request := map[string]interface{}{}
 
-	var link LinkEntry
+	var link Link
 	err := d.sendObject("GET", "/links/"+linkId, request, &link)
 	if err != nil {
 		log.Warning(err)
@@ -120,12 +120,12 @@ func LinkGET(d *Dataplane, linkId string) (error, LinkEntry) {
 	return nil, link
 }
 
-func LinkDELETE(d *Dataplane, linkId string) (error, LinkEntry) {
+func LinkDELETE(d *Dataplane, linkId string) (error, Link) {
 	log.Infof("link DELETE %s\n", linkId)
 
 	request := map[string]interface{}{}
 
-	var link LinkEntry
+	var link Link
 	err := d.sendObject("DELETE", "/links/"+linkId, request, &link)
 	if err != nil {
 		log.Warning(err)
@@ -135,9 +135,9 @@ func LinkDELETE(d *Dataplane, linkId string) (error, LinkEntry) {
 	return nil, link
 }
 
-func LinkListGet(d *Dataplane) (error, map[string]LinkEntry) {
+func LinkListGet(d *Dataplane) (error, map[string]Link) {
 	log.Info("getting links list")
-	links := map[string]LinkEntry{}
+	links := map[string]Link{}
 
 	resp, e := d.client.Get(d.baseUrl + "/links/")
 	if e != nil {
@@ -154,7 +154,7 @@ func LinkListGet(d *Dataplane) (error, map[string]LinkEntry) {
 	}
 
 	for i := range data {
-		l := LinkEntry{}
+		l := Link{}
 		item := data[i]
 
 		id, _ := item["id"].(string)
@@ -313,56 +313,118 @@ func ExternalInterfacesListGET(d *Dataplane) (error, map[string]ExternalInterfac
 
 /*-----------TABLES-------------*/
 
-func TableEntryPUT(d *Dataplane, moduleId string, tableId string, entryId string, entryValue string) (error, ModuleTableEntry) {
+func TableEntryPUT(d *Dataplane, moduleId string, tableId string, entryId string, entryValue string) (error, TableEntry) {
 	log.Infof("table entry PUT /modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId+" {%s,%s}\n", entryId, entryValue)
 
 	req := map[string]interface{}{
 		"key":   entryId,
 		"value": entryValue,
 	}
-	var moduleTableEntry ModuleTableEntry
-	err := d.sendObject("PUT", "/modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId, req, &moduleTableEntry)
+	var tableEntry TableEntry
+	err := d.sendObject("PUT", "/modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId, req, &tableEntry)
 	if err != nil {
 		log.Warning(err)
-		return err, moduleTableEntry
+		return err, tableEntry
 	}
 
-	log.Debugf("table entry PUT /modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId+" {%s,%s} OK\n", moduleTableEntry.Key, moduleTableEntry.Value)
+	log.Debugf("table entry PUT /modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId+" {%s,%s} OK\n", tableEntry.Key, tableEntry.Value)
 
-	return nil, moduleTableEntry
+	return nil, tableEntry
 }
 
-func TableEntryGET(d *Dataplane, moduleId string, tableId string, entryId string) (error, ModuleTableEntry) {
+func TableEntryGET(d *Dataplane, moduleId string, tableId string, entryId string) (error, TableEntry) {
 	log.Infof("table entry GET /modules/" + moduleId + "/tables/" + tableId + "/entries/" + entryId + "\n")
 
 	req := map[string]interface{}{}
-	var moduleTableEntry ModuleTableEntry
-	err := d.sendObject("GET", "/modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId, req, &moduleTableEntry)
+	var tableEntry TableEntry
+	err := d.sendObject("GET", "/modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId, req, &tableEntry)
 	if err != nil {
 		log.Warning(err)
-		return err, moduleTableEntry
+		return err, tableEntry
 	}
 
-	log.Debugf("table entry GET /modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId+" {%s,%s} OK\n", moduleTableEntry.Key, moduleTableEntry.Value)
+	log.Debugf("table entry GET /modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId+" {%s,%s} OK\n", tableEntry.Key, tableEntry.Value)
 
-	return nil, moduleTableEntry
+	return nil, tableEntry
+}
+
+func TableGET(d *Dataplane, moduleId string, tableId string) (error, map[string]TableEntry) {
+	log.Infof("table GET /modules/" + moduleId + "/tables/" + tableId + "/entries/\n")
+
+	table := map[string]TableEntry{}
+
+	resp, e := d.client.Get(d.baseUrl + "/modules/" + moduleId + "/tables/" + tableId + "/entries/")
+	if e != nil {
+		return e, table
+	}
+	defer resp.Body.Close()
+
+	var data []map[string]interface{}
+
+	err := json.NewDecoder(resp.Body).Decode(&data)
+	if err != nil {
+		log.Errorf("%s\n", err)
+		return err, table
+	}
+
+	for i := range data {
+		item := data[i]
+		key, _ := item["key"].(string)
+		value, _ := item["value"].(string)
+		tableEntry := TableEntry{key, value}
+		table[key] = tableEntry
+	}
+
+	//log.Noticef("%+v\n", external_interfaces)
+	log.Infof("table GET /modules/" + moduleId + "/tables/" + tableId + "/entries/ OK\n")
+	return nil, table
+}
+
+func TableListGET(d *Dataplane, moduleId string) (error, map[string]string) {
+	log.Infof("table GET /modules/" + moduleId + "/tables/\n")
+
+	tables := map[string]string{}
+
+	resp, e := d.client.Get(d.baseUrl + "/modules/" + moduleId + "/tables/")
+	if e != nil {
+		return e, tables
+	}
+	defer resp.Body.Close()
+
+	var data []map[string]interface{}
+
+	err := json.NewDecoder(resp.Body).Decode(&data)
+	if err != nil {
+		log.Errorf("%s\n", err)
+		return err, tables
+	}
+
+	for i := range data {
+		item := data[i]
+		name, _ := item["name"].(string)
+		tables[name] = name
+	}
+
+	//log.Noticef("%+v\n", external_interfaces)
+	log.Infof("table GET /modules/" + moduleId + "/tables/ OK\n")
+	return nil, tables
 }
 
 /*Not Working? Depending on Hover delete entryId on arrays? */
-func TableEntryDELETE(d *Dataplane, moduleId string, tableId string, entryId string) (error, ModuleTableEntry) {
+func TableEntryDELETE(d *Dataplane, moduleId string, tableId string, entryId string) (error, TableEntry) {
 	log.Infof("table entry DELETE /modules/" + moduleId + "/tables/" + tableId + "/entries/" + entryId + "\n")
 
 	req := map[string]interface{}{}
-	var moduleTableEntry ModuleTableEntry
-	err := d.sendObject("DELETE", "/modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId, req, &moduleTableEntry)
+	var tableEntry TableEntry
+	err := d.sendObject("DELETE", "/modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId, req, &tableEntry)
 	if err != nil {
 		log.Warning(err)
-		return err, moduleTableEntry
+		return err, tableEntry
 	}
 
 	log.Debugf("table entry DELETE /modules/" + moduleId + "/tables/" + tableId + "/entries/" + entryId + " OK\n")
 
-	return nil, moduleTableEntry
+	return nil, tableEntry
 }
 
 /*

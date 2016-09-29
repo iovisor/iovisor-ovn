@@ -38,13 +38,13 @@ type ExternalInterface struct {
 	Name string `json:"name"`
 }
 
-type LinkEntry struct {
+type Link struct {
 	Id   string `json:"id"`
 	From string `json:"from"`
 	To   string `json:"to"`
 }
 
-type ModuleTableEntry struct {
+type TableEntry struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }

@@ -5,11 +5,11 @@ import (
 	"strings"
 )
 
-func LinkPrint(link LinkEntry) {
+func LinkPrint(link Link) {
 	fmt.Printf("link-id:%15s   from: %10s  to: %10s\n", link.Id, link.From, link.To)
 }
 
-func LinkListPrint(linkList map[string]LinkEntry) {
+func LinkListPrint(linkList map[string]Link) {
 	for _, link := range linkList {
 		LinkPrint(link)
 	}
@@ -37,6 +37,16 @@ func ExternalInterfacesListPrint(externalInterfacesList map[string]ExternalInter
 	for _, externalInterface := range externalInterfacesList {
 		ExternalInterfacePrint(externalInterface)
 	}
+}
+
+func TablePrint(table map[string]TableEntry) {
+	for _, tableEntry := range table {
+		TableEntryPrint(tableEntry)
+	}
+}
+
+func TableEntryPrint(tableEntry TableEntry) {
+	fmt.Printf("key: %15s	value: %15s\n", tableEntry.Key, tableEntry.Value)
 }
 
 func PrintFirstNLines(s string, nlines int) {
