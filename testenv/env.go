@@ -1,3 +1,7 @@
+// TestEnv launches a set of predefined configurations.
+// It is useful to launch some fixed environments
+// for example a switch witch ports connected to veth1_ veth2_ etc..
+
 package testenv
 
 import (
@@ -23,6 +27,17 @@ func TestEnv(dataplane *hoverctl.Dataplane) {
 
 	TestSwitch5(dataplane)
 
+}
+
+//2 ports switch test implementation
+//veth1_ <-> DummySwitch2 <-> veth2_
+func TestLinkPostDelete(dataplane *hoverctl.Dataplane) {
+	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch2", bpf.Switch2Redirect)
+	_, l1 := hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
+	_, l2 := hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
+	time.Sleep(time.Millisecond * 2000)
+	hoverctl.LinkDELETE(dataplane, l1.Id)
+	hoverctl.LinkDELETE(dataplane, l2.Id)
 }
 
 //2 ports switch test implementation
@@ -120,7 +135,7 @@ func TestSwitch2count(dataplane *hoverctl.Dataplane) {
 	hoverctl.TableEntryGET(dataplane, sw.Id, "count", "0x1")
 }
 
-func printLink(l hoverctl.LinkEntry) {
+func printLink(l hoverctl.Link) {
 	fmt.Printf("id: %s\nfrom: %s\nto: %s\n", l.Id, l.From, l.To)
 }
 

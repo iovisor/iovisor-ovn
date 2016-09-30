@@ -1,3 +1,7 @@
+// Inline command line interface for debug purposes
+// in future this cli will be a separate go program that connects to the main iovisor-ovn daemon
+// in future this cli will use a cli go library (e.g. github.com/urfave/cli )
+
 package cli
 
 import (
@@ -8,6 +12,7 @@ import (
 
 	"github.com/netgroup-polito/iovisor-ovn/bpf"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+	"github.com/netgroup-polito/iovisor-ovn/testenv"
 )
 
 func Cli(dataplane *hoverctl.Dataplane) {
@@ -24,7 +29,8 @@ func Cli(dataplane *hoverctl.Dataplane) {
 		if len(args) >= 1 {
 			switch args[0] {
 			case "test":
-				fmt.Printf("test...\n")
+				fmt.Printf("\ntest\n\n")
+				testenv.TestLinkPostDelete(dataplane)
 				//testenv.TestSwitch2ifc(dataplane, "i:veth1_", "i:veth2_")
 			case "interfaces", "i":
 				fmt.Printf("\nInterfaces\n\n")
