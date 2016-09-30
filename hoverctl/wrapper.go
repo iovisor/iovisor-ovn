@@ -56,8 +56,8 @@ func (d *Dataplane) sendObject(method string, url string, requestObj interface{}
 		resp, e = d.client.Get(d.baseUrl + url)
 	default:
 		req, e = http.NewRequest(method, d.baseUrl+url, bytes.NewReader(b))
-		if err != nil {
-			log.Errorf("%s\n", err)
+		if e != nil {
+			log.Errorf("%s\n", e)
 		}
 		resp, e = d.client.Do(req)
 	}
@@ -126,11 +126,12 @@ func LinkDELETE(d *Dataplane, linkId string) (error, Link) {
 	request := map[string]interface{}{}
 
 	var link Link
-	err := d.sendObject("DELETE", "/links/"+linkId, request, &link)
+	err := d.sendObject("DELETE", "/links/"+linkId, request, nil /*&link*/)
 	if err != nil {
 		log.Warning(err)
 		return err, link
 	}
+
 	log.Debugf("link DELETE %s OK\n", linkId)
 	return nil, link
 }
@@ -221,7 +222,7 @@ func ModuleDELETE(d *Dataplane, moduleId string) (error, Module) {
 
 	req := map[string]interface{}{}
 	var module Module
-	err := d.sendObject("DELETE", "/modules/"+moduleId, req, &module)
+	err := d.sendObject("DELETE", "/modules/"+moduleId, req, nil /* &module*/)
 	if err != nil {
 		log.Warning(err)
 		return err, module
@@ -416,7 +417,7 @@ func TableEntryDELETE(d *Dataplane, moduleId string, tableId string, entryId str
 
 	req := map[string]interface{}{}
 	var tableEntry TableEntry
-	err := d.sendObject("DELETE", "/modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId, req, &tableEntry)
+	err := d.sendObject("DELETE", "/modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId, req, nil /*&tableEntry*/)
 	if err != nil {
 		log.Warning(err)
 		return err, tableEntry
