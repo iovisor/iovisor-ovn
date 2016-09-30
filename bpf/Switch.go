@@ -36,7 +36,7 @@ static int handle_rx(void *skb, struct metadata *md) {
 	src_info.rx_pkts = 0;
 	src_info.tx_pkts = 0;
 
-  bpf_trace_printk("pkt from:%x -> to:%x\n",ethernet->src,ethernet->dst);
+	bpf_trace_printk("pkt from:%x -> to:%x\n",ethernet->src,ethernet->dst);
 
 	//lookup in mac2host; if no key present -> initialize with src_info
 	struct host_info *src_host = mac2host.lookup_or_init(&src_key, &src_info);
@@ -64,59 +64,59 @@ static int handle_rx(void *skb, struct metadata *md) {
 		//redirect packet to correspondent interface
 		pkt_redirect(skb, md, dst_host->ifindex);
 
-    bpf_trace_printk("lookup hit -> redirect to %d\n",dst_host->ifindex);
+		bpf_trace_printk("lookup hit -> redirect to %d\n",dst_host->ifindex);
 
 		return RX_REDIRECT;
 
 	} else {
-    //MISS in forwarding table
-    bpf_trace_printk("lookup miss->  broadcast\n");
+		//MISS in forwarding table
+		bpf_trace_printk("lookup miss->  broadcast\n");
 
-    u32  iface_n = 1;
-    u32 *iface_p;
+		u32  iface_n = 1;
+		u32 *iface_p;
 
 		//Manual unroll to avoid ebpf verifier error due to loops
 		//#pragma unroll seems not to work
 
-    iface_n = 1; iface_p = ports.lookup(&iface_n);
-    if(iface_p)
-      if(*iface_p != 0)
-        bpf_clone_redirect(skb,*iface_p,0);
+		iface_n = 1; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
 
-    iface_n = 2; iface_p = ports.lookup(&iface_n);
-    if(iface_p)
-      if(*iface_p != 0)
-        bpf_clone_redirect(skb,*iface_p,0);
+		iface_n = 2; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
 
-    iface_n = 3; iface_p = ports.lookup(&iface_n);
-      if(iface_p)
-        if(*iface_p != 0)
-          bpf_clone_redirect(skb,*iface_p,0);
+		iface_n = 3; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
 
-    iface_n = 4; iface_p = ports.lookup(&iface_n);
-      if(iface_p)
-        if(*iface_p != 0)
-          bpf_clone_redirect(skb,*iface_p,0);
+		iface_n = 4; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
 
-    iface_n = 5; iface_p = ports.lookup(&iface_n);
-      if(iface_p)
-        if(*iface_p != 0)
-          bpf_clone_redirect(skb,*iface_p,0);
+		iface_n = 5; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
 
-    iface_n = 6; iface_p = ports.lookup(&iface_n);
-      if(iface_p)
-        if(*iface_p != 0)
-          bpf_clone_redirect(skb,*iface_p,0);
+		iface_n = 6; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
 
-    iface_n = 7; iface_p = ports.lookup(&iface_n);
-      if(iface_p)
-        if(*iface_p != 0)
-          bpf_clone_redirect(skb,*iface_p,0);
+		iface_n = 7; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
 
-    iface_n = 8; iface_p = ports.lookup(&iface_n);
-      if(iface_p)
-        if(*iface_p != 0)
-          bpf_clone_redirect(skb,*iface_p,0);
+		iface_n = 8; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
 
 		return RX_DROP;
 	}

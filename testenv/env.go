@@ -58,12 +58,12 @@ func TestSwitch2ifc(dataplane *hoverctl.Dataplane, ifc1 string, ifc2 string) {
 
 //3 ports switch test implementation
 //veth123_ <-> DummySwitch3
-func TestSwitch3(dataplane *hoverctl.Dataplane) {
-	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch3", bpf.DummySwitch3)
-	/*	_, l1 := */ hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
-	/*	_, l2 := */ hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
-	/*	_, l3 := */ hoverctl.LinkPOST(dataplane, "i:veth3_", sw.Id)
-}
+// func TestSwitch3(dataplane *hoverctl.Dataplane) {
+// 	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch3", bpf.DummySwitch3)
+// 	/*	_, l1 := */ hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
+// 	/*	_, l2 := */ hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
+// 	/*	_, l3 := */ hoverctl.LinkPOST(dataplane, "i:veth3_", sw.Id)
+// }
 
 //8 ports switch implementation with 5 ports attached
 //veth12345_ <-> Switch
@@ -98,42 +98,42 @@ func TestSwitch5(dataplane *hoverctl.Dataplane) {
 //2 ports switch test implementation & pkt count
 //veth1_ <-> DummySwitch2 <-> veth2_
 //with counters
-func TestSwitch2count(dataplane *hoverctl.Dataplane) {
-
-	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch2count", bpf.DummySwitch2count)
-	/*	_, l1 := */ hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
-	/*	_, l2 := */ hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
-
-	//get Count before packet traffic
-	hoverctl.TableEntryGET(dataplane, sw.Id, "count", "0x1")
-
-	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
-
-	//wait...
-	time.Sleep(time.Second * 8)
-
-	//get Count after packet traffic
-	hoverctl.TableEntryGET(dataplane, sw.Id, "count", "0x1")
-
-	//force value to counter
-	hoverctl.TableEntryPUT(dataplane, sw.Id, "count", "0x1", "0x9")
-
-	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
-
-	//read value should be the previous.
-	hoverctl.TableEntryGET(dataplane, sw.Id, "count", "0x1")
-
-	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
-
-	//delete entry (TODO test why error)
-	//probably because of array map type
-	hoverctl.TableEntryDELETE(dataplane, sw.Id, "count", "0x1")
-
-	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
-
-	//get after delete (probably returns error)
-	hoverctl.TableEntryGET(dataplane, sw.Id, "count", "0x1")
-}
+// func TestSwitch2count(dataplane *hoverctl.Dataplane) {
+//
+// 	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch2count", bpf.DummySwitch2count)
+// 	/*	_, l1 := */ hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
+// 	/*	_, l2 := */ hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
+//
+// 	//get Count before packet traffic
+// 	hoverctl.TableEntryGET(dataplane, sw.Id, "count", "0x1")
+//
+// 	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
+//
+// 	//wait...
+// 	time.Sleep(time.Second * 8)
+//
+// 	//get Count after packet traffic
+// 	hoverctl.TableEntryGET(dataplane, sw.Id, "count", "0x1")
+//
+// 	//force value to counter
+// 	hoverctl.TableEntryPUT(dataplane, sw.Id, "count", "0x1", "0x9")
+//
+// 	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
+//
+// 	//read value should be the previous.
+// 	hoverctl.TableEntryGET(dataplane, sw.Id, "count", "0x1")
+//
+// 	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
+//
+// 	//delete entry (TODO test why error)
+// 	//probably because of array map type
+// 	hoverctl.TableEntryDELETE(dataplane, sw.Id, "count", "0x1")
+//
+// 	//fmt.Printf("key: %s value: %s\n", kv.Key, kv.Value)
+//
+// 	//get after delete (probably returns error)
+// 	hoverctl.TableEntryGET(dataplane, sw.Id, "count", "0x1")
+// }
 
 func printLink(l hoverctl.Link) {
 	fmt.Printf("id: %s\nfrom: %s\nto: %s\n", l.Id, l.From, l.To)
