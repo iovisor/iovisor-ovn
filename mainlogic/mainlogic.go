@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/netgroup-polito/iovisor-ovn/bpf"
+	"github.com/netgroup-polito/iovisor-ovn/global"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
 	l "github.com/op/go-logging"
@@ -26,6 +27,7 @@ func MainLogic(dataplane *hoverctl.Dataplane) {
 	globalHandler.Nb = nbHandler
 	globalHandler.Ovs = ovsHandler
 	globalHandler.Dataplane = dataplane
+	global.Hh = &globalHandler
 	//Here I have to multiplex & demultiplex (maybe it's better if i use a final var or something like that.)
 
 	//for now I only consider ovs notifications

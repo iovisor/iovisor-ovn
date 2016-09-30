@@ -11,6 +11,7 @@ import (
 
 	"github.com/netgroup-polito/iovisor-ovn/cli"
 	"github.com/netgroup-polito/iovisor-ovn/common"
+	"github.com/netgroup-polito/iovisor-ovn/global"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/mainlogic"
 )
@@ -79,7 +80,7 @@ func main() {
 
 	time.Sleep(500 * time.Millisecond)
 	//start simple cli
-	go cli.Cli(dataplane)
+	go cli.Cli(global.Hh)
 
 	//wait forever. if main is killed, Go kills all other goroutines
 	quit := make(chan bool)

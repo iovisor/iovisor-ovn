@@ -12,10 +12,12 @@ import (
 
 	"github.com/netgroup-polito/iovisor-ovn/bpf"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
 	"github.com/netgroup-polito/iovisor-ovn/testenv"
 )
 
-func Cli(dataplane *hoverctl.Dataplane) {
+func Cli(hh *ovnmonitor.HandlerHandler) {
+	dataplane := hh.Dataplane
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("cli@iov-ovn$")
@@ -32,6 +34,29 @@ func Cli(dataplane *hoverctl.Dataplane) {
 				fmt.Printf("\ntest\n\n")
 				testenv.TestLinkPostDelete(dataplane)
 				//testenv.TestSwitch2ifc(dataplane, "i:veth1_", "i:veth2_")
+			case "nb":
+				if len(args) >= 1 {
+					if len(args) == 1 {
+						ovnmonitor.PrintNb(hh)
+					} else {
+						if len(args) == 3 {
+							switch args[2] {
+							case "ls":
+								ovnmonitor.PrintNbLogicalSwitch(hh, args[2])
+							case "lsp":
+								ovnmonitor.PrintNbLogicalSwitchPort(hh, args[2])
+							default:
+								PrintNbUsage()
+							}
+						} else {
+							PrintNbUsage()
+						}
+					}
+				} else {
+					PrintNbUsage()
+				}
+				fmt.Printf("\nNorthBound DB\n\n")
+				ovnmonitor.PrintNb(hh)
 			case "interfaces", "i":
 				fmt.Printf("\nInterfaces\n\n")
 				_, external_interfaces := hoverctl.ExternalInterfacesListGET(dataplane)
@@ -205,6 +230,13 @@ func TrimSuffix(s, suffix string) string {
 	return s
 }
 
+func PrintNbUsage() {
+	fmt.Printf("\nNB Usage\n\n")
+	fmt.Printf("	nb                  print the whole NorthBound\n")
+	fmt.Printf("	nb ls   <ls-name>   print the Logical Switch table\n")
+	fmt.Printf("	nb lsp  <lsp-name>  print the Logical Switch Port table\n")
+}
+
 func PrintTableUsage() {
 	fmt.Printf("\nTable Usage\n\n")
 	fmt.Printf("	table get\n")
@@ -238,9 +270,11 @@ func PrintHelp() {
 	fmt.Printf("	modules, m       prints /modules/\n")
 	fmt.Printf("	links, l         prints /links/\n")
 	fmt.Printf("	table, t         prints tables\n\n")
+	fmt.Printf("	nb               prints NorthBound database local structs\n\n")
 	fmt.Printf("	help, h          print help\n")
 	fmt.Printf("\n")
 	PrintModulesUsage()
 	PrintLinksUsage()
 	PrintTableUsage()
+	PrintNbUsage()
 }
