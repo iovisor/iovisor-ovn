@@ -63,9 +63,6 @@ func main() {
 	//TODO manage multiple hosts (arrays/maps oh HoverDataplane)
 	dataplane := hoverctl.NewDataplane()
 
-	//Init Bpf loadc files
-	//bpf.Init()
-
 	//Connect to hover and initialize HoverDataplane
 	if err := dataplane.Init(hoverUrl); err != nil {
 		Log.Errorf("unable to conect to Hover %s\n%s\n", hoverUrl, err)

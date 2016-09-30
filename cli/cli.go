@@ -25,15 +25,12 @@ func Cli(hh *ovnmonitor.HandlerHandler) {
 
 		line = TrimSuffix(line, "\n")
 		args := strings.Split(line, " ")
-		// fmt.Printf("/%+v/\n", args)
 
-		//TODO parse other commands
 		if len(args) >= 1 {
 			switch args[0] {
 			case "test":
 				fmt.Printf("\ntest\n\n")
 				testenv.TestLinkPostDelete(dataplane)
-				//testenv.TestSwitch2ifc(dataplane, "i:veth1_", "i:veth2_")
 			case "nb":
 				if len(args) >= 1 {
 					if len(args) == 1 {
@@ -61,9 +58,7 @@ func Cli(hh *ovnmonitor.HandlerHandler) {
 				fmt.Printf("\nInterfaces\n\n")
 				_, external_interfaces := hoverctl.ExternalInterfacesListGET(dataplane)
 				hoverctl.ExternalInterfacesListPrint(external_interfaces)
-				// fmt.Printf("%+v\n", external_interfaces)
 			case "modules", "m":
-				//fmt.Printf("\nModules\n")
 				if len(args) >= 2 {
 					switch args[1] {
 					case "get":
@@ -106,14 +101,7 @@ func Cli(hh *ovnmonitor.HandlerHandler) {
 				} else {
 					PrintModulesUsage()
 				}
-
-			// case "modules", "m":
-			// 	fmt.Printf("Modules:\n")
-			// 	_, modules := hoverctl.ModuleListGET(dataplane)
-			// 	hoverctl.ModuleListPrint(modules)
-			// fmt.Printf("%+v\n", modules)
 			case "links", "l":
-				//fmt.Printf("Links:\n")
 				if len(args) >= 2 {
 					switch args[1] {
 					case "get":
@@ -152,7 +140,6 @@ func Cli(hh *ovnmonitor.HandlerHandler) {
 				} else {
 					PrintLinksUsage()
 				}
-				//fmt.Printf("%+v\n", links)
 			case "table", "t":
 				if len(args) >= 2 {
 					switch args[1] {

@@ -13,31 +13,6 @@ import (
 
 var log = l.MustGetLogger("politoctrl")
 
-/*
-func (d *Dataplane) postObject(url string, requestObj interface{}, responseObj interface{}) (err error) {
-	b, err := json.Marshal(requestObj)
-	if err != nil {
-		return
-	}
-	resp, err := d.client.Post(d.baseUrl+url, "application/json", bytes.NewReader(b))
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		var body []byte
-		if body, err = ioutil.ReadAll(resp.Body); err != nil {
-			politoctrl.Error.Print(string(body))
-		}
-		return fmt.Errorf("module server returned %s", resp.Status)
-	}
-	if responseObj != nil {
-		err = json.NewDecoder(resp.Body).Decode(responseObj)
-	}
-	return
-}
-*/
-
 func (d *Dataplane) sendObject(method string, url string, requestObj interface{}, responseObj interface{}) (err error) {
 	b, er := json.Marshal(requestObj)
 	if er != nil {
@@ -79,8 +54,6 @@ func (d *Dataplane) sendObject(method string, url string, requestObj interface{}
 	}
 	return err
 }
-
-/*---------LINKS---------------*/
 
 /*
 	LinkModule(Dataplane,from,to)
@@ -173,8 +146,6 @@ func LinkListGet(d *Dataplane) (error, map[string]Link) {
 	return nil, links
 
 }
-
-/*------------MODULES-----------*/
 
 /*
 	ModulePOST(d,"bpf","myModulòeName",bpf.Modulename)
@@ -276,8 +247,6 @@ func ModuleListGET(d *Dataplane) (error, map[string]Module) {
 	return nil, modules
 }
 
-/*------------EXTERNAL-INTERFACES-----------*/
-
 /*it returns map[iface-name]iface provided by hover
 eg. map[veth1] = iface {Name:veth1, Id:42}
 */
@@ -311,8 +280,6 @@ func ExternalInterfacesListGET(d *Dataplane) (error, map[string]ExternalInterfac
 	log.Debug("getting modules list OK\n")
 	return nil, external_interfaces
 }
-
-/*-----------TABLES-------------*/
 
 func TableEntryPUT(d *Dataplane, moduleId string, tableId string, entryId string, entryValue string) (error, TableEntry) {
 	log.Infof("table entry PUT /modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId+" {%s,%s}\n", entryId, entryValue)
@@ -411,7 +378,6 @@ func TableListGET(d *Dataplane, moduleId string) (error, map[string]string) {
 	return nil, tables
 }
 
-/*Not Working? Depending on Hover delete entryId on arrays? */
 func TableEntryDELETE(d *Dataplane, moduleId string, tableId string, entryId string) (error, TableEntry) {
 	log.Infof("table entry DELETE /modules/" + moduleId + "/tables/" + tableId + "/entries/" + entryId + "\n")
 
@@ -427,17 +393,3 @@ func TableEntryDELETE(d *Dataplane, moduleId string, tableId string, entryId str
 
 	return nil, tableEntry
 }
-
-/*
-func TableEntryDELETE(d *Dataplane, moduleId string) (error, ModuleEntry) {
-	fmt.Printf("deleting module %s\n", moduleId)
-
-	req := map[string]interface{}{}
-	var module ModuleEntry
-	err := d.sendObject("DELETE", "/modules/"+moduleId, req, &module)
-	if err != nil {
-		return err, module
-	}
-	return nil, module
-}
-*/
