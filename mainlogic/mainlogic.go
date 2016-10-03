@@ -49,6 +49,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 	//log.Debugf("Ovs Event:%s\n", s)
 
 	for ifaceName, iface := range hh.Ovs.OvsDatabase.Interface {
+		//if interface is not present into the local db, add it.
 		if ifaceName != "br-int" {
 			if iface.Up {
 				//Up is a logical internal state in iovisor--ovn controller
@@ -57,7 +58,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 			} else {
 				//log.Debugf("(%s)IFACE DOWN, not still mapped to an IOModule\n", ifaceName)
 				//Check if interface name belongs to some logical switch
-				logicalSwitchName := ovnmonitor.PortLookup(hh.Nb.NbDatabase, iface.IfaceId)
+				logicalSwitchName := ovnmonitor.PortLookup(hh.Nb.NbDatabase, iface.IfaceIdExternalIds)
 				//log.Noticef("(%s) port||external-ids:iface-id(%s)-> SWITCH NAME: %s\n", iface.Name, iface.IfaceId, logicalSwitchName)
 				if logicalSwitchName != "" {
 					//log.Noticef("Switch:%s\n", switchName)
@@ -74,15 +75,23 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 							log.Noticef("CREATE LINK from:%s to:%s id:%s\n", linkHover.From, linkHover.To, linkHover.Id)
 							if linkHover.Id != "" {
 								iface.Up = true
+
 							}
 
 							_, external_interfaces := hoverctl.ExternalInterfacesListGET(hh.Dataplane)
 
 							portNumber := ovnmonitor.FindFirtsFreeLogicalPort(logicalSwitch)
 
+							iface.IfaceNumber = portNumber
+							iface.IfaceFd, _ = strconv.Atoi(external_interfaces[iface.Name].Id)
+
 							hoverctl.TableEntryPUT(hh.Dataplane, switchHover.Id, "ports", strconv.Itoa(portNumber), external_interfaces[iface.Name].Id)
 							logicalSwitch.PortsArray[portNumber] = 1
 							logicalSwitch.PortsCount++
+
+							iface.LinkId = linkHover.Id
+							log.Debugf("link-id:%s\n", iface.LinkId)
+							iface.ToRemove = false
 							//Link port (in future lookup hypervisor)
 						} else {
 							//log.Debugf("SWITCH already present!%s\n", sw.ModuleId)
@@ -99,17 +108,64 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 
 							portNumber := ovnmonitor.FindFirtsFreeLogicalPort(logicalSwitch)
 
+							iface.IfaceNumber = portNumber
+							iface.IfaceFd, _ = strconv.Atoi(external_interfaces[iface.Name].Id)
+
 							hoverctl.TableEntryPUT(hh.Dataplane, logicalSwitch.ModuleId, "ports", strconv.Itoa(portNumber), external_interfaces[iface.Name].Id)
 							logicalSwitch.PortsArray[portNumber] = 1
 							logicalSwitch.PortsCount++
 
+							iface.LinkId = linkHover.Id
+							log.Debugf("link-id:%s\n", iface.LinkId)
+							iface.ToRemove = false
 						}
 					} else {
 						log.Errorf("No Switch in Nb referring to //%s//\n", logicalSwitchName)
 					}
 				}
+
 			}
 		}
+	}
+
+	//if interface is present into the local db and not in ovs cache, delete it. (or mark it as deleted.)
+	//NON posso farlo qua! Perchè non ho la visione sulla cache di ovs
+	// for ifaceName, iface := range hh.Ovs.OvsDatabase.Interface {
+	//
+	// }
+
+	//for debug purposes...
+	var cache = *hh.Ovs.Cache
+
+	table, _ := cache["Interface"]
+	log.Debugf("cache[Interface]\n")
+
+	for ifaceName, iface := range hh.Ovs.OvsDatabase.Interface {
+		//If iface.Toremove .. someone has taken in chargethe remove of the iface
+		if !iface.ToRemove {
+			found := false
+			for _, row := range table {
+				name := row.Fields["name"].(string)
+				//log.Debugf("[ovs] %s -> [localdb] %s\n", name, ifaceName)
+				if name == ifaceName {
+					found = true
+					break
+				}
+			}
+			if !found {
+				iface.ToRemove = true
+				log.Warningf("Interface removed: %s\n", ifaceName)
+				log.Debugf("link-id:%s\n", iface.LinkId)
+				hoverctl.LinkDELETE(hh.Dataplane, iface.LinkId)
+
+				logicalSwitchName := ovnmonitor.PortLookup(hh.Nb.NbDatabase, iface.IfaceIdExternalIds)
+				if logicalSwitch, ok := hh.Nb.NbDatabase.Logical_Switch[logicalSwitchName]; ok {
+					hoverctl.TableEntryPUT(hh.Dataplane, logicalSwitch.ModuleId, "ports", strconv.Itoa(iface.IfaceNumber), "0")
+				}
+
+			}
+		}
+
 	}
 
 	//Main Logic for mapping iomodules

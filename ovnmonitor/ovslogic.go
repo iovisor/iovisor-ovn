@@ -57,7 +57,7 @@ func OvsLogic(h *MonitorHandler, ovs *Ovs_Database) {
 
 						iface.Name = name
 						//TODO iface.external_ids
-						iface.IfaceId = ifaceIDstr
+						iface.IfaceIdExternalIds = ifaceIDstr
 						//PortsToMap(ports, &logicalSwitch.PortsUUID)
 
 						//log.Warningf("IF(update):%+v\n", iface)
@@ -72,7 +72,7 @@ func OvsLogic(h *MonitorHandler, ovs *Ovs_Database) {
 						iface.Name = name
 						//logicalSwitch.PortsUUID = make(map[string]string)
 						//PortsToMap(ports, &logicalSwitch.PortsUUID)
-						iface.IfaceId = ifaceIDstr
+						iface.IfaceIdExternalIds = ifaceIDstr
 						iface.Up = false
 
 						ovs.Interface[name] = &iface
