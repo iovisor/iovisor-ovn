@@ -38,7 +38,6 @@ func MainLogic(dataplane *hoverctl.Dataplane) {
 				LogicalMappingOvs(ovsString, &globalHandler)
 			}
 		}
-
 	} else {
 		log.Errorf("MainLogic not started!\n")
 	}
@@ -123,11 +122,9 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 						log.Errorf("No Switch in Nb referring to //%s//\n", logicalSwitchName)
 					}
 				}
-
 			}
 		}
 	}
-
 	//if interface is present into the local db and not in ovs cache, delete it. (or mark it as deleted.)
 	//NON posso farlo qua! Perchè non ho la visione sulla cache di ovs
 	// for ifaceName, iface := range hh.Ovs.OvsDatabase.Interface {
@@ -138,7 +135,6 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 	var cache = *hh.Ovs.Cache
 
 	table, _ := cache["Interface"]
-	log.Debugf("cache[Interface]\n")
 
 	for ifaceName, iface := range hh.Ovs.OvsDatabase.Interface {
 		//If iface.Toremove .. someone has taken in chargethe remove of the iface
@@ -156,16 +152,20 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 				iface.ToRemove = true
 				log.Warningf("Interface removed: %s\n", ifaceName)
 				log.Debugf("link-id:%s\n", iface.LinkId)
-				hoverctl.LinkDELETE(hh.Dataplane, iface.LinkId)
+				linkDeleteError, _ := hoverctl.LinkDELETE(hh.Dataplane, iface.LinkId)
 
+				if linkDeleteError != nil {
+					//log.Warningf("Failed to remove link. ToRemove = false to re-try delete\n")
+					iface.ToRemove = false
+					break
+				}
 				logicalSwitchName := ovnmonitor.PortLookup(hh.Nb.NbDatabase, iface.IfaceIdExternalIds)
 				if logicalSwitch, ok := hh.Nb.NbDatabase.Logical_Switch[logicalSwitchName]; ok {
 					hoverctl.TableEntryPUT(hh.Dataplane, logicalSwitch.ModuleId, "ports", strconv.Itoa(iface.IfaceNumber), "0")
 				}
-
+				delete(hh.Ovs.OvsDatabase.Interface, ifaceName)
 			}
 		}
-
 	}
 
 	//Main Logic for mapping iomodules
