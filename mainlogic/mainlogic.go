@@ -2,7 +2,6 @@ package mainlogic
 
 import (
 	"strconv"
-
 	"time"
 
 	"github.com/netgroup-polito/iovisor-ovn/bpf"
@@ -65,7 +64,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 						if logicalSwitch.ModuleId == "" {
 							log.Noticef("CREATE NEW SWITCH\n")
 
-							time.Sleep(3500 * time.Millisecond)
+							time.Sleep(global.SleepTime)
 
 							_, switchHover := hoverctl.ModulePOST(hh.Dataplane, "bpf", "Switch8", bpf.Switch)
 							logicalSwitch.ModuleId = switchHover.Id
@@ -104,7 +103,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 							//log.Debugf("SWITCH already present!%s\n", sw.ModuleId)
 							//Only Link module
 
-							time.Sleep(3500 * time.Millisecond)
+							time.Sleep(global.SleepTime)
 
 							_, external_interfaces := hoverctl.ExternalInterfacesListGET(hh.Dataplane)
 
