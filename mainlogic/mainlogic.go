@@ -126,12 +126,8 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 		}
 	}
 	//if interface is present into the local db and not in ovs cache, delete it. (or mark it as deleted.)
-	//NON posso farlo qua! Perchè non ho la visione sulla cache di ovs
-	// for ifaceName, iface := range hh.Ovs.OvsDatabase.Interface {
-	//
-	// }
 
-	//for debug purposes...
+	//little "hack". In future centralize this logic.
 	var cache = *hh.Ovs.Cache
 
 	table, _ := cache["Interface"]
@@ -150,7 +146,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 			}
 			if !found {
 				iface.ToRemove = true
-				log.Warningf("Interface removed: %s\n", ifaceName)
+				log.Noticef("Interface removed: %s\n", ifaceName)
 				log.Debugf("link-id:%s\n", iface.LinkId)
 				linkDeleteError, _ := hoverctl.LinkDELETE(hh.Dataplane, iface.LinkId)
 
@@ -167,6 +163,4 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 			}
 		}
 	}
-
-	//Main Logic for mapping iomodules
 }
