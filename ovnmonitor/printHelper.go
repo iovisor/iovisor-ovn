@@ -34,3 +34,20 @@ func PrintNbLogicalSwitchPort(hh *HandlerHandler, logical_switch_port_name strin
 		fmt.Printf("UUID: %s name: %10s addesses: %+v\n", lsp.UUID, lsp.Name, lsp.Addresses)
 	}
 }
+
+func PrintOvs(hh *HandlerHandler) {
+	//	fmt.Printf("loop on Logical Switches")
+	fmt.Printf("\nInterfaces\n\n")
+	for ifaceName, _ := range hh.Ovs.OvsDatabase.Interface {
+		PrintOvsInterface(hh, ifaceName)
+		fmt.Printf("\n\n")
+	}
+}
+
+func PrintOvsInterface(hh *HandlerHandler, interface_name string) {
+	iface, ok := hh.Ovs.OvsDatabase.Interface[interface_name]
+	if ok {
+		fmt.Printf("%10s: %s\n%10s: %s\n%10s: %s\n%10s: %d\n%10s: %d\n", "*name*", iface.Name, "iface-id", iface.IfaceIdExternalIds, "link-id", iface.LinkId, "iface  #", iface.IfaceNumber, "iface fd", iface.IfaceFd)
+		fmt.Printf("%10s: %t\n%10s: %t", "up", iface.Up, "ToRemove", iface.ToRemove)
+	}
+}

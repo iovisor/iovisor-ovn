@@ -31,6 +31,16 @@ func Cli(hh *ovnmonitor.HandlerHandler) {
 			case "test":
 				fmt.Printf("\ntest\n\n")
 				testenv.TestLinkPostDelete(dataplane)
+			case "ovs":
+				if len(args) >= 1 {
+					if len(args) == 1 {
+						ovnmonitor.PrintOvs(hh)
+					} else {
+						PrintOvsUsage()
+					}
+				} else {
+					PrintOvsUsage()
+				}
 			case "nb":
 				if len(args) >= 1 {
 					if len(args) == 1 {
@@ -52,8 +62,8 @@ func Cli(hh *ovnmonitor.HandlerHandler) {
 				} else {
 					PrintNbUsage()
 				}
-				fmt.Printf("\nNorthBound DB\n\n")
-				ovnmonitor.PrintNb(hh)
+				//fmt.Printf("\nNorthBound DB\n\n")
+				//ovnmonitor.PrintNb(hh)
 			case "interfaces", "i":
 				fmt.Printf("\nInterfaces\n\n")
 				_, external_interfaces := hoverctl.ExternalInterfacesListGET(dataplane)
@@ -217,6 +227,11 @@ func TrimSuffix(s, suffix string) string {
 	return s
 }
 
+func PrintOvsUsage() {
+	fmt.Printf("\nOVS Usage\n\n")
+	fmt.Printf("	ovs     print the whole Ovs Local Database\n")
+}
+
 func PrintNbUsage() {
 	fmt.Printf("\nNB Usage\n\n")
 	fmt.Printf("	nb                  print the whole NorthBound\n")
@@ -257,11 +272,13 @@ func PrintHelp() {
 	fmt.Printf("	modules, m       prints /modules/\n")
 	fmt.Printf("	links, l         prints /links/\n")
 	fmt.Printf("	table, t         prints tables\n\n")
-	fmt.Printf("	nb               prints NorthBound database local structs\n\n")
+	fmt.Printf("	nb               prints NorthBound database local structs\n")
+	fmt.Printf("	ovs              prints Ovs local database local structs\n\n")
 	fmt.Printf("	help, h          print help\n")
 	fmt.Printf("\n")
 	PrintModulesUsage()
 	PrintLinksUsage()
 	PrintTableUsage()
 	PrintNbUsage()
+	PrintOvsUsage()
 }
