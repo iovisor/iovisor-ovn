@@ -1,6 +1,11 @@
 package ovnmonitor
 
-import "github.com/socketplane/libovsdb"
+import (
+	"strconv"
+
+	"github.com/netgroup-polito/iovisor-ovn/common"
+	"github.com/socketplane/libovsdb"
+)
 
 func MonitorOvnSb() {
 
@@ -17,32 +22,39 @@ func MonitorOvnSb() {
 	cache := make(map[string]map[string]libovsdb.Row)
 	handler.Cache = &cache
 
-	//Sandbox Environment
-	ovnsbdb_sock := "/home/matteo/ovs/tutorial/sandbox/ovnsb_db.sock"
-	ovnsb, err := libovsdb.ConnectWithUnixSocket(ovnsbdb_sock)
+	ip := "127.0.0.1"
+	port := 6642
+	ovnsbdb_sock := ""
 
-	// //Openstack Real Environment
-	// ip := "127.0.0.1"
-	// port := 6642
-	// ovnsbdb_sock := ip + ":" + strconv.Itoa(port)
-	// ovnsb, err := libovsdb.Connect(ip, port)
-
-	handler.Db = ovnsb
-
-	if err != nil {
-		log.Errorf("unable to Connect to %s - %s\n", ovnsbdb_sock, err)
-		return
+	if common.Sandbox == true {
+		//Sandbox Environment
+		ovnsbdb_sock = "/home/matteo/ovs/tutorial/sandbox/ovnsb_db.sock"
+		ovnsb, err := libovsdb.ConnectWithUnixSocket(ovnsbdb_sock)
+		handler.Db = ovnsb
+		if err != nil {
+			log.Errorf("unable to Connect to %s - %s\n", ovnsbdb_sock, err)
+			return
+		}
+	} else {
+		//Openstack Real Environment
+		ovnsbdb_sock = ip + ":" + strconv.Itoa(port)
+		ovnsb, err := libovsdb.Connect(ip, port)
+		handler.Db = ovnsb
+		if err != nil {
+			log.Errorf("unable to Connect to %s - %s\n", ovnsbdb_sock, err)
+			return
+		}
 	}
 
 	log.Noticef("starting ovn sb db monitor @ %s\n", ovnsbdb_sock)
 
 	var notifier MyNotifier
 	notifier.handler = &handler
-	ovnsb.Register(notifier)
+	handler.Db.Register(notifier)
 
 	//TODO change db
 	var ovnSbDb_name = "OVN_Southbound"
-	initial, err := ovnsb.MonitorAll(ovnSbDb_name, "")
+	initial, err := handler.Db.MonitorAll(ovnSbDb_name, "")
 	if err != nil {
 		log.Errorf("unable to Monitor %s - %s\n", ovnSbDb_name, err)
 		return
