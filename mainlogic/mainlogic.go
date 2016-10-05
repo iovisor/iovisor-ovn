@@ -161,16 +161,25 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 				}
 			}
 			if !found {
+				//I have removed an interface from Interfaces in local ovs bridge
+				//mark this interface to remove (I take in charge the remove operation)
 				iface.ToRemove = true
 				log.Noticef("Interface removed: %s\n", ifaceName)
-				log.Debugf("link-id:%s\n", iface.LinkId)
-				linkDeleteError, _ := hoverctl.LinkDELETE(hh.Dataplane, iface.LinkId)
 
-				if linkDeleteError != nil {
-					//log.Warningf("Failed to remove link. ToRemove = false to re-try delete\n")
-					iface.ToRemove = false
-					break
+				//The interface correspond to a link in hover. So DELETE the link
+				if iface.LinkId != "" {
+					log.Debugf("link-id:%s\n", iface.LinkId)
+					linkDeleteError, _ := hoverctl.LinkDELETE(hh.Dataplane, iface.LinkId)
+
+					if linkDeleteError != nil {
+						//log.Warningf("Failed to remove link. ToRemove = false to re-try delete\n")
+						iface.ToRemove = false
+						break
+					}
 				}
+
+				//lookup in NbDatabase if there is a corresponding port in the bridge.
+				//TODO if I update NbDb -> mark item as deleted and not remove the correspondence to IOModule & Links
 				logicalSwitchName := ovnmonitor.PortLookup(hh.Nb.NbDatabase, iface.IfaceIdExternalIds)
 				if logicalSwitch, ok := hh.Nb.NbDatabase.Logical_Switch[logicalSwitchName]; ok {
 					hoverctl.TableEntryPUT(hh.Dataplane, logicalSwitch.ModuleId, "ports", strconv.Itoa(iface.IfaceNumber), "0")
