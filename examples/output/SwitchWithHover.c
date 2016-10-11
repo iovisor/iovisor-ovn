@@ -67,7 +67,7 @@ static int pkt_mirror(void *pkt, struct metadata *md, int ifc) {
 	return TC_ACT_OK;
 }
 
-/*******CODE OF MY IOMODULE**********
+/*******CODE OF MY IOMODULE**********/
 
 #define MAX_PORTS 8
 
