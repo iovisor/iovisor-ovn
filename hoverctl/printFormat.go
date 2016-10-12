@@ -6,7 +6,7 @@ import (
 )
 
 func LinkPrint(link Link) {
-	fmt.Printf("link-id:%15s   from: %10s  to: %10s\n", link.Id, link.From, link.To)
+	fmt.Printf("link-id:%15s   from: %10s (%d) to: %10s (%d)\n", link.Id, link.From, link.FromId, link.To, link.ToId)
 }
 
 func LinkListPrint(linkList map[string]Link) {

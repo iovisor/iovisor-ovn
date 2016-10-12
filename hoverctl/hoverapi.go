@@ -39,9 +39,11 @@ type ExternalInterface struct {
 }
 
 type Link struct {
-	Id   string `json:"id"`
-	From string `json:"from"`
-	To   string `json:"to"`
+	Id     string `json:"id"`
+	From   string `json:"from"`
+	To     string `json:"to"`
+	FromId int    `json:"from-id"`
+	ToId   int    `json:"to-id"`
 }
 
 type TableEntry struct {

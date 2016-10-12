@@ -74,7 +74,7 @@ func LinkPOST(d *Dataplane, from string, to string) (error, Link) {
 		return err, link
 	}
 
-	log.Debugf("link POST %s <--> %s link id: %s", from, to, link.Id)
+	log.Debugf("link POST %s (%d) <--> %s (%d) link id: %s", from, link.FromId, to, link.ToId, link.Id)
 	return nil, link
 }
 
@@ -137,6 +137,11 @@ func LinkListGet(d *Dataplane) (error, map[string]Link) {
 		l.From = from
 		to, _ := item["to"].(string)
 		l.To = to
+		fromId, _ := item["from-id"]
+		l.FromId = int(fromId.(float64))
+		toId, _ := item["to-id"]
+		l.ToId = int(toId.(float64))
+
 		links[id] = l
 		//log.Debugf("link-id:%15s   from: %10s  to: %10s\n", id, from, to)
 	}
