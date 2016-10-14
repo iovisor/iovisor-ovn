@@ -1,8 +1,10 @@
 package ovnmonitor
 
 import (
+	"bytes"
 	"errors"
 	"reflect"
+	"strings"
 
 	"github.com/socketplane/libovsdb"
 )
@@ -101,7 +103,8 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 
 					/*****Logical_Switch_Port ITEM********/
 					name := row.Fields["name"].(string)
-					//addresses := row.Fields["addresses"]
+					addresses := row.Fields["addresses"]
+					port_security := row.Fields["port_security"]
 
 					if logicalSwitchPort, ok := nb.Logical_Switch_Port[name]; ok {
 						/*****Logical_Switch_Port name PRESENT IN MAP *******/
@@ -110,7 +113,20 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 						logicalSwitchPort.Name = name
 						logicalSwitchPort.UUID = uuid
 						//Addresses to slice
-						//PrintTypeDebug(addresses)
+						logicalSwitchPort.Addresses = InterfaceToString(addresses)
+						// if logicalSwitchPort.Addresses != "" {
+						// 	log.Debugf("logicalSwitchPort: %s Addresses: %s\n", logicalSwitchPort.Name, logicalSwitchPort.Addresses)
+						// }
+						//PrintTypeDebug(port_security)
+						logicalSwitchPort.PortSecutiry = InterfaceToString(port_security)
+						if logicalSwitchPort.PortSecutiry != "" {
+							logicalSwitchPort.SecurityMacStr = FromPortSecurityStrToMacStr(logicalSwitchPort.PortSecutiry)
+							// log.Noticef("MAC:%s\n", logicalSwitchPort.SecurityMacStr)
+						}
+
+						// if logicalSwitchPort.PortSecutiry != "" {
+						// 	log.Debugf("logicalSwitchPort: %s PortSecutiry: %s\n", logicalSwitchPort.Name, logicalSwitchPort.PortSecutiry)
+						// }
 
 						//PortsToMap(ports, &logicalSwitch.Ports)
 
@@ -129,6 +145,20 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 						//PortsToMap(ports, &logicalSwitch.Ports)
 						//Addresses to slice
 						//PrintTypeDebug(addresses)
+						logicalSwitchPort.Addresses = InterfaceToString(addresses)
+						// if logicalSwitchPort.Addresses != "" {
+						// 	log.Debugf("logicalSwitchPort: %s Addresses: %s\n", logicalSwitchPort.Name, logicalSwitchPort.Addresses)
+						// }
+						//PrintTypeDebug(port_security)
+						logicalSwitchPort.PortSecutiry = InterfaceToString(port_security)
+						if logicalSwitchPort.PortSecutiry != "" {
+							logicalSwitchPort.SecurityMacStr = FromPortSecurityStrToMacStr(logicalSwitchPort.PortSecutiry)
+							// log.Noticef("MAC:%s\n", logicalSwitchPort.SecurityMacStr)
+						}
+						// if logicalSwitchPort.PortSecutiry != "" {
+						// 	log.Debugf("logicalSwitchPort: %s PortSecutiry: %s\n", logicalSwitchPort.Name, logicalSwitchPort.PortSecutiry)
+						// }
+
 						//logicalSwitchPort.Addresses = ovsStringSetToSlice(addresses)
 
 						nb.Logical_Switch_Port[name] = &logicalSwitchPort
@@ -141,6 +171,61 @@ func NbLogic(h *MonitorHandler, nb *Nb_Database) {
 			}
 		}
 	}
+}
+
+//Find the first mac and converts it into exadecimal string
+//Eg:
+//input str -> "192.168.1.1 08:00:27:2a:03:54"
+//output str -> 0x0800272a0354
+func FromPortSecurityStrToMacStr(portSecurity string) string {
+	//divide portSecurity into slices " "
+	slices := strings.Split(portSecurity, " ")
+	for _, slice := range slices {
+		//log.Debugf("slice: %s\n", slice)
+		//find first mac
+		if IsMac(slice) {
+			//modify format
+			return MacToExadecimalString(slice)
+		}
+	}
+	return ""
+}
+
+func IsAllowedChar(s string) bool {
+	for _, r := range s {
+		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F') || (r == ':')) {
+			return false
+		}
+	}
+	return true
+}
+
+//01:34:67:90:23:56
+func IsMac(s string) bool {
+	if len(s) != 17 {
+		return false
+	}
+	if s[2] != ':' || s[5] != ':' || s[8] != ':' || s[11] != ':' || s[14] != ':' {
+		return false
+	}
+	if !IsAllowedChar(s) {
+		return false
+	}
+	return true
+}
+
+func MacToExadecimalString(s string) string {
+	var buffer bytes.Buffer
+
+	buffer.WriteString("0x")
+	buffer.WriteString(s[0:2])
+	buffer.WriteString(s[3:5])
+	buffer.WriteString(s[6:8])
+	buffer.WriteString(s[9:11])
+	buffer.WriteString(s[12:14])
+	buffer.WriteString(s[15:17])
+
+	return buffer.String()
 }
 
 func PortsToMap(ports interface{}, Ports *map[string]string) {
@@ -159,6 +244,15 @@ func PortsToMap(ports interface{}, Ports *map[string]string) {
 func PrintTypeDebug(i interface{}) {
 	log.Debugf("ports: %s\n", reflect.TypeOf(i))
 	log.Debugf("ports: %s\n", i)
+}
+
+func InterfaceToString(i interface{}) string {
+
+	switch i.(type) {
+	case string:
+		return i.(string)
+	}
+	return ""
 }
 
 func ovsStringMapToMap(oMap interface{}) (map[string]string, error) {

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/netgroup-polito/iovisor-ovn/bpf"
+	"github.com/netgroup-polito/iovisor-ovn/common"
 	"github.com/netgroup-polito/iovisor-ovn/global"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
@@ -46,96 +47,284 @@ func MainLogic(dataplane *hoverctl.Dataplane) {
 func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 	//log.Debugf("Ovs Event:%s\n", s)
 
-	for ifaceName, iface := range hh.Ovs.OvsDatabase.Interface {
-		//if interface is not present into the local db, add it.
-		if ifaceName != "br-int" {
-			if iface.Up {
-				//Up is a logical internal state in iovisor--ovn controller
-				//it means that the corresponding iomodule is up and the interface connected
-				//log.Debugf("(%s)IFACE UP -> DO NOTHING\n", ifaceName)
-			} else {
-				//log.Debugf("(%s)IFACE DOWN, not still mapped to an IOModule\n", ifaceName)
-				//Check if interface name belongs to some logical switch
-				logicalSwitchName := ovnmonitor.PortLookup(hh.Nb.NbDatabase, iface.IfaceIdExternalIds)
-				//log.Noticef("(%s) port||external-ids:iface-id(%s)-> SWITCH NAME: %s\n", iface.Name, iface.IfaceId, logicalSwitchName)
-				if logicalSwitchName != "" {
-					//log.Noticef("Switch:%s\n", switchName)
-					if logicalSwitch, ok := hh.Nb.NbDatabase.Logical_Switch[logicalSwitchName]; ok {
-						if logicalSwitch.ModuleId == "" {
-							log.Noticef("CREATE NEW SWITCH\n")
+	//SWITCH WITH NO SECURITY POLICIES
+	if !common.SwitchSecurityPolicy {
+		for ifaceName, iface := range hh.Ovs.OvsDatabase.Interface {
+			//if interface is not present into the local db, add it.
+			if ifaceName != "br-int" {
+				if iface.Up {
+					//Up is a logical internal state in iovisor--ovn controller
+					//it means that the corresponding iomodule is up and the interface connected
+					//log.Debugf("(%s)IFACE UP -> DO NOTHING\n", ifaceName)
+				} else {
+					//log.Debugf("(%s)IFACE DOWN, not still mapped to an IOModule\n", ifaceName)
+					//Check if interface name belongs to some logical switch
+					logicalSwitchName := ovnmonitor.PortLookup(hh.Nb.NbDatabase, iface.IfaceIdExternalIds)
+					//log.Noticef("(%s) port||external-ids:iface-id(%s)-> SWITCH NAME: %s\n", iface.Name, iface.IfaceId, logicalSwitchName)
+					if logicalSwitchName != "" {
+						//log.Noticef("Switch:%s\n", switchName)
+						if logicalSwitch, ok := hh.Nb.NbDatabase.Logical_Switch[logicalSwitchName]; ok {
+							if logicalSwitch.ModuleId == "" {
+								log.Noticef("CREATE NEW SWITCH\n")
 
-							time.Sleep(global.SleepTime)
+								time.Sleep(global.SleepTime)
 
-							_, switchHover := hoverctl.ModulePOST(hh.Dataplane, "bpf", "Switch8", bpf.Switch)
-							logicalSwitch.ModuleId = switchHover.Id
+								_, switchHover := hoverctl.ModulePOST(hh.Dataplane, "bpf", "Switch8", bpf.Switch)
+								logicalSwitch.ModuleId = switchHover.Id
 
-							_, external_interfaces := hoverctl.ExternalInterfacesListGET(hh.Dataplane)
+								_, external_interfaces := hoverctl.ExternalInterfacesListGET(hh.Dataplane)
 
-							portNumber := ovnmonitor.FindFirtsFreeLogicalPort(logicalSwitch)
+								portNumber := ovnmonitor.FindFirtsFreeLogicalPort(logicalSwitch)
 
-							if portNumber == 0 {
-								log.Warningf("Switch %s -> module %s : no free ports.\n", logicalSwitch.Name, logicalSwitch.ModuleId)
-							} else {
-
-								linkError, linkHover := hoverctl.LinkPOST(hh.Dataplane, "i:"+iface.Name, switchHover.Id)
-								if linkError != nil {
-									log.Errorf("Error in POSTing the Link: %s\n", linkError)
+								if portNumber == 0 {
+									log.Warningf("Switch %s -> module %s : no free ports.\n", logicalSwitch.Name, logicalSwitch.ModuleId)
 								} else {
-									log.Noticef("CREATE LINK from:%s to:%s id:%s\n", linkHover.From, linkHover.To, linkHover.Id)
-									if linkHover.Id != "" {
-										iface.Up = true
+
+									linkError, linkHover := hoverctl.LinkPOST(hh.Dataplane, "i:"+iface.Name, switchHover.Id)
+									if linkError != nil {
+										log.Errorf("Error in POSTing the Link: %s\n", linkError)
+									} else {
+										log.Noticef("CREATE LINK from:%s to:%s id:%s\n", linkHover.From, linkHover.To, linkHover.Id)
+										if linkHover.Id != "" {
+											iface.Up = true
+										}
+
+										iface.IfaceNumber = portNumber
+										iface.IfaceFd, _ = strconv.Atoi(external_interfaces[iface.Name].Id)
+
+										hoverctl.TableEntryPUT(hh.Dataplane, switchHover.Id, "ports", strconv.Itoa(portNumber), external_interfaces[iface.Name].Id)
+										logicalSwitch.PortsArray[portNumber] = iface.IfaceFd
+										logicalSwitch.PortsCount++
+
+										iface.LinkId = linkHover.Id
+										log.Debugf("link-id:%s\n", iface.LinkId)
+										iface.ToRemove = false
+										//Link port (in future lookup hypervisor)
 									}
+								}
+							} else {
+								//log.Debugf("SWITCH already present!%s\n", sw.ModuleId)
+								//Only Link module
 
-									iface.IfaceNumber = portNumber
-									iface.IfaceFd, _ = strconv.Atoi(external_interfaces[iface.Name].Id)
+								time.Sleep(global.SleepTime)
 
-									hoverctl.TableEntryPUT(hh.Dataplane, switchHover.Id, "ports", strconv.Itoa(portNumber), external_interfaces[iface.Name].Id)
-									logicalSwitch.PortsArray[portNumber] = iface.IfaceFd
-									logicalSwitch.PortsCount++
+								_, external_interfaces := hoverctl.ExternalInterfacesListGET(hh.Dataplane)
 
-									iface.LinkId = linkHover.Id
-									log.Debugf("link-id:%s\n", iface.LinkId)
-									iface.ToRemove = false
-									//Link port (in future lookup hypervisor)
+								portNumber := ovnmonitor.FindFirtsFreeLogicalPort(logicalSwitch)
+
+								if portNumber == 0 {
+									log.Warningf("Switch %s -> module %s : no free ports.\n", logicalSwitch.Name, logicalSwitch.ModuleId)
+								} else {
+									linkError, linkHover := hoverctl.LinkPOST(hh.Dataplane, "i:"+iface.Name, logicalSwitch.ModuleId)
+									if linkError != nil {
+										log.Errorf("Error in POSTing the Link: %s\n", linkError)
+									} else {
+										log.Noticef("CREATE LINK from:%s to:%s id:%s\n", linkHover.From, linkHover.To, linkHover.Id) //TODO Check if crashes
+										if linkHover.Id != "" {
+											iface.Up = true
+										}
+
+										iface.IfaceNumber = portNumber
+										iface.IfaceFd, _ = strconv.Atoi(external_interfaces[iface.Name].Id)
+
+										hoverctl.TableEntryPUT(hh.Dataplane, logicalSwitch.ModuleId, "ports", strconv.Itoa(portNumber), external_interfaces[iface.Name].Id)
+										logicalSwitch.PortsArray[portNumber] = iface.IfaceFd
+										logicalSwitch.PortsCount++
+
+										iface.LinkId = linkHover.Id
+										log.Debugf("link-id:%s\n", iface.LinkId)
+										iface.ToRemove = false
+									}
 								}
 							}
 						} else {
-							//log.Debugf("SWITCH already present!%s\n", sw.ModuleId)
-							//Only Link module
+							log.Errorf("No Switch in Nb referring to //%s//\n", logicalSwitchName)
+						}
+					}
+				}
+			}
+		}
+	} else {
+		//Switch with security policies
+		for ifaceName, iface := range hh.Ovs.OvsDatabase.Interface {
+			//if interface is not present into the local db, add it.
+			if ifaceName != "br-int" {
+				if iface.Up {
+					//Up is a logical internal state in iovisor--ovn controller
+					//it means that the corresponding iomodule is up and the interface connected
+					//log.Debugf("(%s)IFACE UP -> DO NOTHING\n", ifaceName)
+				} else {
+					//log.Debugf("(%s)IFACE DOWN, not still mapped to an IOModule\n", ifaceName)
+					//Check if interface name belongs to some logical switch
+					logicalSwitchName := ovnmonitor.PortLookup(hh.Nb.NbDatabase, iface.IfaceIdExternalIds)
+					//log.Noticef("(%s) port||external-ids:iface-id(%s)-> SWITCH NAME: %s\n", iface.Name, iface.IfaceId, logicalSwitchName)
+					if logicalSwitchName != "" {
+						//log.Noticef("Switch:%s\n", switchName)
+						if logicalSwitch, ok := hh.Nb.NbDatabase.Logical_Switch[logicalSwitchName]; ok {
+							if logicalSwitch.ModuleId == "" {
+								log.Noticef("CREATE NEW SWITCH\n")
 
-							time.Sleep(global.SleepTime)
+								time.Sleep(global.SleepTime)
 
-							_, external_interfaces := hoverctl.ExternalInterfacesListGET(hh.Dataplane)
+								_, switchHover := hoverctl.ModulePOST(hh.Dataplane, "bpf", "Switch8Security", bpf.SwitchSecurityPolicy)
+								logicalSwitch.ModuleId = switchHover.Id
 
-							portNumber := ovnmonitor.FindFirtsFreeLogicalPort(logicalSwitch)
+								_, external_interfaces := hoverctl.ExternalInterfacesListGET(hh.Dataplane)
 
-							if portNumber == 0 {
-								log.Warningf("Switch %s -> module %s : no free ports.\n", logicalSwitch.Name, logicalSwitch.ModuleId)
-							} else {
-								linkError, linkHover := hoverctl.LinkPOST(hh.Dataplane, "i:"+iface.Name, logicalSwitch.ModuleId)
-								if linkError != nil {
-									log.Errorf("Error in POSTing the Link: %s\n", linkError)
+								portNumber := ovnmonitor.FindFirtsFreeLogicalPort(logicalSwitch)
+
+								if portNumber == 0 {
+									log.Warningf("Switch %s -> module %s : no free ports.\n", logicalSwitch.Name, logicalSwitch.ModuleId)
 								} else {
-									log.Noticef("CREATE LINK from:%s to:%s id:%s\n", linkHover.From, linkHover.To, linkHover.Id) //TODO Check if crashes
-									if linkHover.Id != "" {
-										iface.Up = true
+
+									linkError, linkHover := hoverctl.LinkPOST(hh.Dataplane, "i:"+iface.Name, switchHover.Id)
+									if linkError != nil {
+										log.Errorf("Error in POSTing the Link: %s\n", linkError)
+									} else {
+										log.Noticef("CREATE LINK from:%s to:%s id:%s\n", linkHover.From, linkHover.To, linkHover.Id)
+										if linkHover.Id != "" {
+											iface.Up = true
+										}
+
+										//Push security Policy?
+										//check if present security policy
+										//(if not) remove if not already removed
+										lsp, ok := hh.Nb.NbDatabase.Logical_Switch_Port[iface.IfaceIdExternalIds]
+										if ok {
+											//logical switch port found!
+
+											if lsp.SecurityMacStr != "" {
+												//Security Policy Set
+
+												if lsp.SecurityMacStr != iface.SecurityMacString {
+													//Security Mac Policy not yet injected to the module
+
+													ifacenumber := -1
+													if linkHover.From[0:2] == "m:" {
+														ifacenumber = linkHover.FromId
+													}
+													if linkHover.To[0:2] == "m:" {
+														ifacenumber = linkHover.ToId
+													}
+
+													iface.IfaceNumberHover = ifacenumber
+
+													errorTablePost, _ := hoverctl.TableEntryPOST(hh.Dataplane, switchHover.Id, "securitymac", strconv.Itoa(ifacenumber), lsp.SecurityMacStr)
+
+													if errorTablePost == nil {
+														iface.SecurityMacString = lsp.SecurityMacStr
+													}
+												}
+											} else {
+												//No Security Policy
+
+												if iface.SecurityMacString != "" {
+													//No security policy injected
+													errorTableDelete, _ := hoverctl.TableEntryDELETE(hh.Dataplane, switchHover.Id, "securitymac", strconv.Itoa(iface.IfaceNumberHover))
+
+													if errorTableDelete == nil {
+														iface.SecurityMacString = ""
+													}
+												}
+											}
+
+										}
+
+										iface.IfaceNumber = portNumber
+										iface.IfaceFd, _ = strconv.Atoi(external_interfaces[iface.Name].Id)
+
+										hoverctl.TableEntryPUT(hh.Dataplane, switchHover.Id, "ports", strconv.Itoa(portNumber), external_interfaces[iface.Name].Id)
+										logicalSwitch.PortsArray[portNumber] = iface.IfaceFd
+										logicalSwitch.PortsCount++
+
+										iface.LinkId = linkHover.Id
+										log.Debugf("link-id:%s\n", iface.LinkId)
+										iface.ToRemove = false
+										//Link port (in future lookup hypervisor)
 									}
+								}
+							} else {
+								//log.Debugf("SWITCH already present!%s\n", sw.ModuleId)
+								//Only Link module
 
-									iface.IfaceNumber = portNumber
-									iface.IfaceFd, _ = strconv.Atoi(external_interfaces[iface.Name].Id)
+								time.Sleep(global.SleepTime)
 
-									hoverctl.TableEntryPUT(hh.Dataplane, logicalSwitch.ModuleId, "ports", strconv.Itoa(portNumber), external_interfaces[iface.Name].Id)
-									logicalSwitch.PortsArray[portNumber] = iface.IfaceFd
-									logicalSwitch.PortsCount++
+								_, external_interfaces := hoverctl.ExternalInterfacesListGET(hh.Dataplane)
 
-									iface.LinkId = linkHover.Id
-									log.Debugf("link-id:%s\n", iface.LinkId)
-									iface.ToRemove = false
+								portNumber := ovnmonitor.FindFirtsFreeLogicalPort(logicalSwitch)
+
+								if portNumber == 0 {
+									log.Warningf("Switch %s -> module %s : no free ports.\n", logicalSwitch.Name, logicalSwitch.ModuleId)
+								} else {
+									linkError, linkHover := hoverctl.LinkPOST(hh.Dataplane, "i:"+iface.Name, logicalSwitch.ModuleId)
+									if linkError != nil {
+										log.Errorf("Error in POSTing the Link: %s\n", linkError)
+									} else {
+										log.Noticef("CREATE LINK from:%s to:%s id:%s\n", linkHover.From, linkHover.To, linkHover.Id) //TODO Check if crashes
+										if linkHover.Id != "" {
+											iface.Up = true
+										}
+
+										//Push security Policy?
+										//check if present security policy
+										//(if not) remove if not already removed
+										lsp, ok := hh.Nb.NbDatabase.Logical_Switch_Port[iface.IfaceIdExternalIds]
+										if ok {
+											//logical switch port found!
+
+											if lsp.SecurityMacStr != "" {
+												//Security Policy Set
+
+												if lsp.SecurityMacStr != iface.SecurityMacString {
+													//Security Mac Policy not yet injected to the module
+
+													ifacenumber := -1
+													if linkHover.From[0:2] == "m:" {
+														ifacenumber = linkHover.FromId
+													}
+													if linkHover.To[0:2] == "m:" {
+														ifacenumber = linkHover.ToId
+													}
+
+													iface.IfaceNumberHover = ifacenumber
+
+													errorTablePost, _ := hoverctl.TableEntryPOST(hh.Dataplane, logicalSwitch.ModuleId, "securitymac", strconv.Itoa(ifacenumber), lsp.SecurityMacStr)
+
+													if errorTablePost == nil {
+														iface.SecurityMacString = lsp.SecurityMacStr
+													}
+												}
+											} else {
+												//No Security Policy
+
+												if iface.SecurityMacString != "" {
+													//No security policy injected
+													errorTableDelete, _ := hoverctl.TableEntryDELETE(hh.Dataplane, logicalSwitch.ModuleId, "securitymac", strconv.Itoa(iface.IfaceNumberHover))
+
+													if errorTableDelete == nil {
+														iface.SecurityMacString = ""
+													}
+												}
+											}
+
+										}
+
+										iface.IfaceNumber = portNumber
+										iface.IfaceFd, _ = strconv.Atoi(external_interfaces[iface.Name].Id)
+
+										hoverctl.TableEntryPUT(hh.Dataplane, logicalSwitch.ModuleId, "ports", strconv.Itoa(portNumber), external_interfaces[iface.Name].Id)
+										logicalSwitch.PortsArray[portNumber] = iface.IfaceFd
+										logicalSwitch.PortsCount++
+
+										iface.LinkId = linkHover.Id
+										log.Debugf("link-id:%s\n", iface.LinkId)
+										iface.ToRemove = false
+									}
 								}
 							}
+						} else {
+							log.Errorf("No Switch in Nb referring to //%s//\n", logicalSwitchName)
 						}
-					} else {
-						log.Errorf("No Switch in Nb referring to //%s//\n", logicalSwitchName)
 					}
 				}
 			}

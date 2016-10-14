@@ -36,7 +36,7 @@ static int handle_rx(void *skb, struct metadata *md) {
 	src_info.rx_pkts = 0;
 	src_info.tx_pkts = 0;
 
-	bpf_trace_printk("pkt from:%x -> to:%x\n",ethernet->src,ethernet->dst);
+	bpf_trace_printk("pkt in_ifc:%d from:%x -> to:%x\n",md->in_ifc,ethernet->src,ethernet->dst);
 
 	//lookup in mac2host; if no key present -> initialize with src_info
 	struct host_info *src_host = mac2host.lookup_or_init(&src_key, &src_info);

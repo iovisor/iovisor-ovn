@@ -11,13 +11,17 @@ type Logical_Switch_Item struct {
 	ModuleId   string
 	PortsArray [9]int
 	PortsCount int
+	//SecurityPolicyEnabled bool
 	//Enabled   bool
 }
 
 type Logical_Switch_Port_Item struct {
-	UUID      string
-	Name      string
-	Addresses []string
+	UUID           string
+	Name           string
+	Addresses      string
+	PortSecutiry   string
+	SecurityMacStr string
+	SecurityIpStr  string
 }
 
 //return the name of the switch a port belongs to
