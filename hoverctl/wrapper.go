@@ -305,6 +305,25 @@ func TableEntryPUT(d *Dataplane, moduleId string, tableId string, entryId string
 	return nil, tableEntry
 }
 
+func TableEntryPOST(d *Dataplane, moduleId string, tableId string, entryId string, entryValue string) (error, TableEntry) {
+	log.Infof("table entry POST /modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId+" {%s,%s}\n", entryId, entryValue)
+
+	req := map[string]interface{}{
+		"key":   "{" + entryId + "}",
+		"value": "{" + entryValue + "}",
+	}
+	var tableEntry TableEntry
+	err := d.sendObject("POST", "/modules/"+moduleId+"/tables/"+tableId+"/entries/", req, &tableEntry)
+	if err != nil {
+		log.Warning(err)
+		return err, tableEntry
+	}
+
+	log.Debugf("table entry POST /modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId+" {%s,%s} OK\n", tableEntry.Key, tableEntry.Value)
+
+	return nil, tableEntry
+}
+
 func TableEntryGET(d *Dataplane, moduleId string, tableId string, entryId string) (error, TableEntry) {
 	log.Infof("table entry GET /modules/" + moduleId + "/tables/" + tableId + "/entries/" + entryId + "\n")
 
