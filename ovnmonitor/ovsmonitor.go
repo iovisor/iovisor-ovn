@@ -1,9 +1,7 @@
 package ovnmonitor
 
 import (
-	"strconv"
-
-	"github.com/netgroup-polito/iovisor-ovn/common"
+	"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/socketplane/libovsdb"
 )
 
@@ -25,22 +23,20 @@ func MonitorOvsDb() (h *MonitorHandler) {
 	cache := make(map[string]map[string]libovsdb.Row)
 	handler.Cache = &cache
 
-	ip := "127.0.0.1"
-	port := 6640
 	ovsdb_sock := ""
-	if common.Sandbox == true {
+	if config.Sandbox == true {
 		// Sandbox Real Environment
-		ovsdb_sock = "/home/matteo/ovs/tutorial/sandbox/db.sock"
-		ovs, err := libovsdb.ConnectWithUnixSocket(ovsdb_sock)
+		ovsdb_sock = config.OvsSock
+		ovs, err := libovsdb.ConnectWithUnixSocket(config.OvsSock)
 		handler.Db = ovs
 		if err != nil {
-			log.Errorf("unable to Connect to %s - %s\n", ovsdb_sock, err)
+			log.Errorf("unable to Connect to %s - %s\n", config.OvsSock, err)
 			return
 		}
 	} else {
 		//Openstack Real Environment
-		ovsdb_sock = ip + ":" + strconv.Itoa(port)
-		ovs, err := libovsdb.Connect(ip, port)
+		ovsdb_sock = config.Ovs
+		ovs, err := libovsdb.Connect(config.FromStringToIpPort(config.Ovs))
 		handler.Db = ovs
 		if err != nil {
 			log.Errorf("unable to Connect to %s - %s\n", ovsdb_sock, err)
