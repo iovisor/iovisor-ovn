@@ -14,20 +14,16 @@ import (
 
 var log = l.MustGetLogger("politoctrl")
 
-func MainLogic(dataplane *hoverctl.Dataplane) {
+func MainLogic(globalHandler *ovnmonitor.HandlerHandler) {
 	//Start monitoring ovn/s databases
 	nbHandler := ovnmonitor.MonitorOvnNb()
-
 	ovsHandler := ovnmonitor.MonitorOvsDb()
-
 	go ovnmonitor.MonitorOvnSb()
 	//log.Debugf("%+v\n%+v\n", ovsHandler, nbHandler)
 
-	globalHandler := ovnmonitor.HandlerHandler{}
 	globalHandler.Nb = nbHandler
 	globalHandler.Ovs = ovsHandler
-	globalHandler.Dataplane = dataplane
-	global.Hh = &globalHandler
+	global.Hh = globalHandler
 	//Here I have to multiplex & demultiplex (maybe it's better if i use a final var or something like that.)
 
 	//for now I only consider ovs notifications
@@ -35,7 +31,7 @@ func MainLogic(dataplane *hoverctl.Dataplane) {
 		for {
 			select {
 			case ovsString := <-ovsHandler.MainLogicNotification:
-				LogicalMappingOvs(ovsString, &globalHandler)
+				LogicalMappingOvs(ovsString, globalHandler)
 			}
 		}
 	} else {
