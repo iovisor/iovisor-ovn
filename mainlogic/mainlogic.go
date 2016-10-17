@@ -5,8 +5,7 @@ import (
 	"time"
 
 	"github.com/netgroup-polito/iovisor-ovn/bpf"
-	"github.com/netgroup-polito/iovisor-ovn/common"
-	"github.com/netgroup-polito/iovisor-ovn/global"
+	"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
 	l "github.com/op/go-logging"
@@ -23,7 +22,7 @@ func MainLogic(globalHandler *ovnmonitor.HandlerHandler) {
 
 	globalHandler.Nb = nbHandler
 	globalHandler.Ovs = ovsHandler
-	global.Hh = globalHandler
+	//global.Hh = globalHandler
 	//Here I have to multiplex & demultiplex (maybe it's better if i use a final var or something like that.)
 
 	//for now I only consider ovs notifications
@@ -44,7 +43,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 	//log.Debugf("Ovs Event:%s\n", s)
 
 	//SWITCH WITH NO SECURITY POLICIES
-	if !common.SwitchSecurityPolicy {
+	if !config.SwitchSecurityPolicy {
 		for ifaceName, iface := range hh.Ovs.OvsDatabase.Interface {
 			//if interface is not present into the local db, add it.
 			if ifaceName != "br-int" {
@@ -63,7 +62,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 							if logicalSwitch.ModuleId == "" {
 								log.Noticef("CREATE NEW SWITCH\n")
 
-								time.Sleep(global.SleepTime)
+								time.Sleep(config.SleepTime)
 
 								_, switchHover := hoverctl.ModulePOST(hh.Dataplane, "bpf", "Switch8", bpf.Switch)
 								logicalSwitch.ModuleId = switchHover.Id
@@ -102,7 +101,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 								//log.Debugf("SWITCH already present!%s\n", sw.ModuleId)
 								//Only Link module
 
-								time.Sleep(global.SleepTime)
+								time.Sleep(config.SleepTime)
 
 								_, external_interfaces := hoverctl.ExternalInterfacesListGET(hh.Dataplane)
 
@@ -160,7 +159,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 							if logicalSwitch.ModuleId == "" {
 								log.Noticef("CREATE NEW SWITCH\n")
 
-								time.Sleep(global.SleepTime)
+								time.Sleep(config.SleepTime)
 
 								_, switchHover := hoverctl.ModulePOST(hh.Dataplane, "bpf", "Switch8Security", bpf.SwitchSecurityPolicy)
 								logicalSwitch.ModuleId = switchHover.Id
@@ -243,7 +242,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 								//log.Debugf("SWITCH already present!%s\n", sw.ModuleId)
 								//Only Link module
 
-								time.Sleep(global.SleepTime)
+								time.Sleep(config.SleepTime)
 
 								_, external_interfaces := hoverctl.ExternalInterfacesListGET(hh.Dataplane)
 

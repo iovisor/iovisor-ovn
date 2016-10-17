@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"time"
 
 	l "github.com/op/go-logging"
 )
@@ -19,10 +20,15 @@ var Sandbox = false
 var Hover = "http://localhost:5002"
 var TestEnv = false
 
+//Constant
+
+var SleepTime = 3500 * time.Millisecond
+var SwitchSecurityPolicy = true
+
 var log = l.MustGetLogger("politoctrl")
 
 func PrintConfig() {
-	fmt.Printf("-----IOVisor-OVN Daemon-----\n")
+	fmt.Printf("-----IOVisor-OVN Daemon---------------------------------------\n")
 	fmt.Printf("starting configuration\n")
 
 	if !Sandbox {
@@ -38,7 +44,7 @@ func PrintConfig() {
 	}
 	fmt.Printf("%8s:%s\n", "Hover", Hover)
 	fmt.Printf("%8s:%t\n", "TestEnv", TestEnv)
-	fmt.Println("")
+	fmt.Printf("--------------------------------------------------------------\n\n")
 }
 
 func FromStringToIpPort(s string) (string, int) {
