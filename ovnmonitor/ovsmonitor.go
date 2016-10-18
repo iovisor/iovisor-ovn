@@ -74,25 +74,33 @@ func ovsMonitorFilter(h *MonitorHandler) {
 	for {
 		select {
 		case currUpdate := <-h.Update:
-			//PrintCache(h)
-
 			//manage case of new update from db
+
+			if config.PrintOvs {
+				PrintCache(h)
+			}
 
 			//for debug purposes, print the new rows added or modified
 			//a copy of the whole db is in cache.
 
-			for table, _ /*tableUpdate*/ := range currUpdate.Updates {
+			for table, tableUpdate := range currUpdate.Updates {
 				if _, ok := printTable[table]; ok {
 					//Notify ovslogic to update db structs!
 					h.BufupdateOvs <- table
 
-					// log.Noticef("update table: %s\n", table)
-					// for uuid, row := range tableUpdate.Rows {
-					// 	log.Noticef("UUID     : %s\n", uuid)
-					//
-					// 	newRow := row.New
-					// 	PrintRow(newRow)
-					// }
+					if config.PrintOvsChanges {
+						log.Noticef("update table: %s\n", table)
+						for uuid, row := range tableUpdate.Rows {
+							log.Noticef("UUID     : %s\n", uuid)
+
+							newRow := row.New
+							PrintRow(newRow)
+						}
+					}
+
+					if config.PrintOvsFilteredTables {
+						PrintCacheTable(h, table)
+					}
 				}
 			}
 		}

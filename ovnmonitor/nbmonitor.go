@@ -69,6 +69,9 @@ func MonitorOvnNb() (h *MonitorHandler) {
 	return
 }
 
+//All the changes notification from ovsdblib are processed by this function.
+//Only notification on filtered tables are considered.
+//A Notification for each tablename modfied is propagated to XXXLogic() through h.Bufupdate Channel!
 func ovnNbMonitorFilter(h *MonitorHandler) {
 	printTable := make(map[string]int)
 	printTable["Logical_Switch"] = 1
@@ -79,21 +82,32 @@ func ovnNbMonitorFilter(h *MonitorHandler) {
 		case currUpdate := <-h.Update:
 			//manage case of new update from db
 
+			if config.PrintOvnNb {
+				PrintCache(h)
+			}
+
 			//for debug purposes, print the new rows added or modified
 			//a copy of the whole db is in cache.
 
-			for table, _ /*tableUpdate*/ := range currUpdate.Updates {
+			for table, tableUpdate := range currUpdate.Updates {
 				if _, ok := printTable[table]; ok {
 					//Notify nblogic to update db structures!
 					h.Bufupdate <- table
 
-					// log.Noticef("update table: %s\n", table)
-					// for uuid, row := range tableUpdate.Rows {
-					// 	log.Noticef("UUID     : %s\n", uuid)
-					//
-					// 	newRow := row.New
-					// 	PrintRow(newRow)
-					// }
+					if config.PrintOvnNbChanges {
+						log.Noticef("update table: %s\n", table)
+						for uuid, row := range tableUpdate.Rows {
+							log.Noticef("UUID     : %s\n", uuid)
+
+							newRow := row.New
+							PrintRow(newRow)
+						}
+					}
+
+					if config.PrintOvnNbFilteredTables {
+						PrintCacheTable(h, table)
+					}
+
 				}
 			}
 		}

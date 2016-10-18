@@ -73,19 +73,34 @@ func ovnSbMonitor(h *MonitorHandler) {
 		case currUpdate := <-h.Update:
 			//manage case of new update from db
 
+			if config.PrintOvnSb {
+				PrintCache(h)
+			}
+
 			//for debug purposes, print the new rows added or modified
 			//a copy of the whole db is in cache.
 
 			for table, tableUpdate := range currUpdate.Updates {
 				if _, ok := printTable[table]; ok {
 
-					log.Noticef("update table: %s\n", table)
-					for uuid, row := range tableUpdate.Rows {
-						log.Noticef("UUID     : %s\n", uuid)
+					//TODO not yet implemented for southbound
+					//Notify sblogic to update db structures!
+					//h.Bufupdate <- table
 
-						newRow := row.New
-						PrintRow(newRow)
+					if config.PrintOvnSbChanges {
+						log.Noticef("update table: %s\n", table)
+						for uuid, row := range tableUpdate.Rows {
+							log.Noticef("UUID     : %s\n", uuid)
+
+							newRow := row.New
+							PrintRow(newRow)
+						}
 					}
+
+					if config.PrintOvnSbFilteredTables {
+						PrintCacheTable(h, table)
+					}
+
 				}
 			}
 		}

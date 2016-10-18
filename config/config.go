@@ -25,6 +25,21 @@ var TestEnv = false
 var SleepTime = 3500 * time.Millisecond
 var SwitchSecurityPolicy = true
 
+//for debug purposes, print Notification on single changes
+var PrintOvnNbChanges = false
+var PrintOvnSbChanges = false
+var PrintOvsChanges = false
+
+//for debug purposes, print the whole db on changes notification
+var PrintOvnNbFilteredTables = false
+var PrintOvnSbFilteredTables = false
+var PrintOvsFilteredTables = false
+
+//for debug purposes, print ALL the database
+var PrintOvnNb = false
+var PrintOvnSb = false
+var PrintOvs = false
+
 var log = l.MustGetLogger("politoctrl")
 
 func PrintConfig() {
