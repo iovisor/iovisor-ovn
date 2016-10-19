@@ -47,7 +47,7 @@ func PrintOvs(hh *HandlerHandler) {
 func PrintOvsInterface(hh *HandlerHandler, interface_name string) {
 	iface, ok := hh.Ovs.OvsDatabase.Interface[interface_name]
 	if ok {
-		fmt.Printf("%10s: %s\n%10s: %s\n%10s: %s\n%10s: %d\n%10s: %d\n", "*name*", iface.Name, "iface-id", iface.IfaceIdExternalIds, "link-id", iface.LinkId, "iface  #", iface.IfaceNumber, "iface fd", iface.IfaceFd)
+		fmt.Printf("%10s: %s\n%10s: %s\n%10s: %s\n%10s: %d\n%10s: %d\n", "*name*", iface.Name, "iface-id", iface.IfaceIdExternalIds, "link-id", iface.LinkIdHover, "iface  #", iface.IfaceIdArrayBroadcast, "iface fd", iface.IfaceFd)
 		fmt.Printf("%10s: %t\n%10s: %t", "up", iface.Up, "ToRemove", iface.ToRemove)
 	}
 }

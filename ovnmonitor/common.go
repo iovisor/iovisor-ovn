@@ -28,6 +28,7 @@ type MonitorHandler struct {
 	Db                    *libovsdb.OvsdbClient
 	NbDatabase            *Nb_Database
 	OvsDatabase           *Ovs_Database
+	OvsNewDatabase        *Ovs_Database
 }
 
 func PrintRow(row libovsdb.Row) {
