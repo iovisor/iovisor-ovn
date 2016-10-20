@@ -111,6 +111,7 @@ func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 				//compute SecurityMacStr
 				if logicalSwitchPort.PortSecutiry != "" {
 					logicalSwitchPort.SecurityMacStr = ovnmonitor.FromPortSecurityStrToMacStr(logicalSwitchPort.PortSecutiry)
+					hh.Ovs.MainLogicNotification <- "TestNotificationForSecurityPoliciesUPDATE"
 					// log.Noticef("MAC:%s\n", logicalSwitchPort.SecurityMacStr)
 				}
 				//TODO compute SecurityIpStr
@@ -128,6 +129,8 @@ func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 			//compute SecurityMacStr
 			if logicalSwitchPort.PortSecutiry != "" {
 				logicalSwitchPort.SecurityMacStr = ovnmonitor.FromPortSecurityStrToMacStr(logicalSwitchPort.PortSecutiry)
+				//TODO Check if is needed
+				hh.Ovs.MainLogicNotification <- "TestNotificationForSecurityPoliciesUPDATE"
 				// log.Noticef("MAC:%s\n", logicalSwitchPort.SecurityMacStr)
 			}
 			//TODO compute SecurityIpStr
