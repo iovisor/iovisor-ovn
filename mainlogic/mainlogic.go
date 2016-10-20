@@ -19,15 +19,17 @@ func MainLogic(globalHandler *ovnmonitor.HandlerHandler) {
 	//Start monitoring ovn/s databases
 	nbHandler := ovnmonitor.MonitorOvnNb()
 	ovsHandler := ovnmonitor.MonitorOvsDb()
+
 	go ovnmonitor.MonitorOvnSb()
 	//log.Debugf("%+v\n%+v\n", ovsHandler, nbHandler)
 
 	globalHandler.Nb = nbHandler
 	globalHandler.Ovs = ovsHandler
-	//global.Hh = globalHandler
-	//Here I have to multiplex & demultiplex (maybe it's better if i use a final var or something like that.)
 
 	//Init databases
+	globalHandler.Nb.NbDatabase = &ovnmonitor.Nb_Database{}
+	globalHandler.Nb.NbDatabase.Clear()
+
 	globalHandler.Ovs.OvsDatabase = &ovnmonitor.Ovs_Database{}
 	globalHandler.Ovs.OvsDatabase.Clear()
 
@@ -37,11 +39,139 @@ func MainLogic(globalHandler *ovnmonitor.HandlerHandler) {
 			select {
 			case ovsString := <-ovsHandler.MainLogicNotification:
 				LogicalMappingOvs(ovsString, globalHandler)
+			case nbString := <-nbHandler.MainLogicNotification:
+				LogicalMappingNb(nbString, globalHandler)
 			}
 		}
 	} else {
 		log.Errorf("MainLogic not started!\n")
 	}
+}
+
+func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
+	//log.Debugf("Nb Event:%s\n", s)
+
+	//NEW MODULE?
+	// log.Debug("OLD")
+	// spew.Dump(hh.Nb.NbDatabase.Logical_Switch)
+	// log.Debug("NEW")
+	// spew.Dump(hh.Nb.NbNewDatabase.Logical_Switch)
+
+	for newLogicalSwitchName, newLogicalSwitch := range hh.Nb.NbNewDatabase.Logical_Switch {
+		log.Debugf("NEW Ls name: %s %s\n", newLogicalSwitch.Name, newLogicalSwitchName)
+		if logicalSwitch, ok := hh.Nb.NbDatabase.Logical_Switch[newLogicalSwitchName]; ok {
+			//logicalSwitch already present
+
+			//if new ports are added, add them
+			for newPortUUID, _ := range newLogicalSwitch.PortsUUID {
+				logicalSwitch.PortsUUID[newPortUUID] = newPortUUID
+			}
+
+			//TODO Check compatibility with PortLookup!!!
+			//if ports are deleted. Delete them
+
+			// for portUUID, _ := range logicalSwitch.PortsUUID {
+			// 	if ls, ok := newLogicalSwitch.PortsUUID[portUUID]; ok {
+			// 		delete(logicalSwitch.PortsUUID, ls)
+			// 	}
+			// }
+		} else {
+			//logical switch not present
+			logicalSwitch := ovnmonitor.Logical_Switch_Item{}
+			logicalSwitch.Init()
+			logicalSwitch.Name = newLogicalSwitch.Name
+			//if new ports are added, add them
+			for newPortUUID, _ := range newLogicalSwitch.PortsUUID {
+				logicalSwitch.PortsUUID[newPortUUID] = newPortUUID
+			}
+			hh.Nb.NbDatabase.Logical_Switch[newLogicalSwitchName] = &logicalSwitch
+		}
+	}
+
+	//DELETE MODULE?
+	for _, logicalSwitch := range hh.Nb.NbDatabase.Logical_Switch {
+		if _, ok := hh.Nb.NbNewDatabase.Logical_Switch[logicalSwitch.Name]; ok {
+			//it's ok
+		} else {
+			// log.Debugf("MARK ToRemove: logicalSwitchName %s \n", logicalSwitch.Name)
+			//delete the current switch!
+			logicalSwitch.ToRemove = true
+		}
+	}
+
+	//NEW PORT?
+	for newLogicalPortName, newLogicalSwitchPort := range hh.Nb.NbNewDatabase.Logical_Switch_Port {
+		if logicalSwitchPort, ok := hh.Nb.NbDatabase.Logical_Switch_Port[newLogicalPortName]; ok {
+			//check modified fields
+			if logicalSwitchPort.Addresses != newLogicalSwitchPort.Addresses {
+				logicalSwitchPort.Addresses = newLogicalSwitchPort.Addresses
+			}
+			if logicalSwitchPort.PortSecutiry != newLogicalSwitchPort.PortSecutiry {
+				logicalSwitchPort.PortSecutiry = newLogicalSwitchPort.PortSecutiry
+				//compute SecurityMacStr
+				if logicalSwitchPort.PortSecutiry != "" {
+					logicalSwitchPort.SecurityMacStr = ovnmonitor.FromPortSecurityStrToMacStr(logicalSwitchPort.PortSecutiry)
+					// log.Noticef("MAC:%s\n", logicalSwitchPort.SecurityMacStr)
+				}
+				//TODO compute SecurityIpStr
+			}
+
+		} else {
+			//add a new Logical Port at all
+			logicalSwitchPort := ovnmonitor.Logical_Switch_Port_Item{}
+			logicalSwitchPort.Init()
+			logicalSwitchPort.UUID = newLogicalSwitchPort.UUID
+			logicalSwitchPort.Name = newLogicalSwitchPort.Name
+			logicalSwitchPort.Addresses = newLogicalSwitchPort.Addresses
+			logicalSwitchPort.PortSecutiry = newLogicalSwitchPort.PortSecutiry
+
+			//compute SecurityMacStr
+			if logicalSwitchPort.PortSecutiry != "" {
+				logicalSwitchPort.SecurityMacStr = ovnmonitor.FromPortSecurityStrToMacStr(logicalSwitchPort.PortSecutiry)
+				// log.Noticef("MAC:%s\n", logicalSwitchPort.SecurityMacStr)
+			}
+			//TODO compute SecurityIpStr
+
+			hh.Nb.NbDatabase.Logical_Switch_Port[logicalSwitchPort.Name] = &logicalSwitchPort
+		}
+	}
+
+	//DELETE PORT?
+	for logicalPortName, logicalPort := range hh.Nb.NbDatabase.Logical_Switch_Port {
+		if _, ok := hh.Nb.NbNewDatabase.Logical_Switch_Port[logicalPortName]; ok {
+			//it's ok
+		} else {
+			//I deleted the logical switch portStr
+			logicalPort.ToRemove = true
+			log.Debugf("MARK To Remove: logicalPort %s\n", logicalPort.Name)
+		}
+	}
+
+	//PROCESS CHANGES.. what changes??
+	for _, logicalSwitch := range hh.Nb.NbDatabase.Logical_Switch {
+		if logicalSwitch.ToRemove {
+			if logicalSwitch.PortsCount == 0 {
+				if logicalSwitch.ModuleId != "" {
+					moduleDeleteError, _ := hoverctl.ModuleDELETE(hh.Dataplane, logicalSwitch.ModuleId)
+					if moduleDeleteError == nil {
+						logicalSwitch.ModuleId = ""
+					}
+				}
+			} else {
+				log.Debugf("trying to remove logical switch %s module: %s with %d ports still active. Fail.\n", logicalSwitch.Name, logicalSwitch.ModuleId, logicalSwitch.PortsCount)
+			}
+		}
+	}
+
+	for logicalSwitchPortName, logicalSwitchPort := range hh.Nb.NbDatabase.Logical_Switch_Port {
+		if logicalSwitchPort.ToRemove {
+			//TODO Manage this fiels into ovs main logic!!!
+			if logicalSwitchPort.InterfaceReference == "" {
+				delete(hh.Nb.NbDatabase.Logical_Switch_Port, logicalSwitchPortName)
+			}
+		}
+	}
+
 }
 
 /*mapping events of ovs local db*/

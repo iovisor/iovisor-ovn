@@ -27,6 +27,7 @@ type MonitorHandler struct {
 	Cache                 *map[string]map[string]libovsdb.Row
 	Db                    *libovsdb.OvsdbClient
 	NbDatabase            *Nb_Database
+	NbNewDatabase         *Nb_Database
 	OvsDatabase           *Ovs_Database
 	OvsNewDatabase        *Ovs_Database
 }

@@ -6,22 +6,53 @@ type Nb_Database struct {
 }
 
 type Logical_Switch_Item struct {
-	Name       string
-	PortsUUID  map[string]string
-	ModuleId   string
-	PortsArray [9]int
-	PortsCount int
-	//SecurityPolicyEnabled bool
-	//Enabled   bool
+	//OVN fields
+	Name      string
+	PortsUUID map[string]string
+
+	//Main Logic Fields
+	ModuleId   string //module id inside hover
+	PortsArray [9]int //[0]=empty [1..8]=contains the port allocation(with fd) for broadcast tricky implemented inside hover
+	PortsCount int    //number of allocated ports
+	ToRemove   bool   //mark to remove if not present into the OVN_NB_DATABASE, but not yet removed... Other data to remove before
+	// Up         bool   //means corresponding module is already posted
 }
 
 type Logical_Switch_Port_Item struct {
-	UUID           string
-	Name           string
-	Addresses      string
-	PortSecutiry   string
-	SecurityMacStr string
-	SecurityIpStr  string
+	//OVN Fiels
+	UUID         string
+	Name         string
+	Addresses    string
+	PortSecutiry string
+
+	//Main Logic Fields
+	SecurityMacStr     string
+	SecurityIpStr      string
+	ToRemove           bool
+	InterfaceReference string //corresponding interface. If "" emptystring I'm authorized to remove it. After Toremove is marked
+}
+
+func (nb *Nb_Database) Clear() {
+	nb.Logical_Switch = make(map[string]*Logical_Switch_Item)
+	nb.Logical_Switch_Port = make(map[string]*Logical_Switch_Port_Item)
+}
+
+func (nb *Nb_Database) ClearLogicalSwitch() {
+	nb.Logical_Switch = make(map[string]*Logical_Switch_Item)
+}
+
+func (nb *Nb_Database) ClearLogicalSwitchPort() {
+	nb.Logical_Switch_Port = make(map[string]*Logical_Switch_Port_Item)
+}
+
+func (ls *Logical_Switch_Item) Init() {
+	ls.PortsUUID = make(map[string]string)
+	ls.ToRemove = false
+	// ls.Up = false
+}
+
+func (lsp *Logical_Switch_Port_Item) Init() {
+	lsp.ToRemove = false
 }
 
 //return the name of the switch a port belongs to
