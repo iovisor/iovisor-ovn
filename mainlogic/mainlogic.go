@@ -52,15 +52,12 @@ func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 	//log.Debugf("Nb Event:%s\n", s)
 
 	//NEW MODULE?
-	// log.Debug("OLD")
-	// spew.Dump(hh.Nb.NbDatabase.Logical_Switch)
-	// log.Debug("NEW")
-	// spew.Dump(hh.Nb.NbNewDatabase.Logical_Switch)
 
 	for newLogicalSwitchName, newLogicalSwitch := range hh.Nb.NbNewDatabase.Logical_Switch {
-		log.Debugf("NEW Ls name: %s %s\n", newLogicalSwitch.Name, newLogicalSwitchName)
 		if logicalSwitch, ok := hh.Nb.NbDatabase.Logical_Switch[newLogicalSwitchName]; ok {
 			//logicalSwitch already present
+
+			logicalSwitch.ToRemove = false
 
 			//if new ports are added, add them
 			for newPortUUID, _ := range newLogicalSwitch.PortsUUID {
@@ -69,12 +66,15 @@ func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 
 			//TODO Check compatibility with PortLookup!!!
 			//if ports are deleted. Delete them
-
-			// for portUUID, _ := range logicalSwitch.PortsUUID {
-			// 	if ls, ok := newLogicalSwitch.PortsUUID[portUUID]; ok {
-			// 		delete(logicalSwitch.PortsUUID, ls)
-			// 	}
-			// }
+			for portUUID, _ := range logicalSwitch.PortsUUID {
+				if _, ok := newLogicalSwitch.PortsUUID[portUUID]; ok {
+					//it's ok
+				} else {
+					//TODO NOT WORKING
+					// log.Debugf("Deleting %s\n", portUUID)
+					delete(logicalSwitch.PortsUUID, portUUID)
+				}
+			}
 		} else {
 			//logical switch not present
 			logicalSwitch := ovnmonitor.Logical_Switch_Item{}
@@ -96,6 +96,13 @@ func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 			// log.Debugf("MARK ToRemove: logicalSwitchName %s \n", logicalSwitch.Name)
 			//delete the current switch!
 			logicalSwitch.ToRemove = true
+
+			//remove all the ports.
+			//HACK but must work!
+			for logicalSwitchPortName, _ := range logicalSwitch.PortsUUID {
+				// log.Debugf("Deleting %s\n", logicalSwitchPortName)
+				delete(logicalSwitch.PortsUUID, logicalSwitchPortName)
+			}
 		}
 	}
 
@@ -103,6 +110,14 @@ func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 	for newLogicalPortName, newLogicalSwitchPort := range hh.Nb.NbNewDatabase.Logical_Switch_Port {
 		if logicalSwitchPort, ok := hh.Nb.NbDatabase.Logical_Switch_Port[newLogicalPortName]; ok {
 			//check modified fields
+			if logicalSwitchPort.LogicalSwitchName == "" {
+				logicalSwitchPort.LogicalSwitchName = ovnmonitor.PortLookupNoCached(hh.Nb.NbNewDatabase, logicalSwitchPort.Name)
+				log.Debugf("RETRY PortLookupNoCached %s -> %s", logicalSwitchPort.Name, logicalSwitchPort.LogicalSwitchName)
+				if logicalSwitchPort.LogicalSwitchName == "" {
+					log.Warningf("Logical switch Lookup not found for port %s UUID %s\n", logicalSwitchPort.Name, logicalSwitchPort.UUID)
+				}
+			}
+
 			if logicalSwitchPort.Addresses != newLogicalSwitchPort.Addresses {
 				logicalSwitchPort.Addresses = newLogicalSwitchPort.Addresses
 			}
@@ -125,6 +140,11 @@ func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 			logicalSwitchPort.Name = newLogicalSwitchPort.Name
 			logicalSwitchPort.Addresses = newLogicalSwitchPort.Addresses
 			logicalSwitchPort.PortSecutiry = newLogicalSwitchPort.PortSecutiry
+			logicalSwitchPort.LogicalSwitchName = ovnmonitor.PortLookupNoCached(hh.Nb.NbNewDatabase, logicalSwitchPort.Name)
+			log.Debugf("PortLookupNoCached %s -> %s", logicalSwitchPort.Name, logicalSwitchPort.LogicalSwitchName)
+			if logicalSwitchPort.LogicalSwitchName == "" {
+				log.Infof("Logical switch Lookup not found for port %s UUID %s\n", logicalSwitchPort.Name, logicalSwitchPort.UUID)
+			}
 
 			//compute SecurityMacStr
 			if logicalSwitchPort.PortSecutiry != "" {

@@ -25,6 +25,8 @@ type Logical_Switch_Port_Item struct {
 	Addresses    string
 	PortSecutiry string
 
+	LogicalSwitchName string
+
 	//Main Logic Fields
 	SecurityMacStr     string
 	SecurityIpStr      string
@@ -57,6 +59,15 @@ func (lsp *Logical_Switch_Port_Item) Init() {
 
 //return the name of the switch a port belongs to
 func PortLookup(nb *Nb_Database, portName string) string {
+
+	if port, ok := nb.Logical_Switch_Port[portName]; ok {
+		return port.LogicalSwitchName
+	}
+	return ""
+}
+
+//return the name of the switch a port belongs to
+func PortLookupNoCached(nb *Nb_Database, portName string) string {
 
 	if port, ok := nb.Logical_Switch_Port[portName]; ok {
 		uuid := port.UUID
