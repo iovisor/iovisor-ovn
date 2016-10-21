@@ -23,6 +23,8 @@ var TestEnv = false
 //Constant
 
 var SleepTime = 3500 * time.Millisecond
+var FlushTime = 5000 * time.Millisecond
+var FlushEnabled = false
 var SwitchSecurityPolicy = true
 
 //for debug purposes, print Notification on single changes

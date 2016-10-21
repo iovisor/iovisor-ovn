@@ -18,10 +18,10 @@ func PrintNb(hh *HandlerHandler) {
 func PrintNbLogicalSwitch(hh *HandlerHandler, logical_switch_name string) {
 	ls, ok := hh.Nb.NbDatabase.Logical_Switch[logical_switch_name]
 	if ok {
-		fmt.Printf("%12s %s\n%12s %s\n%12s %d\n%12s %+v\n", "switchName:", ls.Name, "module-id:", ls.ModuleId, "portsCount:", ls.PortsArray, "portsArray:", ls.PortsCount)
-		fmt.Printf("%12s\n", "ports:")
+		fmt.Printf("%12s %s\n%12s %s\n%12s %d\n%12s %+v\n%12s %t\n", "SwitchName:", ls.Name, "ModuleId:", ls.ModuleId, "PortsArray:", ls.PortsArray, "PortsCount:", ls.PortsCount, "ToRemove:", ls.ToRemove)
+		fmt.Printf("%12s\n", "portsUUID:")
 		for k, _ := range ls.PortsUUID {
-			fmt.Printf("%12s %20s --> ", "", k)
+			fmt.Printf("%12s %20s", "", k)
 			PrintNbLogicalSwitchPort(hh, k)
 			fmt.Printf("\n")
 		}
@@ -31,7 +31,8 @@ func PrintNbLogicalSwitch(hh *HandlerHandler, logical_switch_name string) {
 func PrintNbLogicalSwitchPort(hh *HandlerHandler, logical_switch_port_name string) {
 	lsp, ok := hh.Nb.NbDatabase.Logical_Switch_Port[logical_switch_port_name]
 	if ok {
-		fmt.Printf("UUID: %s name: %10s addesses: %+v\n", lsp.UUID, lsp.Name, lsp.Addresses)
+		fmt.Printf("%12s %s\n%12s %s\n%12s %s\n%12s %s\n", "UUID:", lsp.UUID, "Name:", lsp.Name, "Addresses:", lsp.Addresses, "PortSecutiry:", lsp.PortSecutiry)
+		fmt.Printf("%12s %s\n%12s %s\n%12s %s\n%12s %s\n%12s %t\n\n", "SecurityMac:", lsp.SecurityMacStr, "SecurityIp:", lsp.SecurityIpStr, "LSwitchName:", lsp.LogicalSwitchName, "IfaceRef:", lsp.InterfaceReference, "ToRemove:", lsp.ToRemove)
 	}
 }
 
@@ -47,7 +48,8 @@ func PrintOvs(hh *HandlerHandler) {
 func PrintOvsInterface(hh *HandlerHandler, interface_name string) {
 	iface, ok := hh.Ovs.OvsDatabase.Interface[interface_name]
 	if ok {
-		fmt.Printf("%10s: %s\n%10s: %s\n%10s: %s\n%10s: %d\n%10s: %d\n", "*name*", iface.Name, "iface-id", iface.IfaceIdExternalIds, "link-id", iface.LinkId, "iface  #", iface.IfaceNumber, "iface fd", iface.IfaceFd)
-		fmt.Printf("%10s: %t\n%10s: %t", "up", iface.Up, "ToRemove", iface.ToRemove)
+		fmt.Printf("%21s: %s\n%21s: %s\n%21s: %s\n%21s: %d\n%21s: %d\n%21s: %d\n", "*Name*", iface.Name, "IfaceIdExternalIds", iface.IfaceIdExternalIds, "LinkIdHover", iface.LinkIdHover, "IfaceIdRedirectHover", iface.IfaceIdRedirectHover, "IfaceIdArrayBroadcast", iface.IfaceIdArrayBroadcast, "IfaceFd", iface.IfaceFd)
+
+		fmt.Printf("%21s: %s\n%21s: %t\n%21s: %t", "SecurityMacString", iface.SecurityMacString, "Up", iface.Up, "ToRemove", iface.ToRemove)
 	}
 }
