@@ -61,7 +61,7 @@ func SetInterfaceReference(nb *Nb_Database, ifaceIdExternalId string, interfaceN
 	for _, logicalSwitchPort := range nb.Logical_Switch_Port {
 		if logicalSwitchPort.Name == ifaceIdExternalId {
 			logicalSwitchPort.InterfaceReference = interfaceName
-			log.Debugf("InterfaceReference logicalSwitchPort %s -> %s\n", ifaceIdExternalId, interfaceName)
+			//log.Debugf("InterfaceReference logicalSwitchPort %s -> %s\n", ifaceIdExternalId, interfaceName)
 			break
 		}
 	}
@@ -71,7 +71,7 @@ func DeleteInterfaceReference(nb *Nb_Database, ifaceIdExternalId string) {
 	for _, logicalSwitchPort := range nb.Logical_Switch_Port {
 		if logicalSwitchPort.Name == ifaceIdExternalId {
 			logicalSwitchPort.InterfaceReference = ""
-			log.Debugf("DELETE InterfaceReference logicalSwitchPort %s -> '' \n", ifaceIdExternalId)
+			//log.Debugf("DELETE InterfaceReference logicalSwitchPort %s -> '' \n", ifaceIdExternalId)
 			break
 		}
 	}

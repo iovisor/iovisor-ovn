@@ -51,7 +51,7 @@ func MainLogic(globalHandler *ovnmonitor.HandlerHandler) {
 }
 
 //TODO Check. I don't know if something could be wrong...
-//MAYBE notication to the parse logic looks better...
+//MAYBE notifcation to the parse logic looks better...
 func FlushCache(globalHandler *ovnmonitor.HandlerHandler) {
 	if config.FlushEnabled {
 		for {
@@ -128,7 +128,7 @@ func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 			//check modified fields
 			if logicalSwitchPort.LogicalSwitchName == "" {
 				logicalSwitchPort.LogicalSwitchName = ovnmonitor.PortLookupNoCached(hh.Nb.NbNewDatabase, logicalSwitchPort.Name)
-				log.Debugf("RETRY PortLookupNoCached %s -> %s", logicalSwitchPort.Name, logicalSwitchPort.LogicalSwitchName)
+				//log.Debugf("RETRY PortLookupNoCached %s -> %s", logicalSwitchPort.Name, logicalSwitchPort.LogicalSwitchName)
 				if logicalSwitchPort.LogicalSwitchName == "" {
 					log.Warningf("Logical switch Lookup not found for port %s UUID %s\n", logicalSwitchPort.Name, logicalSwitchPort.UUID)
 				}
@@ -157,9 +157,9 @@ func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 			logicalSwitchPort.Addresses = newLogicalSwitchPort.Addresses
 			logicalSwitchPort.PortSecutiry = newLogicalSwitchPort.PortSecutiry
 			logicalSwitchPort.LogicalSwitchName = ovnmonitor.PortLookupNoCached(hh.Nb.NbNewDatabase, logicalSwitchPort.Name)
-			log.Debugf("PortLookupNoCached %s -> %s", logicalSwitchPort.Name, logicalSwitchPort.LogicalSwitchName)
+			//log.Debugf("PortLookupNoCached %s -> %s", logicalSwitchPort.Name, logicalSwitchPort.LogicalSwitchName)
 			if logicalSwitchPort.LogicalSwitchName == "" {
-				log.Infof("Logical switch Lookup not found for port %s UUID %s\n", logicalSwitchPort.Name, logicalSwitchPort.UUID)
+				//log.Infof("Logical switch Lookup not found for port %s UUID %s\n", logicalSwitchPort.Name, logicalSwitchPort.UUID)
 			}
 
 			//compute SecurityMacStr
@@ -182,7 +182,7 @@ func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 		} else {
 			//I deleted the logical switch portStr
 			logicalPort.ToRemove = true
-			log.Debugf("MARK To Remove: logicalPort %s\n", logicalPort.Name)
+			//log.Debugf("MARK To Remove: logicalPort %s\n", logicalPort.Name)
 		}
 	}
 
@@ -282,7 +282,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 				if linkDeleteError == nil {
 					//Complete the link deletion..
 					currentInterface.LinkIdHover = ""
-					log.Debug("REMOVE Interface %s %s (1/1) LINK REMOVED\n", currentInterface.Name, currentInterface.IfaceIdExternalIds)
+					//log.Debug("REMOVE Interface %s %s (1/1) LINK REMOVED\n", currentInterface.Name, currentInterface.IfaceIdExternalIds)
 				}
 				//else
 				//this function will be automatically re-called at the next notification.
@@ -302,7 +302,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 
 						logicalSwitch.PortsArray[currentInterface.IfaceIdArrayBroadcast] = 0
 						logicalSwitch.PortsCount--
-						log.Debug("REMOVE Interface %s %s (2/2) NB IfaceIdArrayBroadcast\n", currentInterface.Name, currentInterface.IfaceIdExternalIds)
+						//log.Debugf("REMOVE Interface %s %s (2/2) NB IfaceIdArrayBroadcast\n", currentInterface.Name, currentInterface.IfaceIdExternalIds)
 
 					}
 					if currentInterface.SecurityMacString != "" {
