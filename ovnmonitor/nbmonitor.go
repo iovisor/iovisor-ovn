@@ -62,7 +62,7 @@ func MonitorOvnNb() (h *MonitorHandler) {
 	PopulateCache(&handler, *initial)
 
 	//Receive all update & populate cache
-	go NbLogicInit(&handler)
+	go NbParseInit(&handler)
 	go ovnNbMonitorFilter(&handler)
 	//	<-handler.Quit
 	h = &handler

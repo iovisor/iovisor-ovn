@@ -58,7 +58,7 @@ func MonitorOvsDb() (h *MonitorHandler) {
 	}
 	PopulateCache(&handler, *initial)
 
-	go OvsLogicInit(&handler)
+	go OvsParseInit(&handler)
 	go ovsMonitorFilter(&handler)
 	//<-handler.Quit
 	h = &handler
