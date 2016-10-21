@@ -142,6 +142,7 @@ func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 				//compute SecurityMacStr
 				if logicalSwitchPort.PortSecutiry != "" {
 					logicalSwitchPort.SecurityMacStr = ovnmonitor.FromPortSecurityStrToMacStr(logicalSwitchPort.PortSecutiry)
+					logicalSwitchPort.SecurityIpStr = ovnmonitor.FromPortSecurityStrToIpStr(logicalSwitchPort.PortSecutiry)
 					hh.Ovs.MainLogicNotification <- "TestNotificationForSecurityPoliciesUPDATE"
 					// log.Noticef("MAC:%s\n", logicalSwitchPort.SecurityMacStr)
 				}
@@ -165,11 +166,9 @@ func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 			//compute SecurityMacStr
 			if logicalSwitchPort.PortSecutiry != "" {
 				logicalSwitchPort.SecurityMacStr = ovnmonitor.FromPortSecurityStrToMacStr(logicalSwitchPort.PortSecutiry)
-				//TODO Check if is needed
+				logicalSwitchPort.SecurityIpStr = ovnmonitor.FromPortSecurityStrToIpStr(logicalSwitchPort.PortSecutiry)
 				hh.Ovs.MainLogicNotification <- "TestNotificationForSecurityPoliciesUPDATE"
-				// log.Noticef("MAC:%s\n", logicalSwitchPort.SecurityMacStr)
 			}
-			//TODO compute SecurityIpStr
 
 			hh.Nb.NbDatabase.Logical_Switch_Port[logicalSwitchPort.Name] = &logicalSwitchPort
 		}
@@ -399,8 +398,9 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 								lsp, ok := hh.Nb.NbDatabase.Logical_Switch_Port[currentInterface.IfaceIdExternalIds]
 								if ok {
 									//push or modify security policy?
+									//Mac security
 									if lsp.SecurityMacStr != "" {
-										//Security Policy Set
+										//Security Policy Mac Set
 										if lsp.SecurityMacStr != currentInterface.SecurityMacString {
 											errorTablePost, _ := hoverctl.TableEntryPOST(hh.Dataplane, logicalSwitch.ModuleId, "securitymac", strconv.Itoa(currentInterface.IfaceIdRedirectHover), lsp.SecurityMacStr)
 											if errorTablePost == nil {
@@ -416,6 +416,25 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 											}
 										}
 									}
+									//Ip security
+									if lsp.SecurityIpStr != "" {
+										//Security Policy Ip Set
+										if lsp.SecurityIpStr != currentInterface.SecurityIpString {
+											errorTablePost, _ := hoverctl.TableEntryPOST(hh.Dataplane, logicalSwitch.ModuleId, "securityip", strconv.Itoa(currentInterface.IfaceIdRedirectHover), lsp.SecurityIpStr)
+											if errorTablePost == nil {
+												currentInterface.SecurityIpString = lsp.SecurityIpStr
+											}
+										}
+									} else {
+										if currentInterface.SecurityIpString != "" {
+											//delete security policy?
+											errorDelete, _ := hoverctl.TableEntryDELETE(hh.Dataplane, logicalSwitch.ModuleId, "securityip", strconv.Itoa(currentInterface.IfaceIdRedirectHover))
+											if errorDelete == nil {
+												currentInterface.SecurityIpString = ""
+											}
+										}
+									}
+
 								}
 							}
 						}

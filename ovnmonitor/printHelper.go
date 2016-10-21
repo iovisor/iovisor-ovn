@@ -50,6 +50,6 @@ func PrintOvsInterface(hh *HandlerHandler, interface_name string) {
 	if ok {
 		fmt.Printf("%21s: %s\n%21s: %s\n%21s: %s\n%21s: %d\n%21s: %d\n%21s: %d\n", "*Name*", iface.Name, "IfaceIdExternalIds", iface.IfaceIdExternalIds, "LinkIdHover", iface.LinkIdHover, "IfaceIdRedirectHover", iface.IfaceIdRedirectHover, "IfaceIdArrayBroadcast", iface.IfaceIdArrayBroadcast, "IfaceFd", iface.IfaceFd)
 
-		fmt.Printf("%21s: %s\n%21s: %t\n%21s: %t", "SecurityMacString", iface.SecurityMacString, "Up", iface.Up, "ToRemove", iface.ToRemove)
+		fmt.Printf("%21s: %s\n%21s: %s\n%21s: %t\n%21s: %t", "SecurityMacString", iface.SecurityMacString, "SecurityIpString", iface.SecurityIpString, "Up", iface.Up, "ToRemove", iface.ToRemove)
 	}
 }

@@ -21,37 +21,68 @@ struct mac_leaf{
 	u64 mac;
 };
 
+struct ip_leaf{
+	u32 ip;
+};
+
 BPF_TABLE("hash", struct mac_key, struct host_info, mac2host, 10240);
 
 BPF_TABLE("array",u32,u32,ports,MAX_PORTS);
 
 BPF_TABLE("hash",struct iface_key,struct mac_leaf, securitymac, MAX_PORTS);
 
+BPF_TABLE("hash",struct iface_key,struct ip_leaf, securityip, MAX_PORTS);
+
+
 static int handle_rx(void *skb, struct metadata *md) {
-	//LEARNING PHASE: mapping src_mac with src_interface
-	//Lets assume that the packet is at 0th location of the memory.
+
 	u8 *cursor = 0;
 
-	struct mac_key src_key = {};
-	struct host_info src_info = {};
-
-	//Extract ethernet header from the memory and point cursor to payload of ethernet header.
 	struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
 
-	//bpf_trace_printk("Policy on MAC\n");
-	struct mac_leaf * mac_lookup;
+	bpf_trace_printk("md->in_ifc = %d\n",md->in_ifc);
+
 	struct iface_key ifc_key = {};
 	ifc_key.ifindex = md->in_ifc;
 
+	struct mac_leaf * mac_lookup;
+
+	bpf_trace_printk("Policy on MAC\n");
 	mac_lookup = securitymac.lookup(&ifc_key);
 	if (mac_lookup)
-		//bpf_trace_printk("MAC lookup hit\n");
 		if (ethernet->src != mac_lookup->mac){
-			bpf_trace_printk("MAC %x not match %x\n",ethernet->src, mac_lookup->mac);
+			bpf_trace_printk("MAC %x mismatch %x\n",ethernet->src, mac_lookup->mac);
 			return RX_DROP;
 		}
-	//else
-		//bpf_trace_printk("MAC lookup miss\n");
+
+	bpf_trace_printk("Policy on IP\n");
+	bpf_trace_printk("Ethertype %x\n",ethernet->type);
+	//IP Packets
+	if(ethernet->type == 0x0800){
+		bpf_trace_printk("IP Packet\n");
+
+		struct ip_t *ip = cursor_advance(cursor,sizeof(*ip));
+
+		struct ip_leaf * ip_lookup;
+
+		ip_lookup = securityip.lookup(&ifc_key);
+		if (ip_lookup){
+			bpf_trace_printk("IP Lookup hit\n");
+			if (ip->src != ip_lookup->ip){
+				bpf_trace_printk("IP %x mismatch %x\n",ip->src, ip_lookup->ip);
+				return RX_DROP;
+			}
+		}else{
+			bpf_trace_printk("IP Lookup miss\n");
+		}
+	}
+	else{
+			bpf_trace_printk("NO IP Packet\n");
+	}
+
+	//LEARNING PHASE: mapping src_mac with src_interface
+	struct mac_key src_key = {};
+	struct host_info src_info = {};
 
 	//set src_mac as key
 	src_key.mac = ethernet->src;
@@ -133,15 +164,15 @@ static int handle_rx(void *skb, struct metadata *md) {
 			if(*iface_p != 0)
 				bpf_clone_redirect(skb,*iface_p,0);
 
-		iface_n = 7; iface_p = ports.lookup(&iface_n);
-		if(iface_p)
-			if(*iface_p != 0)
-				bpf_clone_redirect(skb,*iface_p,0);
-
-		iface_n = 8; iface_p = ports.lookup(&iface_n);
-		if(iface_p)
-			if(*iface_p != 0)
-				bpf_clone_redirect(skb,*iface_p,0);
+		// iface_n = 7; iface_p = ports.lookup(&iface_n);
+		// if(iface_p)
+		// 	if(*iface_p != 0)
+		// 		bpf_clone_redirect(skb,*iface_p,0);
+		//
+		// iface_n = 8; iface_p = ports.lookup(&iface_n);
+		// if(iface_p)
+		// 	if(*iface_p != 0)
+		// 		bpf_clone_redirect(skb,*iface_p,0);
 
 		return RX_DROP;
 	}

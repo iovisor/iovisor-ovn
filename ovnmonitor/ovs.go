@@ -17,6 +17,7 @@ type Interface_Item struct {
 	LinkIdHover           string //iomodules Link Id
 	ToRemove              bool   //To remove flag
 	SecurityMacString     string //if the security policy based on mac in already injected into the Iomodules, contains the string of the leaf in the table
+	SecurityIpString      string ////if the security policy based on ip is already injected into the Iomodules, contains the string of the leaf in the table
 }
 
 func (ovs *Ovs_Database) Clear() {

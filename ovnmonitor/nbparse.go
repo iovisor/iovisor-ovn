@@ -3,6 +3,8 @@ package ovnmonitor
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"net"
 	"reflect"
 	"strings"
 
@@ -121,6 +123,26 @@ func FromPortSecurityStrToMacStr(portSecurity string) string {
 		if IsMac(slice) {
 			//modify format
 			return MacToExadecimalString(slice)
+		}
+	}
+	return ""
+}
+
+//Find the first IP and converts it into exadecimal string
+//Eg:
+//input str -> "192.168.1.1 08:00:27:2a:03:54"
+//output str -> 0x012345663 (192.168.1.1 in HEX)
+func FromPortSecurityStrToIpStr(portSecurity string) string {
+	//divide portSecurity into slices " "
+	slices := strings.Split(portSecurity, " ")
+	for _, slice := range slices {
+		//log.Debugf("slice: %s\n", slice)
+		trial := net.ParseIP(slice)
+		if trial.To4() != nil {
+			ba := []byte(trial.To4())
+			// log.Debugf("0x%02x%02x%02x%02x\n", ba[0], ba[1], ba[2], ba[3])
+			ipv4HexStr := fmt.Sprintf("0x%02x%02x%02x%02x", ba[0], ba[1], ba[2], ba[3])
+			return ipv4HexStr
 		}
 	}
 	return ""
