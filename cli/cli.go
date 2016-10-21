@@ -20,7 +20,7 @@ func Cli(hh *ovnmonitor.HandlerHandler) {
 	dataplane := hh.Dataplane
 	for {
 		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("cli@iov-ovn$")
+		fmt.Print("cli@iov-ovn$ ")
 		line, _ := reader.ReadString('\n')
 
 		line = TrimSuffix(line, "\n")
