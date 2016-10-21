@@ -33,6 +33,8 @@ func MainLogic(globalHandler *ovnmonitor.HandlerHandler) {
 	globalHandler.Ovs.OvsDatabase = &ovnmonitor.Ovs_Database{}
 	globalHandler.Ovs.OvsDatabase.Clear()
 
+	go FlushCache(globalHandler)
+
 	//for now I only consider ovs notifications
 	if ovsHandler != nil {
 		for {
@@ -45,6 +47,20 @@ func MainLogic(globalHandler *ovnmonitor.HandlerHandler) {
 		}
 	} else {
 		log.Errorf("MainLogic not started!\n")
+	}
+}
+
+//TODO Check. I don't know if something could be wrong...
+//MAYBE notication to the parse logic looks better...
+func FlushCache(globalHandler *ovnmonitor.HandlerHandler) {
+	if config.FlushEnabled {
+		for {
+			time.Sleep(config.FlushTime)
+			log.Debugf("FLUSHING Northbound......\n")
+			globalHandler.Nb.MainLogicNotification <- "FlushNb"
+			log.Debugf("FLUSHING Ovs Database......\n")
+			globalHandler.Ovs.MainLogicNotification <- "FlushOvs"
+		}
 	}
 }
 
@@ -178,6 +194,7 @@ func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 					moduleDeleteError, _ := hoverctl.ModuleDELETE(hh.Dataplane, logicalSwitch.ModuleId)
 					if moduleDeleteError == nil {
 						logicalSwitch.ModuleId = ""
+						delete(hh.Nb.NbDatabase.Logical_Switch, logicalSwitch.Name)
 					}
 				}
 			} else {
@@ -212,7 +229,10 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 				//Check differences
 				//.IfaceIdExternalIds
 				if iface.IfaceIdExternalIds != newIface.IfaceIdExternalIds {
+					//TODO
+					ovnmonitor.DeleteInterfaceReference(hh.Nb.NbDatabase, iface.IfaceIdExternalIds)
 					iface.IfaceIdExternalIds = newIface.IfaceIdExternalIds
+					ovnmonitor.SetInterfaceReference(hh.Nb.NbDatabase, iface.IfaceIdExternalIds, iface.Name)
 				}
 				//log.Debugf("Interface MODIFIED: %+v\n", iface)
 			} else {
@@ -221,6 +241,10 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 				ifc.Init()
 				ifc.Name = newIface.Name
 				ifc.IfaceIdExternalIds = newIface.IfaceIdExternalIds
+				if ifc.IfaceIdExternalIds != "" {
+					//TODO
+					ovnmonitor.SetInterfaceReference(hh.Nb.NbDatabase, ifc.IfaceIdExternalIds, ifc.Name)
+				}
 				hh.Ovs.OvsDatabase.Interface[newIfaceName] = &ifc
 				//log.Debugf("Interface ADDED: %+v\n", ifc)
 			}
@@ -238,6 +262,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 				//mark Interface as Removed (if not yet marked!).
 				if !iface.ToRemove {
 					iface.ToRemove = true
+					ovnmonitor.DeleteInterfaceReference(hh.Nb.NbDatabase, iface.IfaceIdExternalIds)
 					//log.Debugf("Interface REMOVED (mark as ToRemove..): %+v\n", iface)
 				}
 			}
@@ -257,6 +282,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 				if linkDeleteError == nil {
 					//Complete the link deletion..
 					currentInterface.LinkIdHover = ""
+					log.Debug("REMOVE Interface %s %s (1/1) LINK REMOVED\n", currentInterface.Name, currentInterface.IfaceIdExternalIds)
 				}
 				//else
 				//this function will be automatically re-called at the next notification.
@@ -273,8 +299,11 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 					if logicalSwitch.PortsArray[currentInterface.IfaceIdArrayBroadcast] != 0 {
 						hoverctl.TableEntryPUT(hh.Dataplane, logicalSwitch.ModuleId, "ports", strconv.Itoa(currentInterface.IfaceIdArrayBroadcast), "0")
 						//TODO if not successful retry
+
 						logicalSwitch.PortsArray[currentInterface.IfaceIdArrayBroadcast] = 0
 						logicalSwitch.PortsCount--
+						log.Debug("REMOVE Interface %s %s (2/2) NB IfaceIdArrayBroadcast\n", currentInterface.Name, currentInterface.IfaceIdExternalIds)
+
 					}
 					if currentInterface.SecurityMacString != "" {
 						//TODO cleanup Security Policy

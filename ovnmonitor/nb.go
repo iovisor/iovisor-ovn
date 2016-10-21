@@ -57,6 +57,26 @@ func (lsp *Logical_Switch_Port_Item) Init() {
 	lsp.ToRemove = false
 }
 
+func SetInterfaceReference(nb *Nb_Database, ifaceIdExternalId string, interfaceName string) {
+	for _, logicalSwitchPort := range nb.Logical_Switch_Port {
+		if logicalSwitchPort.Name == ifaceIdExternalId {
+			logicalSwitchPort.InterfaceReference = interfaceName
+			log.Debugf("InterfaceReference logicalSwitchPort %s -> %s\n", ifaceIdExternalId, interfaceName)
+			break
+		}
+	}
+}
+
+func DeleteInterfaceReference(nb *Nb_Database, ifaceIdExternalId string) {
+	for _, logicalSwitchPort := range nb.Logical_Switch_Port {
+		if logicalSwitchPort.Name == ifaceIdExternalId {
+			logicalSwitchPort.InterfaceReference = ""
+			log.Debugf("DELETE InterfaceReference logicalSwitchPort %s -> '' \n", ifaceIdExternalId)
+			break
+		}
+	}
+}
+
 //return the name of the switch a port belongs to
 func PortLookup(nb *Nb_Database, portName string) string {
 
