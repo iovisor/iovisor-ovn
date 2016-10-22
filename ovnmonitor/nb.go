@@ -1,5 +1,7 @@
 package ovnmonitor
 
+import "github.com/netgroup-polito/iovisor-ovn/config"
+
 type Nb_Database struct {
 	Logical_Switch      map[string]*Logical_Switch_Item      //Logical_Switch 			name
 	Logical_Switch_Port map[string]*Logical_Switch_Port_Item //Logical_Switch_Port name
@@ -11,10 +13,10 @@ type Logical_Switch_Item struct {
 	PortsUUID map[string]string
 
 	//Main Logic Fields
-	ModuleId   string //module id inside hover
-	PortsArray [9]int //[0]=empty [1..8]=contains the port allocation(with fd) for broadcast tricky implemented inside hover
-	PortsCount int    //number of allocated ports
-	ToRemove   bool   //mark to remove if not present into the OVN_NB_DATABASE, but not yet removed... Other data to remove before
+	ModuleId   string                            //module id inside hover
+	PortsArray [config.SwitchPortsNumber + 1]int //[0]=empty [1..8]=contains the port allocation(with fd) for broadcast tricky implemented inside hover
+	PortsCount int                               //number of allocated ports
+	ToRemove   bool                              //mark to remove if not present into the OVN_NB_DATABASE, but not yet removed... Other data to remove before
 	// Up         bool   //means corresponding module is already posted
 }
 
@@ -102,7 +104,7 @@ func PortLookupNoCached(nb *Nb_Database, portName string) string {
 }
 
 func FindFirtsFreeLogicalPort(logicalSwitch *Logical_Switch_Item) int {
-	for i := 1; i < 9; i++ {
+	for i := 1; i < config.SwitchPortsNumber+1; i++ {
 		if logicalSwitch.PortsArray[i] == 0 {
 			return i
 		}

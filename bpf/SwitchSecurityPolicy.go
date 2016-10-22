@@ -1,132 +1,113 @@
 package bpf
 
 var SwitchSecurityPolicy = `
-#define MAX_PORTS 8
+#define BPF_TRACE
+//#undef BPF_TRACE
 
-struct mac_key {
+#define MAX_PORTS 28
+
+struct mac_t {
 	u64 mac;
 };
 
-struct host_info {
-	u32 ifindex;
-	u64 rx_pkts;
-	u64 tx_pkts;
-};
-
-struct iface_key{
+struct interface {
 	u32 ifindex;
 };
 
-struct mac_leaf{
-	u64 mac;
+struct ifindex{
+	u32 ifindex;
 };
 
 struct ip_leaf{
 	u32 ip;
 };
 
-BPF_TABLE("hash", struct mac_key, struct host_info, mac2host, 10240);
-
+BPF_TABLE("hash", struct mac_t, struct interface, fwdtable, 10240);
 BPF_TABLE("array",u32,u32,ports,MAX_PORTS);
-
-BPF_TABLE("hash",struct iface_key,struct mac_leaf, securitymac, MAX_PORTS);
-
-BPF_TABLE("hash",struct iface_key,struct ip_leaf, securityip, MAX_PORTS);
-
+BPF_TABLE("hash",struct ifindex,struct mac_t, securitymac, MAX_PORTS);
+BPF_TABLE("hash",struct ifindex,struct ip_leaf, securityip, MAX_PORTS);
 
 static int handle_rx(void *skb, struct metadata *md) {
-
 	u8 *cursor = 0;
-
 	struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
 
-	bpf_trace_printk("md->in_ifc = %d\n",md->in_ifc);
+	#ifdef BPF_TRACE
+		bpf_trace_printk("in_ifc=%d\n",md->in_ifc);
+	#endif
 
-	struct iface_key ifc_key = {};
-	ifc_key.ifindex = md->in_ifc;
+	//set in-interface for lookup ports security
+	struct ifindex in_iface = {};
+	in_iface.ifindex = md->in_ifc;
 
-	struct mac_leaf * mac_lookup;
-
-	bpf_trace_printk("Policy on MAC\n");
-	mac_lookup = securitymac.lookup(&ifc_key);
+	//port security on source mac
+	struct mac_t * mac_lookup;
+	mac_lookup = securitymac.lookup(&in_iface);
 	if (mac_lookup)
 		if (ethernet->src != mac_lookup->mac){
-			bpf_trace_printk("MAC %x mismatch %x\n",ethernet->src, mac_lookup->mac);
+			#ifdef BPF_TRACE
+				bpf_trace_printk("mac %lx mismatch %lx -> DROP\n",ethernet->src, mac_lookup->mac);
+			#endif
 			return RX_DROP;
 		}
 
-	bpf_trace_printk("Policy on IP\n");
-	bpf_trace_printk("Ethertype %x\n",ethernet->type);
-	//IP Packets
+	//port security on source ip
 	if(ethernet->type == 0x0800){
-		bpf_trace_printk("IP Packet\n");
-
-		struct ip_t *ip = cursor_advance(cursor,sizeof(*ip));
-
 		struct ip_leaf * ip_lookup;
-
-		ip_lookup = securityip.lookup(&ifc_key);
+		ip_lookup = securityip.lookup(&in_iface);
 		if (ip_lookup){
-			bpf_trace_printk("IP Lookup hit\n");
+			struct ip_t *ip = cursor_advance(cursor,sizeof(*ip));
 			if (ip->src != ip_lookup->ip){
-				bpf_trace_printk("IP %x mismatch %x\n",ip->src, ip_lookup->ip);
+				#ifdef BPF_TRACE
+					bpf_trace_printk("IP %x mismatch %x -> DROP\n",ip->src, ip_lookup->ip);
+				#endif
 				return RX_DROP;
 			}
-		}else{
-			bpf_trace_printk("IP Lookup miss\n");
 		}
 	}
-	else{
-			bpf_trace_printk("NO IP Packet\n");
-	}
 
-	//LEARNING PHASE: mapping src_mac with src_interface
-	struct mac_key src_key = {};
-	struct host_info src_info = {};
+	#ifdef BPF_TRACE
+		bpf_trace_printk("mac src:%lx dst:%lx\n",ethernet->src,ethernet->dst);
+	#endif
 
-	//set src_mac as key
+	//LEARNING PHASE: mapping in_iface with src_interface
+	struct mac_t src_key = {};
+	struct interface interface = {};
+
+	//set in_iface as key
 	src_key.mac = ethernet->src;
 
 	//set in_ifc, and 0 counters as leaf
-	src_info.ifindex = md->in_ifc;
-	src_info.rx_pkts = 0;
-	src_info.tx_pkts = 0;
+	interface.ifindex = md->in_ifc;
 
-	bpf_trace_printk("pkt in_ifc:%d from:%x -> to:%x\n",md->in_ifc,ethernet->src,ethernet->dst);
-
-	//lookup in mac2host; if no key present -> initialize with src_info
-	struct host_info *src_host = mac2host.lookup_or_init(&src_key, &src_info);
+	//lookup in fwdtable. if no key present initialize with interface
+	struct interface *interface_lookup = fwdtable.lookup_or_init(&src_key, &interface);
 
 	//if the same mac has changed interface, update it
-	if(src_host->ifindex!=md->in_ifc)
-		src_host->ifindex = md->in_ifc;
-
-	//update rx_pkts counter
-	lock_xadd(&src_host->rx_pkts, 1);
-
+	if(interface_lookup->ifindex!=md->in_ifc)
+		interface_lookup->ifindex = md->in_ifc;
 
 	//FORWARDING PHASE: select interface(s) to send the packet
-	//set dst_mac as key
-	struct mac_key dst_key = {ethernet->dst};
+	struct mac_t dst_mac = {ethernet->dst};
 
-	//lookup in forwarding table mac2host
-	struct host_info *dst_host = mac2host.lookup(&dst_key);
+	//lookup in forwarding table fwdtable
+	struct interface *dst_interface = fwdtable.lookup(&dst_mac);
 
-	if (dst_host) {
+	if (dst_interface) {
 		//HIT in forwarding table
-		//increment tx_pkts counter
-		lock_xadd(&dst_host->tx_pkts, 1);
+		//redirect packet to dst_interface
+		pkt_redirect(skb, md, dst_interface->ifindex);
 
-		//redirect packet to correspondent interface
-		pkt_redirect(skb, md, dst_host->ifindex);
-
-		bpf_trace_printk("lookup hit -> redirect to %d\n",dst_host->ifindex);
+		#ifdef BPF_TRACE
+			bpf_trace_printk("redirect out_ifc=%d\n",dst_interface->ifindex);
+		#endif
 
 		return RX_REDIRECT;
 
 	} else {
 		//MISS in forwarding table
-		bpf_trace_printk("lookup miss->  broadcast\n");
+		#ifdef BPF_TRACE
+			bpf_trace_printk("broadcast\n");
+		#endif
 
 		u32  iface_n = 1;
 		u32 *iface_p;
@@ -164,15 +145,132 @@ static int handle_rx(void *skb, struct metadata *md) {
 			if(*iface_p != 0)
 				bpf_clone_redirect(skb,*iface_p,0);
 
-		// iface_n = 7; iface_p = ports.lookup(&iface_n);
-		// if(iface_p)
-		// 	if(*iface_p != 0)
-		// 		bpf_clone_redirect(skb,*iface_p,0);
-		//
-		// iface_n = 8; iface_p = ports.lookup(&iface_n);
-		// if(iface_p)
-		// 	if(*iface_p != 0)
-		// 		bpf_clone_redirect(skb,*iface_p,0);
+		iface_n = 7; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+		iface_n = 8; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 9; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 10; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 11; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+		iface_n = 12; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 13; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 14; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 15; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 16; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+		iface_n = 17; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 18; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 19; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 20; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 21; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 22; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 23; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 24; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+		iface_n = 25; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 26; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 27; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+
+		iface_n = 28; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
 
 		return RX_DROP;
 	}

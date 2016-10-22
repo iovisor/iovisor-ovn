@@ -21,9 +21,10 @@ var Hover = "http://localhost:5002"
 var TestEnv = false
 
 //Constant
+const SwitchPortsNumber = 28
 
 var SleepTime = 3500 * time.Millisecond
-var FlushTime = 5000 * time.Millisecond
+var FlushTime = 30000 * time.Millisecond
 var FlushEnabled = false
 var SwitchSecurityPolicy = true
 
