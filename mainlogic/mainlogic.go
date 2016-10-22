@@ -410,7 +410,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 									} else {
 										if currentInterface.SecurityMacString != "" {
 											//delete security policy?
-											errorDelete, _ := hoverctl.TableEntryDELETE(hh.Dataplane, logicalSwitch.ModuleId, "securitymac", strconv.Itoa(currentInterface.IfaceIdRedirectHover))
+											errorDelete, _ := hoverctl.TableEntryDELETE(hh.Dataplane, logicalSwitch.ModuleId, "securitymac", "{"+strconv.Itoa(currentInterface.IfaceIdRedirectHover)+"}")
 											if errorDelete == nil {
 												currentInterface.SecurityMacString = ""
 											}
@@ -428,7 +428,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 									} else {
 										if currentInterface.SecurityIpString != "" {
 											//delete security policy?
-											errorDelete, _ := hoverctl.TableEntryDELETE(hh.Dataplane, logicalSwitch.ModuleId, "securityip", strconv.Itoa(currentInterface.IfaceIdRedirectHover))
+											errorDelete, _ := hoverctl.TableEntryDELETE(hh.Dataplane, logicalSwitch.ModuleId, "securityip", "{"+strconv.Itoa(currentInterface.IfaceIdRedirectHover)+"}")
 											if errorDelete == nil {
 												currentInterface.SecurityIpString = ""
 											}
