@@ -40,13 +40,17 @@ func PrintRow(row libovsdb.Row) {
 
 //DUMP ALL THE DB
 func PrintCache(h *MonitorHandler) {
-	var cache = *h.Cache
-	log.Noticef("print all tables in cache\n")
-	for tableName, table := range cache {
-		log.Noticef("%20s:%s\n", "TABLE", tableName)
-		for uuid, row := range table {
-			log.Noticef("%20s:%s\n", "UUID", uuid)
-			PrintRow(row)
+	if h != nil {
+		var cache = *h.Cache
+		if cache != nil {
+			log.Noticef("print all tables in cache\n")
+			for tableName, table := range cache {
+				log.Noticef("%20s:%s\n", "TABLE", tableName)
+				for uuid, row := range table {
+					log.Noticef("%20s:%s\n", "UUID", uuid)
+					PrintRow(row)
+				}
+			}
 		}
 	}
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/netgroup-polito/iovisor-ovn/bpf"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
-	"github.com/netgroup-polito/iovisor-ovn/testenv"
 )
 
 func Cli(hh *ovnmonitor.HandlerHandler) {
@@ -30,7 +29,39 @@ func Cli(hh *ovnmonitor.HandlerHandler) {
 			switch args[0] {
 			case "test":
 				fmt.Printf("\ntest\n\n")
-				testenv.TestLinkPostDelete(dataplane)
+				//testenv.TestModule(dataplane)
+			case "ovncontroller", "o":
+				if len(args) >= 1 {
+					if len(args) == 1 {
+						fmt.Printf("\n*********************OVN-NorthBound-Database***********************\n\n")
+						ovnmonitor.PrintCache(hh.Nb)
+						fmt.Printf("\n*********************OVN-SouthBound-Database***********************\n\n")
+						ovnmonitor.PrintCache(hh.Sb)
+						fmt.Printf("\n************************OVS-Local-Database*************************\n\n")
+						ovnmonitor.PrintCache(hh.Ovs)
+					}
+					if len(args) == 2 {
+						//switch
+						switch args[1] {
+						case "nb":
+							fmt.Printf("\n*********************OVN-NorthBound-Database***********************\n\n")
+							ovnmonitor.PrintCache(hh.Nb)
+						case "sb":
+							fmt.Printf("\n*********************OVN-SouthBound-Database***********************\n\n")
+							ovnmonitor.PrintCache(hh.Sb)
+						case "ovs":
+							fmt.Printf("\n************************OVS-Local-Database*************************\n\n")
+							ovnmonitor.PrintCache(hh.Ovs)
+						default:
+							PrintOvnControllerUsage()
+						}
+					}
+					if len(args) >= 3 {
+						PrintOvnControllerUsage()
+					}
+				} else {
+					PrintOvnControllerUsage()
+				}
 			case "ovs":
 				if len(args) >= 1 {
 					if len(args) == 1 {
@@ -227,6 +258,14 @@ func TrimSuffix(s, suffix string) string {
 	return s
 }
 
+func PrintOvnControllerUsage() {
+	fmt.Printf("\nNB Usage\n\n")
+	fmt.Printf("	ovncontroller       print Databases\n")
+	fmt.Printf("	ovncontroller nb		print Nb\n")
+	fmt.Printf("	ovncontroller sb		print Sb\n")
+	fmt.Printf("	ovncontroller ovs		print Ovs\n")
+}
+
 func PrintOvsUsage() {
 	fmt.Printf("\nOVS Usage\n\n")
 	fmt.Printf("	ovs     print the whole Ovs Local Database\n")
@@ -274,6 +313,7 @@ func PrintHelp() {
 	fmt.Printf("	table, t         prints tables\n\n")
 	fmt.Printf("	nb               prints NorthBound database local structs\n")
 	fmt.Printf("	ovs              prints Ovs local database local structs\n\n")
+	fmt.Printf("	ovncontroller,o  prints OVN Databases\n\n")
 	fmt.Printf("	help, h          print help\n")
 	fmt.Printf("\n")
 	PrintModulesUsage()
@@ -281,4 +321,5 @@ func PrintHelp() {
 	PrintTableUsage()
 	PrintNbUsage()
 	PrintOvsUsage()
+	PrintOvnControllerUsage()
 }
