@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/netgroup-polito/iovisor-ovn/bpf"
+	"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
 )
@@ -30,6 +31,39 @@ func Cli(hh *ovnmonitor.HandlerHandler) {
 			case "test":
 				fmt.Printf("\ntest\n\n")
 				//testenv.TestModule(dataplane)
+			case "config":
+				config.PrintConfigCli()
+				if len(args) == 3 {
+					switch args[1] {
+					case "PrintOvnNbChanges":
+						switch args[2] {
+						case "true":
+							config.PrintOvnNbChanges = true
+							fmt.Printf("OK\n")
+						case "false":
+							config.PrintOvnNbChanges = false
+							fmt.Printf("OK\n")
+						}
+					case "PrintOvnSbChanges":
+						switch args[2] {
+						case "true":
+							config.PrintOvnSbChanges = true
+							fmt.Printf("OK\n")
+						case "false":
+							config.PrintOvnSbChanges = false
+							fmt.Printf("OK\n")
+						}
+					case "PrintOvsChanges":
+						switch args[2] {
+						case "true":
+							config.PrintOvsChanges = true
+							fmt.Printf("OK\n")
+						case "false":
+							config.PrintOvsChanges = false
+							fmt.Printf("OK\n")
+						}
+					}
+				}
 			case "ovncontroller", "o":
 				if len(args) >= 1 {
 					if len(args) == 1 {
@@ -258,8 +292,14 @@ func TrimSuffix(s, suffix string) string {
 	return s
 }
 
+func PrintConfigUsage() {
+	fmt.Printf("\nConfig Usage\n\n")
+	fmt.Printf("	config              print Config\n")
+	fmt.Printf("	config <parameter> <value>\n")
+}
+
 func PrintOvnControllerUsage() {
-	fmt.Printf("\nNB Usage\n\n")
+	fmt.Printf("\nOvn Controller Usage\n\n")
 	fmt.Printf("	ovncontroller       print Databases\n")
 	fmt.Printf("	ovncontroller nb		print Nb\n")
 	fmt.Printf("	ovncontroller sb		print Sb\n")
@@ -313,6 +353,7 @@ func PrintHelp() {
 	fmt.Printf("	table, t         prints tables\n\n")
 	fmt.Printf("	nb               prints NorthBound database local structs\n")
 	fmt.Printf("	ovs              prints Ovs local database local structs\n\n")
+	fmt.Printf("	config,c         config print and modify\n\n")
 	fmt.Printf("	ovncontroller,o  prints OVN Databases\n\n")
 	fmt.Printf("	help, h          print help\n")
 	fmt.Printf("\n")
@@ -321,5 +362,6 @@ func PrintHelp() {
 	PrintTableUsage()
 	PrintNbUsage()
 	PrintOvsUsage()
+	PrintConfigUsage()
 	PrintOvnControllerUsage()
 }

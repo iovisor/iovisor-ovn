@@ -45,6 +45,24 @@ var PrintOvs = false
 
 var log = l.MustGetLogger("politoctrl")
 
+func PrintConfigCli() {
+	fmt.Printf("***************CONFIGURATION*******************\n")
+	// fmt.Printf("%30s:%d\n", "SleepTime", SleepTime)
+	// fmt.Printf("%30s:%d\n", "FlushTime", FlushTime)
+	// fmt.Printf("%30s:%d\n\n", "FlushEnabled", FlushEnabled)
+	fmt.Printf("%30s: %t\n", "PrintOvnNbChanges", PrintOvnNbChanges)
+	fmt.Printf("%30s: %t\n", "PrintOvnSbChanges", PrintOvnSbChanges)
+	fmt.Printf("%30s: %t\n\n", "PrintOvsChanges", PrintOvsChanges)
+	fmt.Printf("%30s: %t\n", "PrintOvnNbFilteredTables", PrintOvnNbFilteredTables)
+	fmt.Printf("%30s: %t\n", "PrintOvnSbFilteredTables", PrintOvnSbFilteredTables)
+	fmt.Printf("%30s: %t\n\n", "PrintOvsFilteredTables", PrintOvsFilteredTables)
+	fmt.Printf("%30s: %t\n", "PrintOvnNb", PrintOvnNb)
+	fmt.Printf("%30s: %t\n", "PrintOvnSb", PrintOvnSb)
+	fmt.Printf("%30s: %t\n", "PrintOvs", PrintOvs)
+
+	fmt.Printf("************************************************\n")
+}
+
 func PrintConfig() {
 	fmt.Printf("-----IOVisor-OVN Daemon---------------------------------------\n")
 	fmt.Printf("starting configuration\n")
