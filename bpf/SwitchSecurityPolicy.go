@@ -4,7 +4,8 @@ var SwitchSecurityPolicy = `
 #define BPF_TRACE
 //#undef BPF_TRACE
 
-#define MAX_PORTS 28
+//Ports 32+1
+#define MAX_PORTS 33
 
 struct mac_t {
 	u64 mac;
@@ -24,8 +25,8 @@ struct ip_leaf{
 
 BPF_TABLE("hash", struct mac_t, struct interface, fwdtable, 10240);
 BPF_TABLE("array",u32,u32,ports,MAX_PORTS);
-BPF_TABLE("hash",struct ifindex,struct mac_t, securitymac, MAX_PORTS);
-BPF_TABLE("hash",struct ifindex,struct ip_leaf, securityip, MAX_PORTS);
+BPF_TABLE("hash",struct ifindex,struct mac_t, securitymac, MAX_PORTS*2);
+BPF_TABLE("hash",struct ifindex,struct ip_leaf, securityip, MAX_PORTS*2);
 
 static int handle_rx(void *skb, struct metadata *md) {
 	u8 *cursor = 0;
@@ -268,6 +269,26 @@ static int handle_rx(void *skb, struct metadata *md) {
 
 
 		iface_n = 28; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+		iface_n = 29; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+		iface_n = 30; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+		iface_n = 31; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+		iface_n = 32; iface_p = ports.lookup(&iface_n);
 		if(iface_p)
 			if(*iface_p != 0)
 				bpf_clone_redirect(skb,*iface_p,0);
