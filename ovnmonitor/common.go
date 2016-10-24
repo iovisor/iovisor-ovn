@@ -9,7 +9,7 @@ import (
 	"github.com/socketplane/libovsdb"
 )
 
-var log = l.MustGetLogger("politoctrl")
+var log = l.MustGetLogger("iovisor-ovn-daemon")
 
 type HandlerHandler struct {
 	Nb        *MonitorHandler

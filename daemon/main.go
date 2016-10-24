@@ -16,7 +16,7 @@ import (
 	"github.com/netgroup-polito/iovisor-ovn/mainlogic"
 )
 
-var Log = l.MustGetLogger("politoctrl")
+var Log = l.MustGetLogger("iovisor-ovn-daemon")
 
 func init() {
 	flag.StringVar(&config.Nb, "nb", config.Nb, "nb db address:port")

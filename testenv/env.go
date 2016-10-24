@@ -14,7 +14,7 @@ import (
 	l "github.com/op/go-logging"
 )
 
-var log = l.MustGetLogger("politoctrl")
+var log = l.MustGetLogger("iovisor-ovn-daemon")
 
 //TestEnv Launches a defined configuration at daemon startup
 func TestEnv(dataplane *hoverctl.Dataplane) {
@@ -25,19 +25,91 @@ func TestEnv(dataplane *hoverctl.Dataplane) {
 
 	//TestSwitch3(dataplane)
 
-	TestSwitch5(dataplane)
+	//TestSwitch5(dataplane)
 
+	//TestChainModule(dataplane)
+}
+
+//veth1_<>m1<>m2<>m3<>veth2_
+// func TestChainModule(dataplane *hoverctl.Dataplane) {
+// 	_, m1 := hoverctl.ModulePOST(dataplane, "bpf", "Module1", bpf.Module1)
+// 	_, m2 := hoverctl.ModulePOST(dataplane, "bpf", "Module2", bpf.Module2)
+// 	_, m3 := hoverctl.ModulePOST(dataplane, "bpf", "Module3", bpf.Module3)
+//
+// 	hoverctl.LinkPOST(dataplane, "i:veth1_", m1.Id)
+// 	hoverctl.LinkPOST(dataplane, m1.Id, m2.Id)
+// 	hoverctl.LinkPOST(dataplane, m2.Id, m3.Id)
+// 	hoverctl.LinkPOST(dataplane, "i:veth2_", m3.Id)
+//
+// }
+
+func TestModule(dataplane *hoverctl.Dataplane) {
+	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "Switch6SecurityMacIp", bpf.SwitchSecurityPolicy)
+	hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
+	hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
+
+	_, external_interfaces := hoverctl.ExternalInterfacesListGET(dataplane)
+
+	hoverctl.TableEntryPUT(dataplane, sw.Id, "ports", "0x1", external_interfaces["veth1_"].Id)
+	hoverctl.TableEntryPUT(dataplane, sw.Id, "ports", "0x2", external_interfaces["veth2_"].Id)
 }
 
 //2 ports switch test implementation
 //veth1_ <-> DummySwitch2 <-> veth2_
 func TestLinkPostDelete(dataplane *hoverctl.Dataplane) {
-	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch2", bpf.Switch2Redirect)
+
+	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "Switch", bpf.Switch)
 	_, l1 := hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
 	_, l2 := hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
-	time.Sleep(time.Millisecond * 2000)
+
+	_, external_interfaces := hoverctl.ExternalInterfacesListGET(dataplane)
+
+	hoverctl.TableEntryPUT(dataplane, sw.Id, "ports", "0x1", external_interfaces["veth1_"].Id)
+	hoverctl.TableEntryPUT(dataplane, sw.Id, "ports", "0x2", external_interfaces["veth2_"].Id)
+
+	time.Sleep(time.Millisecond * 10000)
 	hoverctl.LinkDELETE(dataplane, l1.Id)
 	hoverctl.LinkDELETE(dataplane, l2.Id)
+
+	time.Sleep(time.Millisecond * 10000)
+
+	_, l1 = hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
+	_, l2 = hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
+
+	_, external_interfaces = hoverctl.ExternalInterfacesListGET(dataplane)
+
+	hoverctl.TableEntryPUT(dataplane, sw.Id, "ports", "0x1", external_interfaces["veth1_"].Id)
+	hoverctl.TableEntryPUT(dataplane, sw.Id, "ports", "0x2", external_interfaces["veth2_"].Id)
+
+	time.Sleep(time.Millisecond * 10000)
+	hoverctl.LinkDELETE(dataplane, l1.Id)
+	hoverctl.LinkDELETE(dataplane, l2.Id)
+
+	// hoverctl.TableEntryPUT(dataplane, sw.Id, "ports", "0x3", external_interfaces["veth3_"].Id)
+	// hoverctl.TableEntryPUT(dataplane, sw.Id, "ports", "0x4", external_interfaces["veth4_"].Id)
+	// hoverctl.TableEntryPUT(dataplane, sw.Id, "ports", "0x5", external_interfaces["veth5_"].Id)
+	//
+	// hoverctl.TableEntryGET(dataplane, sw.Id, "ports", "0x1")
+	// hoverctl.TableEntryGET(dataplane, sw.Id, "ports", "0x2")
+	// hoverctl.TableEntryGET(dataplane, sw.Id, "ports", "0x3")
+	// hoverctl.TableEntryGET(dataplane, sw.Id, "ports", "0x4")
+	// hoverctl.TableEntryGET(dataplane, sw.Id, "ports", "0x5")
+	//
+	// hoverctl.ModuleListGET(dataplane)
+
+	// _, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch2", bpf.Switch2Redirect)
+	// _, l1 := hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
+	// _, l2 := hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
+	//
+	// time.Sleep(time.Millisecond * 2000)
+	// hoverctl.LinkDELETE(dataplane, l1.Id)
+	// hoverctl.LinkDELETE(dataplane, l2.Id)
+	//
+	// time.Sleep(time.Millisecond * 2000)
+	// /*_, l1 :=*/ hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
+	// time.Sleep(time.Millisecond * 2000)
+	// /*_, l2 :=*/ hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
+
 }
 
 //2 ports switch test implementation

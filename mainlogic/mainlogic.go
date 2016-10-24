@@ -13,7 +13,7 @@ import (
 
 const brint = "br-int"
 
-var log = l.MustGetLogger("politoctrl")
+var log = l.MustGetLogger("iovisor-ovn-daemon")
 
 func MainLogic(globalHandler *ovnmonitor.HandlerHandler) {
 	//Start monitoring ovn/s databases

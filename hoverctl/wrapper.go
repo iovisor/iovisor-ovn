@@ -11,7 +11,7 @@ import (
 	l "github.com/op/go-logging"
 )
 
-var log = l.MustGetLogger("politoctrl")
+var log = l.MustGetLogger("iovisor-ovn-daemon")
 
 func (d *Dataplane) sendObject(method string, url string, requestObj interface{}, responseObj interface{}) (err error) {
 	b, er := json.Marshal(requestObj)

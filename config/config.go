@@ -43,7 +43,7 @@ var PrintOvnNb = false
 var PrintOvnSb = false
 var PrintOvs = false
 
-var log = l.MustGetLogger("politoctrl")
+var log = l.MustGetLogger("iovisor-ovn-daemon")
 
 func PrintConfigCli() {
 	fmt.Printf("***************CONFIGURATION*******************\n")
