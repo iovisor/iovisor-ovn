@@ -67,6 +67,10 @@ func FlushCache(globalHandler *ovnmonitor.HandlerHandler) {
 func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 	//log.Debugf("Nb Event:%s\n", s)
 
+	//Read Lock on Northbound Db
+	hh.Nb.RWMutex.RLock()
+	defer hh.Nb.RWMutex.RUnlock()
+
 	//NEW MODULE?
 
 	for newLogicalSwitchName, newLogicalSwitch := range hh.Nb.NbNewDatabase.Logical_Switch {
@@ -126,8 +130,10 @@ func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 	for newLogicalPortName, newLogicalSwitchPort := range hh.Nb.NbNewDatabase.Logical_Switch_Port {
 		if logicalSwitchPort, ok := hh.Nb.NbDatabase.Logical_Switch_Port[newLogicalPortName]; ok {
 			//check modified fields
+			// log.Debugf("B logicalSwitchPort %s LogicalSwitchName %s\n", logicalSwitchPort.Name, logicalSwitchPort.LogicalSwitchName)
 			if logicalSwitchPort.LogicalSwitchName == "" {
 				logicalSwitchPort.LogicalSwitchName = ovnmonitor.PortLookupNoCached(hh.Nb.NbNewDatabase, logicalSwitchPort.Name)
+				// log.Debugf("A logicalSwitchPort %s LogicalSwitchName %s\n", logicalSwitchPort.Name, logicalSwitchPort.LogicalSwitchName)
 				//log.Debugf("RETRY PortLookupNoCached %s -> %s", logicalSwitchPort.Name, logicalSwitchPort.LogicalSwitchName)
 				if logicalSwitchPort.LogicalSwitchName == "" {
 					log.Warningf("Logical switch Lookup not found for port %s UUID %s\n", logicalSwitchPort.Name, logicalSwitchPort.UUID)

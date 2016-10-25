@@ -35,6 +35,7 @@ func NbParseInit(h *MonitorHandler) *Nb_Database {
 func NbParse(h *MonitorHandler, nb *Nb_Database) {
 	//buffered channel, give me the opportunity to get notified on every change in ovnnb
 	//but I base my logic on cache-localdbstructs compare, every time
+
 	for {
 		select {
 		case tableUpdate := <-h.Bufupdate:
@@ -42,6 +43,10 @@ func NbParse(h *MonitorHandler, nb *Nb_Database) {
 			//select on what cache table perform updates
 			// time.Sleep(1 * time.Second)
 			//nb.Clear()
+
+			//Mutex: also the mainlogic contains the reference to the NewNorthbound
+			//Be sure the structs are consistent!
+			h.RWMutex.Lock()
 
 			switch tableUpdate {
 
@@ -105,6 +110,7 @@ func NbParse(h *MonitorHandler, nb *Nb_Database) {
 					// log.Debugf("%s %s \n", logicalSwitchPort.Name, logicalSwitchPort.UUID)
 				}
 			}
+			h.RWMutex.Unlock()
 			h.MainLogicNotification <- "Nb"
 		}
 	}

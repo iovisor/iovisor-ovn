@@ -2,6 +2,7 @@ package ovnmonitor
 
 import (
 	"reflect"
+	"sync"
 
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	l "github.com/op/go-logging"
@@ -19,6 +20,7 @@ type HandlerHandler struct {
 }
 
 type MonitorHandler struct {
+	RWMutex               sync.RWMutex
 	Quit                  chan bool
 	Update                chan *libovsdb.TableUpdates //All Tables updates from ovsdblib
 	Bufupdate             chan string                 //Only Filtered Tables names
