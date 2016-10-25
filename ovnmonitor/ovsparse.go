@@ -33,6 +33,11 @@ func OvsParse(h *MonitorHandler, ovs *Ovs_Database) {
 	for {
 		select {
 		case tableUpdate := <-h.BufupdateOvs:
+
+			//Mutex: also the mainlogic contains the reference to the OvsDatabase
+			//Be sure the structs are consistent!
+			h.RWMutex.Lock()
+
 			//select on what cache table perform updates
 			switch tableUpdate {
 
@@ -61,6 +66,7 @@ func OvsParse(h *MonitorHandler, ovs *Ovs_Database) {
 
 					ovs.Interface[iface.Name] = &iface
 				}
+				h.RWMutex.Unlock()
 				h.MainLogicNotification <- "Ovs.Interfaces"
 			}
 		}

@@ -223,6 +223,10 @@ func LogicalMappingNb(s string, hh *ovnmonitor.HandlerHandler) {
 func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 	//log.Debugf("Ovs Event:%s\n", s)
 
+	//Read Lock on Northbound Db
+	hh.Ovs.RWMutex.RLock()
+	defer hh.Ovs.RWMutex.RUnlock()
+
 	//NEW INTERFACES?
 	//Iterate on OvsNewDatabase (There are New Interfaces?)
 	for newIfaceName, newIface := range hh.Ovs.OvsNewDatabase.Interface {
