@@ -337,7 +337,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 								log.Noticef("POST Switch IOModule ...\n")
 								time.Sleep(config.SleepTime)
 
-								switchError, switchHover := hoverctl.ModulePOST(hh.Dataplane, "bpf", "Switch8Security", bpf.SwitchSecurityPolicy)
+								switchError, switchHover := hoverctl.ModulePOST(hh.Dataplane, "bpf", "Switch32SP", bpf.SwitchSecurityPolicy)
 								if switchError != nil {
 									log.Errorf("Error in POST Switch IOModule: %s\n", switchError)
 								} else {
