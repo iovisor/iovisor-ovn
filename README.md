@@ -15,11 +15,15 @@ The repository is organized in the following way
 
 * bpf
 
-Contains all ebpf code
+Contains all ebpf code: switch with security ports
 
-* common
+* cli
 
-Contains common utilities
+Contains the command line interface of IOVisor-OVN daemon.
+
+* config
+
+Contains default configuration that can be changed by passing different parameters at the daemon start.
 
 * hoverctl
 
@@ -33,4 +37,3 @@ Using libovsdb monitors ovs, ovn sb,nb
 
 Some Examples, demos and useful files
 
-### Documentation is under construction
