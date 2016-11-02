@@ -3,7 +3,7 @@
 ---
 ## Architecture
 
-![IOVisor-OVN architecture](https://raw.githubusercontent.com/netgroup-polito/iovisor-ovn/master/docs/Architecture.png)
+![IOVisor-OVN architecture](https://raw.githubusercontent.com/netgroup-polito/iovisor-ovn/master/docs/iovisor-ovn-architecture.png)
 
 IOVisor-OVN sits on side of the traditional OVN architecture, it intercepts the
 contents of the different databases and based on an implemented logic it deploys
