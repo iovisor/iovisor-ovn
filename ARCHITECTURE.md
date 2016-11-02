@@ -12,7 +12,7 @@ the required network services using the IOVisor technology.
 ## IOVisor-OVN daemon
 
 Daemon is the running daemon that coordinates all other modules.
-The deamon is a central system that coordinates the deployment of network services
+The daemon is a central system that coordinates the deployment of network services
 based on the contents of the OVN databases.
 
 It is composed of different elements:
@@ -29,21 +29,22 @@ It is a simple system that prints and if configured saves all the logs into a fi
 ### CLI
 
 The command line interface allows to the user to interact with the system.
-It is specially useful for troubleshooting and debugging purposes
+It is specially useful for troubleshooting and debugging purposes.
+Provides an easy way to access the realtime modules status on the hypervisors, look at the current status of the mapping between OVN network elements and IOModules.
 
 ### Main Logic
 
 This module implements the logic for deploying the network services across the
 different compute nodes.
 
-It receives a new service network request, process it and then uses the hover ctrl
+It receives a new service network request from OVN, process it and then uses the hover ctrl
 interface to deploy those services in the different compute nodes.
 
-### Hover ctrl
+### Hover Controller
 
-The hover ctrl is a wrapper that sends command to the hover instances using
+The hover controller is a wrapper to sends command to the hover instances using
 a RESTful API.
 
-### IOModule Repo
+### IOModules Repository
 
 This module is a local Repository that contains the implementation of the different IOModules.
