@@ -23,10 +23,13 @@ var TestEnv = false
 //Constant
 const SwitchPortsNumber = 32
 
-var SleepTime = 3500 * time.Millisecond
+var SleepTime = 2000 * time.Millisecond
 var FlushTime = 30000 * time.Millisecond
 var FlushEnabled = false
 var SwitchSecurityPolicy = true
+
+var Debug = false
+var Info = true
 
 //for debug purposes, print Notification on single changes
 var PrintOvnNbChanges = false
@@ -79,7 +82,7 @@ func PrintConfig() {
 		fmt.Printf("%8s:%s\n", "OvsSock", OvsSock)
 	}
 	fmt.Printf("%8s:%s\n", "Hover", Hover)
-	fmt.Printf("%8s:%t\n", "TestEnv", TestEnv)
+	// fmt.Printf("%8s:%t\n", "TestEnv", TestEnv)
 	fmt.Printf("--------------------------------------------------------------\n\n")
 }
 

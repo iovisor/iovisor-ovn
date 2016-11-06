@@ -334,13 +334,14 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 						if logicalSwitch, ok := hh.Nb.NbDatabase.Logical_Switch[logicalSwitchName]; ok {
 							//NO SWITCH POSTED
 							if logicalSwitch.ModuleId == "" {
-								log.Noticef("POST Switch IOModule ...\n")
+								// log.Noticef("POST Switch IOModule\n")
 								time.Sleep(config.SleepTime)
 
-								switchError, switchHover := hoverctl.ModulePOST(hh.Dataplane, "bpf", "Switch32SP", bpf.SwitchSecurityPolicy)
+								switchError, switchHover := hoverctl.ModulePOST(hh.Dataplane, "bpf", "Switch", bpf.SwitchSecurityPolicy)
 								if switchError != nil {
 									log.Errorf("Error in POST Switch IOModule: %s\n", switchError)
 								} else {
+									log.Noticef("POST Switch IOModule %s\n", switchHover.Id)
 									logicalSwitch.ModuleId = switchHover.Id
 								}
 							}

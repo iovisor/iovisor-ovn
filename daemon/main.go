@@ -30,18 +30,21 @@ func init() {
 	flag.BoolVar(&config.Sandbox, "sandbox", false, "connect to sandbox with local .sock files")
 	flag.BoolVar(&config.TestEnv, "testenv", false, "enable testenv")
 
+	flag.BoolVar(&config.Debug, "debug", false, "enable DEBUG level in logger")
+	flag.BoolVar(&config.Info, "info", true, "enable INFO  level in logger")
+
 	flag.StringVar(&config.Hover, "hover", config.Hover, "hover url")
 }
 
 //Start iovisor-ovn Daemon
 func main() {
 
-	//Init Logger
-	common.LogInit()
-
 	//Parse Cmdline args
 	flag.Parse()
 	config.PrintConfig()
+
+	//Init Logger
+	common.LogInit()
 
 	//Init Global Handler
 	globalHandler := ovnmonitor.HandlerHandler{}
