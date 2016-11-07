@@ -1,7 +1,4 @@
-# IOVisor-OVN
-
----
-## Architecture
+# IOVisor-OVN Architecture
 
 ![IOVisor-OVN architecture](https://raw.githubusercontent.com/netgroup-polito/iovisor-ovn/master/docs/iovisor-ovn-architecture.png)
 
@@ -34,16 +31,13 @@ Provides an easy way to access the realtime modules status on the hypervisors, l
 
 ### Main Logic
 
-This module implements the logic for deploying the network services across the
-different compute nodes.
+This module implements the logic for deploying the network services across the different compute nodes.
 
-It receives a new service network request from OVN, process it and then uses the hover ctrl
-interface to deploy those services in the different compute nodes.
+It receives a new service network request from OVN, process it and then uses the hover ctrl interface to deploy those services in the different compute nodes.
 
 ### Hover Controller
 
-The hover controller is a wrapper to sends command to the hover instances using
-a RESTful API.
+The hover controller is a wrapper to sends command to the hover instances using a RESTful API.
 
 ### IOModules Repository
 
