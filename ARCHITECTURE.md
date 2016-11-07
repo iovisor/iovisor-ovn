@@ -1,10 +1,9 @@
 # IOVisor-OVN Architecture
 
+IOVisor-OVN sits on side of the traditional OVN architecture, it intercepts the contents of the different databases and based on an implemented logic it deploys the required network services using the IOVisor technology, as shown in the Figure below.
+
 ![IOVisor-OVN architecture](https://raw.githubusercontent.com/netgroup-polito/iovisor-ovn/master/docs/iovisor-ovn-architecture.png)
 
-IOVisor-OVN sits on side of the traditional OVN architecture, it intercepts the
-contents of the different databases and based on an implemented logic it deploys
-the required network services using the IOVisor technology.
 
 ## IOVisor-OVN daemon
 
@@ -16,8 +15,7 @@ It is composed of different elements:
 
 ### OVN Monitor
 
-Uses the [libovsdb](https://github.com/socketplane/libovsdb) to monitor all the
-databases of OVN. (northbound, southbound and the local ovsdb on each compute node)
+Uses the [libovsdb](https://github.com/socketplane/libovsdb) to monitor all the databases of OVN. (northbound, southbound and the local ovsdb on each compute node)
 
 ### Logger
 
