@@ -30,4 +30,4 @@ The password: password
 
 At this point, your new OpenStack instance will use IOVisor-OVN as network provider.
 
-Please note that currently only L2 networks are supported.
+Please note that currently only L2 networks are supported and that IP addresses in the VMs must be configured manually (the DHCP service has not been integrated yet).
