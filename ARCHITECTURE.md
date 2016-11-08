@@ -21,6 +21,6 @@ It is made by the following elements.
 
 * **Main Logic**. This module implements the logic for deploying the network services across the different compute nodes. It receives a new service network request from OVN, process it and then uses the hover ctrl interface to deploy those services in the different compute nodes.
 
-* **Hover Controller**. The hover controller is a wrapper to sends command to the hover instances using a RESTful API.
+* **Hover Controller**. The hover controller is a wrapper to send command to the hover instances using a RESTful API.
 
 * **IOModules Repository**. This module is a local Repository that contains the implementation of the different IOModules.
