@@ -2,21 +2,22 @@
 // It is useful to launch some fixed environments
 // for example a switch witch ports connected to veth1_ veth2_ etc..
 
-package testenv
+package tests
 
 import (
 	"fmt"
 	"time"
 
-	"github.com/netgroup-polito/iovisor-ovn/bpf"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+	"github.com/netgroup-polito/iovisor-ovn/iomodules/developing"
+	"github.com/netgroup-polito/iovisor-ovn/iomodules/l2switch"
 
 	l "github.com/op/go-logging"
 )
 
 var log = l.MustGetLogger("iovisor-ovn-daemon")
 
-//TestEnv Launches a defined configuration at daemon startup
+//tests Launches a defined configuration at daemon startup
 func TestEnv(dataplane *hoverctl.Dataplane) {
 
 	//testSwitch2(dataplane)
@@ -32,9 +33,9 @@ func TestEnv(dataplane *hoverctl.Dataplane) {
 
 //veth1_<>m1<>m2<>m3<>veth2_
 // func TestChainModule(dataplane *hoverctl.Dataplane) {
-// 	_, m1 := hoverctl.ModulePOST(dataplane, "bpf", "Module1", bpf.Module1)
-// 	_, m2 := hoverctl.ModulePOST(dataplane, "bpf", "Module2", bpf.Module2)
-// 	_, m3 := hoverctl.ModulePOST(dataplane, "bpf", "Module3", bpf.Module3)
+// 	_, m1 := hoverctl.ModulePOST(dataplane, "bpf", "Module1", l2switch.Module1)
+// 	_, m2 := hoverctl.ModulePOST(dataplane, "bpf", "Module2", l2switch.Module2)
+// 	_, m3 := hoverctl.ModulePOST(dataplane, "bpf", "Module3", l2switch.Module3)
 //
 // 	hoverctl.LinkPOST(dataplane, "i:veth1_", m1.Id)
 // 	hoverctl.LinkPOST(dataplane, m1.Id, m2.Id)
@@ -44,7 +45,7 @@ func TestEnv(dataplane *hoverctl.Dataplane) {
 // }
 
 func TestModule(dataplane *hoverctl.Dataplane) {
-	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "Switch6SecurityMacIp", bpf.SwitchSecurityPolicy)
+	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "Switch6SecurityMacIp", l2switch.SwitchSecurityPolicy)
 	hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
 	hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
 
@@ -58,7 +59,7 @@ func TestModule(dataplane *hoverctl.Dataplane) {
 //veth1_ <-> DummySwitch2 <-> veth2_
 func TestLinkPostDelete(dataplane *hoverctl.Dataplane) {
 
-	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "Switch", bpf.Switch)
+	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "Switch", developing.Switch)
 	_, l1 := hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
 	_, l2 := hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
 
@@ -97,7 +98,7 @@ func TestLinkPostDelete(dataplane *hoverctl.Dataplane) {
 	//
 	// hoverctl.ModuleListGET(dataplane)
 
-	// _, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch2", bpf.Switch2Redirect)
+	// _, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch2", developing.Switch2Redirect)
 	// _, l1 := hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
 	// _, l2 := hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
 	//
@@ -115,7 +116,7 @@ func TestLinkPostDelete(dataplane *hoverctl.Dataplane) {
 //2 ports switch test implementation
 //veth1_ <-> DummySwitch2 <-> veth2_
 func TestSwitch2(dataplane *hoverctl.Dataplane) {
-	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch2", bpf.DummySwitch2)
+	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch2", developing.DummySwitch2)
 	/*	_, l1 := */ hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
 	/*	_, l2 := */ hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
 }
@@ -123,7 +124,7 @@ func TestSwitch2(dataplane *hoverctl.Dataplane) {
 //2 ports switch test implementation
 //veth1_ <-> DummySwitch2 <-> veth2_
 func TestSwitch2ifc(dataplane *hoverctl.Dataplane, ifc1 string, ifc2 string) {
-	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch2", bpf.DummySwitch2)
+	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch2", developing.DummySwitch2)
 	/*	_, l1 := */ hoverctl.LinkPOST(dataplane, ifc1, sw.Id)
 	/*	_, l2 := */ hoverctl.LinkPOST(dataplane, ifc2, sw.Id)
 }
@@ -131,7 +132,7 @@ func TestSwitch2ifc(dataplane *hoverctl.Dataplane, ifc1 string, ifc2 string) {
 //3 ports switch test implementation
 //veth123_ <-> DummySwitch3
 // func TestSwitch3(dataplane *hoverctl.Dataplane) {
-// 	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch3", bpf.DummySwitch3)
+// 	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch3", l2switch.DummySwitch3)
 // 	/*	_, l1 := */ hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
 // 	/*	_, l2 := */ hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
 // 	/*	_, l3 := */ hoverctl.LinkPOST(dataplane, "i:veth3_", sw.Id)
@@ -142,7 +143,7 @@ func TestSwitch2ifc(dataplane *hoverctl.Dataplane, ifc1 string, ifc2 string) {
 func TestSwitch5(dataplane *hoverctl.Dataplane) {
 	log.Noticef("TestSwitch5: create a Switch with 8 ports, and connect vethx_ (1,2,3,4,5) to the switch\n")
 
-	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "Switch", bpf.Switch)
+	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "Switch", developing.Switch)
 	/*	_, l1 := */ hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
 	/*	_, l2 := */ hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
 	/*	_, l3 := */ hoverctl.LinkPOST(dataplane, "i:veth3_", sw.Id)
@@ -172,7 +173,7 @@ func TestSwitch5(dataplane *hoverctl.Dataplane) {
 //with counters
 // func TestSwitch2count(dataplane *hoverctl.Dataplane) {
 //
-// 	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch2count", bpf.DummySwitch2count)
+// 	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "DummySwitch2count", l2switch.DummySwitch2count)
 // 	/*	_, l1 := */ hoverctl.LinkPOST(dataplane, "i:veth1_", sw.Id)
 // 	/*	_, l2 := */ hoverctl.LinkPOST(dataplane, "i:veth2_", sw.Id)
 //

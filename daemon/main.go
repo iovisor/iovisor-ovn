@@ -8,7 +8,7 @@ import (
 	"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
-	"github.com/netgroup-polito/iovisor-ovn/testenv"
+	"github.com/netgroup-polito/iovisor-ovn/tests"
 	l "github.com/op/go-logging"
 
 	"github.com/netgroup-polito/iovisor-ovn/cli"
@@ -67,7 +67,7 @@ func main() {
 
 	//simple test enviroment (see testenv/env.go)
 	if config.TestEnv {
-		go testenv.TestEnv(dataplane)
+		go tests.TestEnv(dataplane)
 	}
 
 	//Montiors started here!
