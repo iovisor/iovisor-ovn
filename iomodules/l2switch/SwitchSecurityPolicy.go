@@ -1,4 +1,4 @@
-package bpf
+package l2switch
 
 var SwitchSecurityPolicy = `
 #define BPF_TRACE

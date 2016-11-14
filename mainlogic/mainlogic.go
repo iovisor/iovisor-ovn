@@ -4,9 +4,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/netgroup-polito/iovisor-ovn/bpf"
 	"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+	"github.com/netgroup-polito/iovisor-ovn/iomodules/l2switch"
 	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
 	l "github.com/op/go-logging"
 )
@@ -337,7 +337,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 								// log.Noticef("POST Switch IOModule\n")
 								time.Sleep(config.SleepTime)
 
-								switchError, switchHover := hoverctl.ModulePOST(hh.Dataplane, "bpf", "Switch", bpf.SwitchSecurityPolicy)
+								switchError, switchHover := hoverctl.ModulePOST(hh.Dataplane, "bpf", "Switch", l2switch.SwitchSecurityPolicy)
 								if switchError != nil {
 									log.Errorf("Error in POST Switch IOModule: %s\n", switchError)
 								} else {

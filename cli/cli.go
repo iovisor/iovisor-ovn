@@ -10,9 +10,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/netgroup-polito/iovisor-ovn/bpf"
 	"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+	"github.com/netgroup-polito/iovisor-ovn/iomodules/l2switch"
 	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
 )
 
@@ -30,7 +30,7 @@ func Cli(hh *ovnmonitor.HandlerHandler) {
 			switch args[0] {
 			case "test":
 				fmt.Printf("\ntest\n\n")
-				//testenv.TestModule(dataplane)
+				//tests.TestModule(dataplane)
 			case "config":
 				config.PrintConfigCli()
 				if len(args) == 3 {
@@ -154,7 +154,7 @@ func Cli(hh *ovnmonitor.HandlerHandler) {
 						case 3:
 							fmt.Printf("\nModules POST\n\n")
 							if args[2] == "switch" {
-								_, module := hoverctl.ModulePOST(dataplane, "bpf", "Switch", bpf.Switch)
+								_, module := hoverctl.ModulePOST(dataplane, "bpf", "Switch", l2switch.SwitchSecurityPolicy)
 								hoverctl.ModulePrint(module)
 							} else {
 								//TODO Print modules list

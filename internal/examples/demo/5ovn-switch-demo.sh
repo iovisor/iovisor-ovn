@@ -36,10 +36,17 @@ ovn-nbctl lsp-add sw0 sw0-port5
 
 read -r line
 # Set a MAC address for each of the two logical ports.
-ovn-nbctl lsp-set-addresses sw0-port1 00:00:00:00:00:01
+ovn-nbctl lsp-set-addresses sw0-port1 "192.168.1.1"
+
+#read -r line
+ovn-nbctl lsp-set-addresses sw0-port2 "00:00:00:00:00:02 192.168.1.2"
 
 read -r line
-ovn-nbctl lsp-set-addresses sw0-port2 00:00:00:00:00:02
+# Set a MAC address for each of the two logical ports.
+ovn-nbctl lsp-set-port-security sw0-port1 "192.168.1.1"
+
+#read -r line
+ovn-nbctl lsp-set-port-security sw0-port2 "192.168.1.2"
 
 # Set up port security for the two logical ports.  This ensures that
 # the logical port mac address we have configured is the only allowed

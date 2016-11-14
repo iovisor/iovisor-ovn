@@ -36,7 +36,7 @@ For more details about how to install and test this software please see [INSTALL
 
 The repository is organized in the following way
 
-* **bpf**: contains eBPF code (i.e., available IOModules).
+* **iomodules**: contains eBPF code (i.e., available IOModules).
 
 * **cli**: tool that implements the command line interface of IOVisor-OVN daemon.
 

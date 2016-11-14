@@ -1,7 +1,8 @@
-package bpf
+package developing
 
-/*Switch that implements broadcast only between 2 interfaces(named 1 and 2 in hover)*/
-var DummySwitch2 = `
+var Switch = `
+#define MAX_PORTS 8
+
 struct mac_key {
 	u64 mac;
 };
@@ -14,9 +15,10 @@ struct host_info {
 
 BPF_TABLE("hash", struct mac_key, struct host_info, mac2host, 10240);
 
+BPF_TABLE("array",u32,u32,ports,MAX_PORTS);
+
 static int handle_rx(void *skb, struct metadata *md) {
 	//LEARNING PHASE: mapping src_mac with src_interface
-
 	//Lets assume that the packet is at 0th location of the memory.
 	u8 *cursor = 0;
 
@@ -34,6 +36,8 @@ static int handle_rx(void *skb, struct metadata *md) {
 	src_info.rx_pkts = 0;
 	src_info.tx_pkts = 0;
 
+	bpf_trace_printk("pkt in_ifc:%d from:%x -> to:%x\n",md->in_ifc,ethernet->src,ethernet->dst);
+
 	//lookup in mac2host; if no key present -> initialize with src_info
 	struct host_info *src_host = mac2host.lookup_or_init(&src_key, &src_info);
 
@@ -45,9 +49,7 @@ static int handle_rx(void *skb, struct metadata *md) {
 	lock_xadd(&src_host->rx_pkts, 1);
 
 
-
 	//FORWARDING PHASE: select interface(s) to send the packet
-
 	//set dst_mac as key
 	struct mac_key dst_key = {ethernet->dst};
 
@@ -55,47 +57,68 @@ static int handle_rx(void *skb, struct metadata *md) {
 	struct host_info *dst_host = mac2host.lookup(&dst_key);
 
 	if (dst_host) {
-		//hit in forwarding table
-
+		//HIT in forwarding table
 		//increment tx_pkts counter
 		lock_xadd(&dst_host->tx_pkts, 1);
 
 		//redirect packet to correspondent interface
 		pkt_redirect(skb, md, dst_host->ifindex);
+
+		bpf_trace_printk("lookup hit -> redirect to %d\n",dst_host->ifindex);
+
 		return RX_REDIRECT;
 
 	} else {
-		//miss in forwarding table
+		//MISS in forwarding table
+		bpf_trace_printk("lookup miss->  broadcast\n");
 
-		//increment tx_pkts counter
-		//lock_xadd(&dst_host->tx_pkts, 1);
+		u32  iface_n = 1;
+		u32 *iface_p;
 
-		//TODO implement real broadcast!
-		if(md->in_ifc==1){
-			pkt_redirect(skb,md,2);
-			return RX_REDIRECT;
-		}
-		if(md->in_ifc==2){
-			pkt_redirect(skb,md,1);
-			return RX_REDIRECT;
-		}
+		//Manual unroll to avoid ebpf verifier error due to loops
+		//#pragma unroll seems not to work
+
+		iface_n = 1; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+		iface_n = 2; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+		iface_n = 3; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+		iface_n = 4; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+		iface_n = 5; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+		iface_n = 6; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+		iface_n = 7; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
+		iface_n = 8; iface_p = ports.lookup(&iface_n);
+		if(iface_p)
+			if(*iface_p != 0)
+				bpf_clone_redirect(skb,*iface_p,0);
+
 		return RX_DROP;
 	}
-}
-`
-var Switch2Redirect = `
-
-static int handle_rx(void *skb, struct metadata *md) {
-	if(md->in_ifc==1){
-		bpf_trace_printk("pkt_redirect 1->2\n");
-		pkt_redirect(skb,md,2);
-		return RX_REDIRECT;
-	}
-	if(md->in_ifc==2){
-		bpf_trace_printk("pkt_redirect 2->1\n");
-		pkt_redirect(skb,md,1);
-		return RX_REDIRECT;
-	}
-	return RX_DROP;
 }
 `

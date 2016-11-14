@@ -153,7 +153,7 @@ func LinkListGet(d *Dataplane) (error, map[string]Link) {
 }
 
 /*
-	ModulePOST(d,"bpf","myModulòeName",bpf.Modulename)
+	ModulePOST(d,"bpf","myModulòeName",l2switch.Modulename)
 */
 func ModulePOST(d *Dataplane, moduleType string, displayName string, code string) (error, Module) {
 	log.Infof("module POST %s\n", displayName)
