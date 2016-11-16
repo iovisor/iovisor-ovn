@@ -5,12 +5,15 @@
 package tests
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/developing"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/l2switch"
+	"github.com/netgroup-polito/iovisor-ovn/iomodules/router"
 
 	l "github.com/op/go-logging"
 )
@@ -29,6 +32,8 @@ func TestEnv(dataplane *hoverctl.Dataplane) {
 	//TestSwitch5(dataplane)
 
 	//TestChainModule(dataplane)
+
+	TestRouter(dataplane)
 }
 
 //veth1_<>m1<>m2<>m3<>veth2_
@@ -43,6 +48,34 @@ func TestEnv(dataplane *hoverctl.Dataplane) {
 // 	hoverctl.LinkPOST(dataplane, "i:veth2_", m3.Id)
 //
 // }
+
+func TestRouter(dataplane *hoverctl.Dataplane) {
+	_, router := hoverctl.ModulePOST(dataplane, "bpf", "RouterDev", router.Router)
+	log.Debug(router.Id)
+
+	_, l1 := hoverctl.LinkPOST(dataplane, "i:veth1_", router.Id)
+	_, l2 := hoverctl.LinkPOST(dataplane, "i:veth2_", router.Id)
+	_, l3 := hoverctl.LinkPOST(dataplane, "i:veth3_", router.Id)
+
+	// hoverctl.LinkPOST(dataplane, "i:veth3_", sw.Id)
+
+	hoverctl.TableEntryPUT(dataplane, router.Id, "routing_table", "0x0", "{ 0x01010100  0xffffff00  0x1}")
+	hoverctl.TableEntryPUT(dataplane, router.Id, "routing_table", "0x1", "{ 0x02020200  0xffffff00  0x2}")
+	hoverctl.TableEntryPUT(dataplane, router.Id, "routing_table", "0x2", "{ 0x03030300  0xffffff00  0x3}")
+
+	hoverctl.TableEntryPOST(dataplane, router.Id, "router_port", "1", "0x010101fe 0xffffff00 0x987654321abc")
+	hoverctl.TableEntryPOST(dataplane, router.Id, "router_port", "2", "0x020202fe 0xffffff00 0x123456789abc")
+	hoverctl.TableEntryPOST(dataplane, router.Id, "router_port", "3", "0x030303fe 0xffffff00 0xaa34bb78ccdd")
+
+	fmt.Print("Press 'Enter' to continue...")
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
+
+	hoverctl.LinkDELETE(dataplane, l1.Id)
+	hoverctl.LinkDELETE(dataplane, l2.Id)
+	hoverctl.LinkDELETE(dataplane, l3.Id)
+
+	hoverctl.ModuleDELETE(dataplane, router.Id)
+}
 
 func TestModule(dataplane *hoverctl.Dataplane) {
 	_, sw := hoverctl.ModulePOST(dataplane, "bpf", "Switch6SecurityMacIp", l2switch.SwitchSecurityPolicy)
