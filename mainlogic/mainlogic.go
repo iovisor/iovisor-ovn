@@ -413,7 +413,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 									if lsp.SecurityMacStr != "" {
 										//Security Policy Mac Set
 										if lsp.SecurityMacStr != currentInterface.SecurityMacString {
-											errorTablePost, _ := hoverctl.TableEntryPOST(hh.Dataplane, logicalSwitch.ModuleId, "securitymac", strconv.Itoa(currentInterface.IfaceIdRedirectHover), lsp.SecurityMacStr)
+											errorTablePost, _ := hoverctl.TableEntryPOST(hh.Dataplane, logicalSwitch.ModuleId, "securitymac", "{ "+strconv.Itoa(currentInterface.IfaceIdRedirectHover)+" }", lsp.SecurityMacStr)
 											if errorTablePost == nil {
 												currentInterface.SecurityMacString = lsp.SecurityMacStr
 											}
@@ -431,7 +431,7 @@ func LogicalMappingOvs(s string, hh *ovnmonitor.HandlerHandler) {
 									if lsp.SecurityIpStr != "" {
 										//Security Policy Ip Set
 										if lsp.SecurityIpStr != currentInterface.SecurityIpString {
-											errorTablePost, _ := hoverctl.TableEntryPOST(hh.Dataplane, logicalSwitch.ModuleId, "securityip", strconv.Itoa(currentInterface.IfaceIdRedirectHover), lsp.SecurityIpStr)
+											errorTablePost, _ := hoverctl.TableEntryPOST(hh.Dataplane, logicalSwitch.ModuleId, "securityip", "{ "+strconv.Itoa(currentInterface.IfaceIdRedirectHover)+" }", lsp.SecurityIpStr)
 											if errorTablePost == nil {
 												currentInterface.SecurityIpString = lsp.SecurityIpStr
 											}

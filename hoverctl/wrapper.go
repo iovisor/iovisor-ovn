@@ -309,8 +309,8 @@ func TableEntryPOST(d *Dataplane, moduleId string, tableId string, entryId strin
 	log.Infof("table entry POST /modules/"+moduleId+"/tables/"+tableId+"/entries/"+entryId+" {%s,%s}\n", entryId, entryValue)
 
 	req := map[string]interface{}{
-		"key":   "{" + entryId + "}",
-		"value": "{" + entryValue + "}",
+		"key":/*  "{" + */ entryId, /*+ "}"*/
+		"value":                    "{" + entryValue + "}",
 	}
 	var tableEntry TableEntry
 	err := d.sendObject("POST", "/modules/"+moduleId+"/tables/"+tableId+"/entries/", req, &tableEntry)
