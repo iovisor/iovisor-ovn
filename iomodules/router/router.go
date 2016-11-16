@@ -31,22 +31,22 @@ var Router = `
 
 /*Routing Table Entry*/
 struct rt_entry{
-  u32 network;	//network: e.g. 192.168.1.0
-  u32 netmask;	//netmask: e.g. 255.255.255.0
-  u32 port;			//port of the router
+  u32 network;  //network: e.g. 192.168.1.0
+  u32 netmask;  //netmask: e.g. 255.255.255.0
+  u32 port;     //port of the router
 };
 
 /*Router Port*/
 struct r_port{
-  u32 ip;				//ip addr : e.g. 192.168.1.254
-  u32 netmask;	//netmask : e.g. 255.255.255.0
-  u64 mac;			//mac addr: e.g. a1:b2:c3:ab:cd:ef
+  u32 ip;       //ip addr : e.g. 192.168.1.254
+  u32 netmask;  //netmask : e.g. 255.255.255.0
+  u64 mac;      //mac addr: e.g. a1:b2:c3:ab:cd:ef
 };
 
 /*Arp Table Key*/
 struct arp_table_key{
-  u32 ip;				//ip addr : e.g. 192.168.1.2
-  u32 port;			//port    : e.g. 1
+  u32 ip;       //ip addr : e.g. 192.168.1.2
+  u32 port;     //port    : e.g. 1
 };
 
 /*
