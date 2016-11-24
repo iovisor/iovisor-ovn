@@ -2,16 +2,10 @@ package main
 
 import (
 	"flag"
-	"os"
-	"time"
 
 	"github.com/netgroup-polito/iovisor-ovn/config"
-	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
-	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
-	"github.com/netgroup-polito/iovisor-ovn/tests"
 	l "github.com/op/go-logging"
 
-	"github.com/netgroup-polito/iovisor-ovn/cli"
 	"github.com/netgroup-polito/iovisor-ovn/common"
 	"github.com/netgroup-polito/iovisor-ovn/mainlogic"
 )
@@ -46,39 +40,14 @@ func main() {
 	//Init Logger
 	common.LogInit()
 
-	//Init Global Handler
-	globalHandler := ovnmonitor.HandlerHandler{}
-
-	//TODO Check how many dataplanes should be initialized.
-	//For now (single Hypervisor) only one
-
-	//In future (multiple hypervisor) I can read this information from config package
-	//Or read the information from the Main Nb database table (that points to hypervisors)
-
-	dataplane := hoverctl.NewDataplane()
-
-	//Connect to hover and initialize HoverDataplane
-	if err := dataplane.Init(config.Hover); err != nil {
-		Log.Errorf("unable to conect to Hover %s\n%s\n", config.Hover, err)
-		os.Exit(1)
-	}
-
-	globalHandler.Dataplane = dataplane
-
 	//simple test enviroment (see testenv/env.go)
-	if config.TestEnv {
-		go tests.TestEnv(dataplane)
-	}
+	//if config.TestEnv {
+	//	go tests.TestEnv(dataplane)
+	//}
 
-	//Montiors started here!
-	go mainlogic.MainLogic(&globalHandler)
+	//Monitors started here!
+	mainlogic.MainLogic()
 
-	time.Sleep(500 * time.Millisecond)
-
-	//start simple cli
-	go cli.Cli(&globalHandler)
-
-	//wait forever. if main is killed, Go kills all other goroutines
 	quit := make(chan bool)
 	<-quit
 }
