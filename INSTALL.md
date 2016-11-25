@@ -10,8 +10,8 @@ In order to create a test environment with a single compute node you should perf
 2. Install DevStack with IOVisor-OVN as network provider, typing the following commands:
 
 ```
-    git clone http://git.openstack.org/openstack-dev/devstack.git
-    git clone https://github.com/netgroup-polito/networking-ovn/
+    git clone http://git.openstack.org/openstack-dev/devstack.git --branch stable/newton
+    git clone https://github.com/netgroup-polito/networking-ovn.git --branch stable/newton
     cd devstack
     cp ../networking-ovn/devstack/local.conf.sample local.conf
     ./stack.sh
@@ -24,9 +24,9 @@ Horizon is now available at http://192.168.122.8/
 Keystone is serving at http://192.168.122.8:5000/
 The default users are: admin and demo
 The password: password
-2015-04-30 22:02:40.220 | stack.sh completed in 515 seconds.
+2016-11-24 19:34:06.116 | stack.sh completed in 1334 seconds.
 ```
 
-At this point, your new OpenStack instance will use IOVisor-OVN as network provider.
+At this point, your new OpenStack newton instance will use IOVisor-OVN as network provider.
 
 Please note that currently only L2 networks are supported and that IP addresses in the VMs must be configured manually (the DHCP service has not been integrated yet).
