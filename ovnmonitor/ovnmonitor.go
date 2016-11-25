@@ -282,7 +282,9 @@ func ProcessLogicalSwitchPort(db *OvnDB, uuid string, row libovsdb.RowUpdate) {
 		} else {	/* update port */
 			ParseLogicalSwitchPort(port, row.New)
 			port.Modified = true
-			port.parent.Modified = true
+			if port.parent != nil {
+				port.parent.Modified = true
+			}
 		}
 	} else {	/* new logical switch port*/
 		port := new(LogicalSwitchPort)
