@@ -8,7 +8,7 @@ package router
 
 //LONGEST PREFIX MATCHING trivialimplementation
 
-var Router = `
+var RouterCode = `
 #include <linux/ip.h>
 #include <linux/bpf.h>
 
