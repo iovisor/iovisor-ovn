@@ -25,12 +25,8 @@ type L2SwitchModuleInterface struct {
 	IfaceIdRedirectHover  int    //Iface id inside hover (relative to the m:1234 the interface is attached to ...) and provided my the extended hover /links/ API
 	IfaceIdArrayBroadcast int    //Interface Id in the array for broadcast (id->fd for broadcast)
 	IfaceFd               int    //Interface Fd inside External_Ids (42, etc...)
-	//Up                    bool   //Up means corresponding (module??) link is already POSTed
 	LinkIdHover           string //iomodules Link Id
-	IfaceName							string
-	//ToRemove              bool   //To remove flag
-	//SecurityMacString     string //if the security policy based on mac in already injected into the Iomodules, contains the string of the leaf in the table
-	//SecurityIpString      string ////if the security policy based on ip is already injected into the Iomodules, contains the string of the leaf in the table
+	IfaceName             string
 }
 
 func Create(dp *hoverctl.Dataplane) *L2SwitchModule {
