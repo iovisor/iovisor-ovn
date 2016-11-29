@@ -2,6 +2,7 @@ package l2switch
 
 import (
 	"strconv"
+	"bytes"
 
 	"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
@@ -200,6 +201,40 @@ func (sw *L2SwitchModule) FindFirstFreeLogicalPort() int {
 		}
 	}
 	return 0
+}
+
+// adds a entry in the forwarding table of the switch
+// mac MUST be in the format xx:xx:xx:xx:xx:xx
+func (sw *L2SwitchModule) AddForwardingTableEntry(mac string, ifaceName string) (error bool) {
+
+	swIface, ok := sw.Interfaces[ifaceName]
+	if !ok {
+		log.Warningf("Iface '%s' is not present in switch '%s'\n",
+			ifaceName, sw.ModuleId)
+		return false
+	}
+
+	macString := "{" + macToHexadecimalString(mac) + "}"
+
+	hoverctl.TableEntryPOST(sw.dataplane, sw.ModuleId, "fwdtable", macString,
+		strconv.Itoa(swIface.IfaceIdRedirectHover))
+
+	return true
+}
+
+// TODO: this function should be smarter
+func macToHexadecimalString(s string) string {
+	var buffer bytes.Buffer
+
+	buffer.WriteString("0x")
+	buffer.WriteString(s[0:2])
+	buffer.WriteString(s[3:5])
+	buffer.WriteString(s[6:8])
+	buffer.WriteString(s[9:11])
+	buffer.WriteString(s[12:14])
+	buffer.WriteString(s[15:17])
+
+	return buffer.String()
 }
 
 // TODO: port security policies
