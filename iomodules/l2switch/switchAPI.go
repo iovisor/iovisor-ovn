@@ -18,7 +18,7 @@ type L2SwitchModule struct {
 	Interfaces map[string]*L2SwitchModuleInterface
 
 	deployed	bool
-	dataplane	*hoverctl.Dataplane	/* used to send commands to hover*/
+	dataplane	*hoverctl.Dataplane	// used to send commands to hover
 }
 
 type L2SwitchModuleInterface struct {
@@ -73,10 +73,10 @@ func (sw *L2SwitchModule) Destroy() (error bool) {
 		return true
 	}
 
-	/* TODO:
-	 * All interfaces must be detached before destroying the module.
-	 * Should it be done automatically here, or should be the application responsible for that?
-	 */
+	// TODO:
+	// All interfaces must be detached before destroying the module.
+	// Should it be done automatically here, or should be the application responsible for that?
+
 	moduleDeleteError, _ := hoverctl.ModuleDELETE(sw.dataplane, sw.ModuleId)
 	if moduleDeleteError != nil {
 		log.Errorf("Error in destrying Switch IOModule: %s\n", moduleDeleteError)
@@ -111,11 +111,11 @@ func (sw *L2SwitchModule) AttachPort(ifaceName string) (error bool) {
 
 	_, external_interfaces := hoverctl.ExternalInterfacesListGET(sw.dataplane)
 
-	//We are assuming that this process is made only once... If fails it could be a problem.
+	// We are assuming that this process is made only once... If fails it could be a problem.
 
 	iface := new(L2SwitchModuleInterface)
 
-	//Configuring broadcast on the switch module
+	// Configuring broadcast on the switch module
 	iface.IfaceIdArrayBroadcast = portNumber
 	iface.IfaceFd, _ = strconv.Atoi(external_interfaces[ifaceName].Id)
 
@@ -130,7 +130,7 @@ func (sw *L2SwitchModule) AttachPort(ifaceName string) (error bool) {
 	sw.PortsArray[portNumber] = iface.IfaceFd
 	sw.PortsCount++
 
-	//Saving IfaceIdRedirectHover for this port. The number will be used by security policies
+	// Saving IfaceIdRedirectHover for this port. The number will be used by security policies
 	ifacenumber := -1
 	if linkHover.From[0:2] == "m:" {
 		ifacenumber = linkHover.FromId
@@ -149,7 +149,7 @@ func (sw *L2SwitchModule) AttachPort(ifaceName string) (error bool) {
 
 	sw.Interfaces[ifaceName] = iface
 
-	/* TODO: security policies */
+	// TODO: security policies
 
 	return true
 }
@@ -178,19 +178,19 @@ func (sw *L2SwitchModule) DetachPort(ifaceName string) (error bool) {
 		return false
 	}
 
-	//Complete the link deletion...
+	// Complete the link deletion...
 	iface.LinkIdHover = ""
 
-	/* cleanup broadcast tables*/
+	// cleanup broadcast tables
 	if sw.PortsArray[iface.IfaceIdArrayBroadcast] != 0 {
 		hoverctl.TableEntryPUT(sw.dataplane, sw.ModuleId, "ports", strconv.Itoa(iface.IfaceIdArrayBroadcast), "0")
-		//TODO if not successful retry
+		// TODO: if not successful retry
 
 		sw.PortsArray[iface.IfaceIdArrayBroadcast] = 0
 		sw.PortsCount--
     }
 
-	/*TODO: clean up port security tables*/
+	// TODO: clean up port security tables
 
 	delete(sw.Interfaces, ifaceName)
 
@@ -206,6 +206,4 @@ func (sw *L2SwitchModule) FindFirstFreeLogicalPort() int {
 	return 0
 }
 
-/*
- * TODO: port security policies
- */
+// TODO: port security policies
