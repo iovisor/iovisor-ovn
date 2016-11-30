@@ -122,7 +122,7 @@ func updateSwitch(lsw *ovnmonitor.LogicalSwitch) {
 
 func removePort(sw *L2Switch, port *L2SwitchPort) {
 	if port.IfaceName != "" {
-		sw.swIomodule.DetachPort(port.IfaceName)
+		sw.swIomodule.DetachExternalInterface(port.IfaceName)
 	}
 
 	delete(sw.ports, port.Name)
@@ -141,7 +141,7 @@ func updatePort(sw *L2Switch, lport *ovnmonitor.LogicalSwitchPort) {
 	if port.IfaceName != lport.IfaceName {
 		/* if it was connected to an iface */
 		if port.IfaceName != "" {
-			sw.swIomodule.DetachPort(port.IfaceName)
+			sw.swIomodule.DetachExternalInterface(port.IfaceName)
 		}
 
 		port.IfaceName = lport.IfaceName
@@ -150,7 +150,7 @@ func updatePort(sw *L2Switch, lport *ovnmonitor.LogicalSwitchPort) {
 			if sw.swIomodule.PortsCount == 0 {
 				sw.swIomodule.Deploy()
 			}
-			sw.swIomodule.AttachPort(port.IfaceName)
+			sw.swIomodule.AttachExternalInterface(port.IfaceName)
 		}
 	}
 

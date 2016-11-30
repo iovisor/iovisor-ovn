@@ -3,6 +3,8 @@ package l2switch
 import (
 	"strconv"
 	"bytes"
+	"errors"
+	"fmt"
 
 	"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
@@ -44,30 +46,30 @@ func Create(dp *hoverctl.Dataplane) *L2SwitchModule {
 	return x
 }
 
-func (sw *L2SwitchModule) Deploy() (error bool) {
+func (sw *L2SwitchModule) Deploy() (err error) {
 
 	if sw.deployed {
-		return true
+		return nil
 	}
 
 	switchError, switchHover := hoverctl.ModulePOST(sw.dataplane, "bpf",
 									"Switch", SwitchSecurityPolicy)
 	if switchError != nil {
 		log.Errorf("Error in POST Switch IOModule: %s\n", switchError)
-		return false
+		return switchError
 	}
 
 	log.Noticef("POST Switch IOModule %s\n", switchHover.Id)
 	sw.ModuleId = switchHover.Id
 	sw.deployed = true
 
-	return true
+	return nil
 }
 
-func (sw *L2SwitchModule) Destroy() (error bool) {
+func (sw *L2SwitchModule) Destroy() (err error) {
 
 	if !sw.deployed {
-		return true
+		return nil
 	}
 
 	// TODO:
@@ -77,33 +79,35 @@ func (sw *L2SwitchModule) Destroy() (error bool) {
 	moduleDeleteError, _ := hoverctl.ModuleDELETE(sw.dataplane, sw.ModuleId)
 	if moduleDeleteError != nil {
 		log.Errorf("Error in destrying Switch IOModule: %s\n", moduleDeleteError)
-		return false
+		return moduleDeleteError
 	}
 
 	sw.ModuleId = ""
 	sw.deployed = false
 
-	return true
+	return nil
 }
 
-func (sw *L2SwitchModule) AttachPort(ifaceName string) (error bool) {
+func (sw *L2SwitchModule) AttachExternalInterface(ifaceName string) (err error) {
 
 	if !sw.deployed {
-		log.Errorf("Trying to attach port in undeployed switch\n")
-		return false
+		errString := "Trying to attach port in undeployed switch"
+		log.Errorf(errString)
+		return errors.New(errString)
 	}
 
 	linkError, linkHover := hoverctl.LinkPOST(sw.dataplane, "i:" + ifaceName, sw.ModuleId)
 	if linkError != nil {
 		log.Errorf("Error in POSTing the Link: %s\n", linkError)
-		return false
+		return linkError
 	}
 
 	portNumber := sw.FindFirstFreeLogicalPort()
 
 	if portNumber == 0 {
-		log.Warningf("Switch '%s': no free ports.\n", sw.ModuleId)
-		return false
+		errString := fmt.Sprintf("Switch '%s': no free ports.\n", sw.ModuleId)
+		log.Warningf(errString)
+		return errors.New(errString)
 	}
 
 	_, external_interfaces := hoverctl.ExternalInterfacesListGET(sw.dataplane)
@@ -121,7 +125,7 @@ func (sw *L2SwitchModule) AttachPort(ifaceName string) (error bool) {
 	if tablePutError != nil {
 		log.Warningf("Error in PUT entry into ports table... ",
 			"Probably problems with broadcast in the module. Error: %s\n", tablePutError)
-		return false
+		return tablePutError
 	}
 
 	sw.PortsArray[portNumber] = iface.IfaceFd
@@ -148,22 +152,24 @@ func (sw *L2SwitchModule) AttachPort(ifaceName string) (error bool) {
 
 	// TODO: security policies
 
-	return true
+	return nil
 }
 
-func (sw *L2SwitchModule) DetachPort(ifaceName string) (error bool) {
+func (sw *L2SwitchModule) DetachExternalInterface(ifaceName string) (err error) {
 
 	if !sw.deployed {
-		log.Errorf("Trying to detach port in undeployed switch\n")
-		return false
+		errString := "Trying to detach port in undeployed switch"
+		log.Errorf(errString)
+		return errors.New(errString)
 	}
 
 	iface, ok := sw.Interfaces[ifaceName]
 
 	if !ok {
-		log.Warningf("Iface '%s' is not present in switch '%s'\n",
+		errString := fmt.Sprintf("Iface '%s' is not present in switch '%s'\n",
 			ifaceName, sw.ModuleId)
-		return false
+		log.Warningf(errString)
+		return errors.New(errString)
 	}
 
 	linkDeleteError, _ := hoverctl.LinkDELETE(sw.dataplane, iface.LinkIdHover)
@@ -172,7 +178,7 @@ func (sw *L2SwitchModule) DetachPort(ifaceName string) (error bool) {
 		//log.Debug("REMOVE Interface %s %s (1/1) LINK REMOVED\n", currentInterface.Name, currentInterface.IfaceIdExternalIds)
 		log.Warningf("Problem removing iface '%s' from switch '%s'\n",
 			ifaceName, sw.ModuleId)
-		return false
+		return linkDeleteError
 	}
 
 	// Complete the link deletion...
@@ -191,7 +197,55 @@ func (sw *L2SwitchModule) DetachPort(ifaceName string) (error bool) {
 
 	delete(sw.Interfaces, ifaceName)
 
-	return true
+	return nil
+}
+
+// This function is still experimental
+// Adds an interface that is connected to another IOModule, the connection must
+// be already been created by an external component.
+// TODO: How to handle broadcast in this case?
+func (sw *L2SwitchModule) AttachToIoModule(ifaceId int, ifaceName string) (err error) {
+	if !sw.deployed {
+		log.Errorf("Trying to attach port in undeployed switch\n")
+		return errors.New("Trying to attach port in undeployed switch")
+	}
+
+	iface := new(L2SwitchModuleInterface)
+
+	sw.PortsCount++
+	iface.IfaceIdRedirectHover = ifaceId
+	iface.IfaceName = ifaceName
+
+	sw.Interfaces[ifaceName] = iface
+
+	// TODO: security policies
+
+	return nil
+}
+
+// This is also experimental, same considerations as previous function should
+// be considered
+func (sw *L2SwitchModule) DetachFromIoModule(ifaceName string) (err error) {
+	if !sw.deployed {
+		log.Errorf("Trying to detach port in undeployed switch\n")
+		return errors.New("Trying to detach port in undeployed switch")
+	}
+
+	_, ok := sw.Interfaces[ifaceName]
+
+	if !ok {
+		errString := fmt.Sprintf("Iface '%s' is not present in switch '%s'\n",
+			ifaceName, sw.ModuleId)
+		log.Warningf(errString)
+		return errors.New(errString)
+	}
+
+	sw.PortsCount--
+
+	// TODO: clean up port security tables
+
+	delete(sw.Interfaces, ifaceName)
+	return nil
 }
 
 func (sw *L2SwitchModule) FindFirstFreeLogicalPort() int {
@@ -205,13 +259,14 @@ func (sw *L2SwitchModule) FindFirstFreeLogicalPort() int {
 
 // adds a entry in the forwarding table of the switch
 // mac MUST be in the format xx:xx:xx:xx:xx:xx
-func (sw *L2SwitchModule) AddForwardingTableEntry(mac string, ifaceName string) (error bool) {
+func (sw *L2SwitchModule) AddForwardingTableEntry(mac string, ifaceName string) (err error) {
 
 	swIface, ok := sw.Interfaces[ifaceName]
 	if !ok {
-		log.Warningf("Iface '%s' is not present in switch '%s'\n",
+		errString := fmt.Sprintf("Iface '%s' is not present in switch '%s'\n",
 			ifaceName, sw.ModuleId)
-		return false
+		log.Warningf(errString)
+		return errors.New(errString)
 	}
 
 	macString := "{" + macToHexadecimalString(mac) + "}"
@@ -219,7 +274,7 @@ func (sw *L2SwitchModule) AddForwardingTableEntry(mac string, ifaceName string) 
 	hoverctl.TableEntryPOST(sw.dataplane, sw.ModuleId, "fwdtable", macString,
 		strconv.Itoa(swIface.IfaceIdRedirectHover))
 
-	return true
+	return nil
 }
 
 // TODO: this function should be smarter
