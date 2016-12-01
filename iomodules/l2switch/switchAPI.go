@@ -46,6 +46,10 @@ func Create(dp *hoverctl.Dataplane) *L2SwitchModule {
 	return x
 }
 
+func (sw *L2SwitchModule) GetModuleId() string {
+	return sw.ModuleId
+}
+
 func (sw *L2SwitchModule) Deploy() (err error) {
 
 	if sw.deployed {

@@ -58,6 +58,10 @@ func Create(dp *hoverctl.Dataplane) *RouterModule {
 	return r
 }
 
+func (r *RouterModule) GetModuleId() string {
+	return r.ModuleId
+}
+
 func (r *RouterModule) Deploy() (err error) {
 
 	if r.deployed {

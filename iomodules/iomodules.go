@@ -1,10 +1,55 @@
 package iomodules
 
+import (
+	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+	l "github.com/op/go-logging"
+)
+
+var log = l.MustGetLogger("iomodules")
+
 type IoModule interface {
+	GetModuleId() string
 	Deploy() (err error)
 	Destroy() (err error)
 	AttachExternalInterface(name string) (err error)
 	DetachExternalInterface(name string) (err error)
 	AttachToIoModule(IfaceId int, name string) (err error)
 	DetachFromIoModule(name string) (err error)
+}
+
+// this function attaches to modules together.  It performs the reques to hover
+// and then it calls the AttachToIoModule of each module to register the interface
+func AttachIoModules(dataplane *hoverctl.Dataplane,
+	m1 IoModule, ifaceName1 string, m2 IoModule, ifaceName2 string) (err error) {
+
+	link_err, link := hoverctl.LinkPOST(dataplane, m1.GetModuleId(), m2.GetModuleId())
+	if link_err != nil {
+		log.Errorf("%s", link_err)
+		return
+	}
+
+	// hover does not guarantee that the order of the link is conserved, then
+	// it is necessary to check it explicitely to realize the interface id
+	// inside each module
+	m1id := -1
+	m2id := -1
+	if link.From == m1.GetModuleId() {
+		m1id = link.FromId
+		m2id = link.ToId
+	} else {
+		m1id = link.ToId
+		m2id = link.FromId
+	}
+
+	if err := m1.AttachToIoModule(m1id, ifaceName1); err != nil {
+		log.Errorf("%s", err)
+		return err
+	}
+
+	if err := m2.AttachToIoModule(m2id, ifaceName2); err != nil {
+		log.Errorf("%s", err)
+		return err
+	}
+
+	return nil
 }
