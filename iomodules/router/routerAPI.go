@@ -17,8 +17,6 @@ var log = l.MustGetLogger("iomodules-switch")
 type RouterModule struct {
 	ModuleId	string
 	PortsCount	int                               //number of allocated ports
-	PortsArray	[10]bool // This is used to keep track of available index in
-						 // the router_port map of the switch
 	RoutingTable [10]RoutingTableEntry
 	Interfaces map[string]*RouterModuleInterface
 
@@ -34,7 +32,6 @@ type RouterModuleInterface struct {
 	IP                    string
 	Netmask               string
 	MAC                   string
-	portIndex             int
 }
 
 type RoutingTableEntry struct {
@@ -52,7 +49,6 @@ func Create(dp *hoverctl.Dataplane) *RouterModule {
 
 	r := new(RouterModule)
 	r.Interfaces = make(map[string]*RouterModuleInterface)
-	//r.PortsArray = make(map[int]bool)
 	r.dataplane = dp
 	r.deployed = false
 	return r
@@ -112,16 +108,7 @@ func (r *RouterModule) AttachExternalInterface(ifaceName string) (err error) {
 		return errors.New(errString)
 	}
 
-	portIndex := -1
-
-	for i := 0; i < 10; i++ {
-		if !r.PortsArray[i] {
-			portIndex = i
-			break
-		}
-	}
-
-	if portIndex == -1 {
+	if r.PortsCount == 10 {
 		errString := "There are not free ports in the router\n"
 		log.Errorf(errString)
 		return errors.New(errString)
@@ -135,7 +122,6 @@ func (r *RouterModule) AttachExternalInterface(ifaceName string) (err error) {
 
 	_, external_interfaces := hoverctl.ExternalInterfacesListGET(r.dataplane)
 
-	r.PortsArray[portIndex] = true
 	r.PortsCount++
 
 	// Saving IfaceIdRedirectHover for this port. The number will be used by security policies
@@ -156,7 +142,6 @@ func (r *RouterModule) AttachExternalInterface(ifaceName string) (err error) {
 	iface.IfaceIdRedirectHover = ifacenumber
 	iface.LinkIdHover = linkHover.Id
 	iface.IfaceName = ifaceName
-	iface.portIndex = portIndex
 
 	r.Interfaces[ifaceName] = iface
 
@@ -189,12 +174,9 @@ func (r *RouterModule) DetachExternalInterface(ifaceName string) (err error) {
 		return linkDeleteError
 	}
 
-	// indicate that the port index is available
-	r.PortsArray[iface.portIndex] = false
-
 	// remove port from list of ports
-	portIndexString := strconv.Itoa(iface.portIndex)
-	hoverctl.TableEntryDELETE(r.dataplane, r.ModuleId, "router_port", portIndexString)
+	ifaceIdString := strconv.Itoa(iface.IfaceIdRedirectHover)
+	hoverctl.TableEntryDELETE(r.dataplane, r.ModuleId, "router_port", ifaceIdString)
 
 	// TODO: remove static route entry
 	delete(r.Interfaces, ifaceName)
@@ -209,16 +191,7 @@ func (r *RouterModule) AttachToIoModule(ifaceId int, ifaceName string) (err erro
 		return errors.New(errString)
 	}
 
-	portIndex := -1
-
-	for i := 0; i < 10; i++ {
-		if !r.PortsArray[i] {
-			portIndex = i
-			break
-		}
-	}
-
-	if portIndex == -1 {
+	if r.PortsCount == 10 {
 		errString := "There are not free ports in the router"
 		log.Errorf(errString)
 		return errors.New(errString)
@@ -230,7 +203,6 @@ func (r *RouterModule) AttachToIoModule(ifaceId int, ifaceName string) (err erro
 	iface.IfaceIdRedirectHover = ifaceId
 	iface.LinkIdHover = ""
 	iface.IfaceName = ifaceName
-	iface.portIndex = portIndex
 
 	r.Interfaces[ifaceName] = iface
 
@@ -266,7 +238,7 @@ func (r *RouterModule) ConfigureInterface(ifaceName string, ip string, netmask s
 	iface.MAC = mac
 
 	// configure port entry
-	portIndexString := strconv.Itoa(iface.portIndex)
+	ifaceIdString := strconv.Itoa(iface.IfaceIdRedirectHover)
 	ipString := ipToHexadecimalString(ip)
 	netmaskString := ipToHexadecimalString(netmask)
 	macString := macToHexadecimalString(mac)
@@ -274,7 +246,7 @@ func (r *RouterModule) ConfigureInterface(ifaceName string, ip string, netmask s
 	toSend := ipString + " " + netmaskString + " " + macString
 
 	hoverctl.TableEntryPOST(r.dataplane, r.ModuleId, "router_port",
-		portIndexString, toSend)
+		ifaceIdString, toSend)
 
 	ip_ := net.ParseIP(ip)
 	netmask_ := ParseIPv4Mask(netmask)
