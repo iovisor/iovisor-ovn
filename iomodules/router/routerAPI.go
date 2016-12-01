@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"net"
 	"fmt"
+	"errors"
 
 	//"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
@@ -57,30 +58,30 @@ func Create(dp *hoverctl.Dataplane) *RouterModule {
 	return r
 }
 
-func (r *RouterModule) Deploy() (error bool) {
+func (r *RouterModule) Deploy() (err error) {
 
 	if r.deployed {
-		return true
+		return nil
 	}
 
 	routerError, routerHover := hoverctl.ModulePOST(r.dataplane, "bpf",
 									"Router", RouterCode)
 	if routerError != nil {
 		log.Errorf("Error in POST Router IOModule: %s\n", routerError)
-		return false
+		return routerError
 	}
 
 	log.Noticef("POST Router IOModule %s\n", routerHover.Id)
 	r.ModuleId = routerHover.Id
 	r.deployed = true
 
-	return true
+	return nil
 }
 
-func (r *RouterModule) Destroy() (error bool) {
+func (r *RouterModule) Destroy() (err error) {
 
 	if !r.deployed {
-		return true
+		return nil
 	}
 
 	// TODO:
@@ -90,20 +91,21 @@ func (r *RouterModule) Destroy() (error bool) {
 	moduleDeleteError, _ := hoverctl.ModuleDELETE(r.dataplane, r.ModuleId)
 	if moduleDeleteError != nil {
 		log.Errorf("Error in destrying Router IOModule: %s\n", moduleDeleteError)
-		return false
+		return moduleDeleteError
 	}
 
 	r.ModuleId = ""
 	r.deployed = false
 
-	return true
+	return nil
 }
 
-func (r *RouterModule) AttachPort(ifaceName string, ip string, netmask string, mac string) (error bool) {
+func (r *RouterModule) AttachExternalInterface(ifaceName string) (err error) {
 
 	if !r.deployed {
-		log.Errorf("Trying to attach port in undeployed router\n")
-		return false
+		errString := "Trying to attach port in undeployed router"
+		log.Errorf(errString)
+		return errors.New(errString)
 	}
 
 	portIndex := -1
@@ -116,25 +118,16 @@ func (r *RouterModule) AttachPort(ifaceName string, ip string, netmask string, m
 	}
 
 	if portIndex == -1 {
-		log.Errorf("There are not free ports in the router\n")
-		return false
+		errString := "There are not free ports in the router\n"
+		log.Errorf(errString)
+		return errors.New(errString)
 	}
 
 	linkError, linkHover := hoverctl.LinkPOST(r.dataplane, "i:" + ifaceName, r.ModuleId)
 	if linkError != nil {
 		log.Errorf("Error in POSTing the Link: %s\n", linkError)
-		return false
+		return linkError
 	}
-
-	portIndexString := strconv.Itoa(portIndex)
-	ipString := ipToHexadecimalString(ip)
-	netmaskString := ipToHexadecimalString(netmask)
-	macString := macToHexadecimalString(mac)
-
-	toSend := ipString + " " + netmaskString + " " + macString
-
-	hoverctl.TableEntryPOST(r.dataplane, r.ModuleId, "router_port",
-		portIndexString, toSend)
 
 	_, external_interfaces := hoverctl.ExternalInterfacesListGET(r.dataplane)
 
@@ -153,50 +146,34 @@ func (r *RouterModule) AttachPort(ifaceName string, ip string, netmask string, m
 		log.Warningf("IfaceIdRedirectHover == -1 something wrong happend...\n")
 	}
 
-	ip_ := net.ParseIP(ip)
-	netmask_ := net.ParseIP(netmask)
-	network_ := ip_.Mask(net.IPMask{netmask_[0], netmask_[1], netmask_[2], netmask_[3]})
-
-	if network_.To4() == nil {
-		log.Warningf("Something when wrong. (I know you are hating me for writing this non descrite error log)\n")
-		return false
-	}
-
-	if !r.AddRoutingTableEntry(network_.String(), netmask, ifacenumber) {
-		log.Warningf("Error adding static route for port '%s' in router '%s'\n",
-			ifaceName, r.ModuleId)
-		return false
-	}
-
 	iface := new(RouterModuleInterface)
 
 	iface.IfaceFd, _ = strconv.Atoi(external_interfaces[ifaceName].Id)
 	iface.IfaceIdRedirectHover = ifacenumber
 	iface.LinkIdHover = linkHover.Id
 	iface.IfaceName = ifaceName
-	iface.IP = ip
-	iface.Netmask = netmask
-	iface.MAC = mac
 	iface.portIndex = portIndex
 
 	r.Interfaces[ifaceName] = iface
 
-	return true
+	return nil
 }
 
-func (r *RouterModule) DetachPort(ifaceName string) (error bool) {
+func (r *RouterModule) DetachExternalInterface(ifaceName string) (err error) {
 
 	if !r.deployed {
-		log.Errorf("Trying to detach port in undeployed switch\n")
-		return false
+		errString := "Trying to detach port in undeployed switch"
+		log.Errorf(errString)
+		return errors.New(errString)
 	}
 
 	iface, ok := r.Interfaces[ifaceName]
 
 	if !ok {
-		log.Warningf("Iface '%s' is not present in router '%s'\n",
+		errString := fmt.Sprintf("Iface '%s' is not present in router '%s'\n",
 			ifaceName, r.ModuleId)
-		return false
+		log.Warningf(errString)
+		return errors.New(errString)
 	}
 
 	linkDeleteError, _ := hoverctl.LinkDELETE(r.dataplane, iface.LinkIdHover)
@@ -205,16 +182,109 @@ func (r *RouterModule) DetachPort(ifaceName string) (error bool) {
 		//log.Debug("REMOVE Interface %s %s (1/1) LINK REMOVED\n", currentInterface.Name, currentInterface.IfaceIdExternalIds)
 		log.Warningf("Problem removing iface '%s' from router '%s'\n",
 			ifaceName, r.ModuleId)
-		return false
+		return linkDeleteError
 	}
+
+	// indicate that the port index is available
+	r.PortsArray[iface.portIndex] = false
 
 	// remove port from list of ports
 	portIndexString := strconv.Itoa(iface.portIndex)
 	hoverctl.TableEntryDELETE(r.dataplane, r.ModuleId, "router_port", portIndexString)
 
+	// TODO: remove static route entry
 	delete(r.Interfaces, ifaceName)
 
-	return true
+	return nil
+}
+
+func (r *RouterModule) AttachToIoModule(ifaceId int, ifaceName string) (err error) {
+	if !r.deployed {
+		errString := "Trying to attach port in undeployed router"
+		log.Errorf(errString)
+		return errors.New(errString)
+	}
+
+	portIndex := -1
+
+	for i := 0; i < 10; i++ {
+		if !r.PortsArray[i] {
+			portIndex = i
+			break
+		}
+	}
+
+	if portIndex == -1 {
+		errString := "There are not free ports in the router"
+		log.Errorf(errString)
+		return errors.New(errString)
+	}
+
+	iface := new(RouterModuleInterface)
+
+	iface.IfaceFd = -1
+	iface.IfaceIdRedirectHover = ifaceId
+	iface.LinkIdHover = ""
+	iface.IfaceName = ifaceName
+	iface.portIndex = portIndex
+
+	r.Interfaces[ifaceName] = iface
+
+	return nil
+}
+
+func (r *RouterModule) DetachFromIoModule(ifaceName string) (err error) {
+	return errors.New("Not implemented")
+}
+
+// After a interface has been added, it is necessary to configure it before
+// it can be used to route packets
+func (r *RouterModule) ConfigureInterface(ifaceName string, ip string, netmask string, mac string) (err error) {
+	if !r.deployed {
+		errString := "Trying to configure an interface in undeployed router"
+		log.Errorf(errString)
+		return errors.New(errString)
+	}
+
+	iface, ok := r.Interfaces[ifaceName]
+
+	if !ok {
+		errString := fmt.Sprintf("Iface '%s' is not present in router '%s'\n",
+			ifaceName, r.ModuleId)
+		log.Warningf(errString)
+		return errors.New(errString)
+	}
+
+	// TODO: check ip, netmask and mac
+
+	iface.IP = ip
+	iface.Netmask = netmask
+	iface.MAC = mac
+
+	// configure port entry
+	portIndexString := strconv.Itoa(iface.portIndex)
+	ipString := ipToHexadecimalString(ip)
+	netmaskString := ipToHexadecimalString(netmask)
+	macString := macToHexadecimalString(mac)
+
+	toSend := ipString + " " + netmaskString + " " + macString
+
+	hoverctl.TableEntryPOST(r.dataplane, r.ModuleId, "router_port",
+		portIndexString, toSend)
+
+	ip_ := net.ParseIP(ip)
+	netmask_ := ParseIPv4Mask(netmask)
+	network_ := ip_.Mask(netmask_)
+
+	// add route for that port
+	if !r.AddRoutingTableEntry(network_.String(), netmask, iface.IfaceIdRedirectHover) {
+		errString := fmt.Sprintf("Error adding static route for port '%s' in router '%s'\n",
+			ifaceName, r.ModuleId)
+		log.Warningf(errString)
+		return errors.New(errString)
+	}
+
+	return nil
 }
 
 // With the current implementation of the eBPF router this functions is a kind
@@ -282,4 +352,12 @@ func ipToHexadecimalString(ip string) string {
 	}
 
 	return ""
+}
+
+func ParseIPv4Mask(s string) net.IPMask {
+	mask := net.ParseIP(s)
+	if mask == nil {
+		return nil
+	}
+	return net.IPv4Mask(mask[12], mask[13], mask[14], mask[15])
 }
