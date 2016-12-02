@@ -1,10 +1,8 @@
 package ovnmonitor
 
 import (
-	//"fmt"
-	//"os"
 	"reflect"
-	//"errors"
+	"fmt"
 
 	"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/socketplane/libovsdb"
@@ -18,58 +16,49 @@ type NotificationHandler interface {
 	Update(db *OvnDB)
 }
 
-/*
- * a logical Switch in the OVN northbound DB, contains only the data that is
- * necessary for our implementation
- */
+// A logical Switch in the OVN northbound DB, contains only the data that is
+// necessary for our implementation
 type LogicalSwitch struct {
-	uuid	string /* UUID of this row in the database */
-	Name	string /* Name of the LogicalSwitch */
+	uuid	string // UUID of this row in the database
+	Name	string // Name of the LogicalSwitch
 	Ports	 map[string]*LogicalSwitchPort
-	Modified bool /* was it modified in the last update? */
-	//Action	Action_t
+	Modified bool // was it modified in the last update?
 }
 
-/*
- * a logical port in a switch in the OVNnorthbound DB
- */
+// A logical port in a switch in the OVNnorthbound DB
 type LogicalSwitchPort struct {
 	uuid		string
-	parent *LogicalSwitch
+	parent 		*LogicalSwitch
 	Name		string
-	IfaceName	string /* name of the virtual interface in the host. if empty
-						* means that the interfaces has not been bound
-						*/
-	/*
-	 * TODO:
-	 * Addresses and port security
-	 */
-	//Action Action_t
-	Modified bool /* modified in the last update? */
+	IfaceName	string // name of the virtual interface in the host. if empty
+					   //means that the interfaces has not been bound
+
+	// TODO: Addresses and port security
+
+	Modified bool // modified in the last update?
 }
 
-/*
- * an interface in an ovs bridge instance
- */
+// An interface in an ovs bridge instance
 type OvsInterface struct {
 	uuid 	string
-	Name	string 			/* name of the port: e.g tap0123 */
-	ExternalIdIface string 	/* external id of that interface if set */
+	Name	string 			// ame of the port: e.g tap0123
+	ExternalIdIface string 	// external id of that interface if set
 
-	LogicalPort *LogicalSwitchPort	/* point to the port that owns this interface*/
+	LogicalPort *LogicalSwitchPort	// point to the port that owns this interface
 }
 
 type OvnDB struct {
-	Switches map[string]*LogicalSwitch	/* switches indexed by name*/
+	Switches map[string]*LogicalSwitch	// switches indexed by name
+	Routers map[string]*LogicalRouter 	// routers indexed by name
 
-	/* Private: this fields are only used by ovnmonitor */
-	/* Contains all the logical switches present in the NB DB. Indexed by UUID */
+	// Private: this fields are only used by ovnmonitor
+	// Contains all the logical switches present in the NB DB. Indexed by UUID
 	logicalSwitches map[string]*LogicalSwitch
 
-	/* Contains all the logical ports present in the NB DB. Indexed by UUID */
+	// Contains all the logical ports present in the NB DB. Indexed by UUID
 	logicalSwitchPorts map[string]*LogicalSwitchPort
 
-	/* Contains all the interfaces present in OVS DB. Indexed by UUID */
+	// Contains all the interfaces present in OVS DB. Indexed by UUID
 	ovsInterfaces map[string]*OvsInterface
 }
 
@@ -91,10 +80,10 @@ type OVNMonitor struct {
 }
 
 func (o *OVNMonitor) Connect() (error bool) {
-	/* first connect to the NB DB */
+	// first connect to the NB DB
 	ovnnbdb_sock := ""
 	if config.Sandbox == true {
-		//Sandbox Environment
+		// Sandbox Environment
 		ovnnbdb_sock = config.NbSock
 		nbClient, err := libovsdb.ConnectWithUnixSocket(config.NbSock)
 
@@ -105,7 +94,7 @@ func (o *OVNMonitor) Connect() (error bool) {
 
 		o.nbClient = nbClient
 	} else {
-		//Openstack Real Environment
+		// Openstack Real Environment
 		ovnnbdb_sock = config.Nb
 		nbClient, err := libovsdb.Connect(config.FromStringToIpPort(config.Nb))
 
@@ -117,7 +106,7 @@ func (o *OVNMonitor) Connect() (error bool) {
 		o.nbClient = nbClient
 	}
 
-	/* connect to the ovs db */
+	// connect to the ovs db
 	ovsdb_sock := ""
 	if config.Sandbox == true {
 		// Sandbox Real Environment
@@ -132,7 +121,7 @@ func (o *OVNMonitor) Connect() (error bool) {
 		o.ovsClient = ovsClient
 
 	} else {
-		//Openstack Real Environment
+		// Openstack Real Environment
 		ovsdb_sock = config.Ovs
 		ovsClient, err := libovsdb.Connect(config.FromStringToIpPort(config.Ovs))
 
@@ -144,7 +133,7 @@ func (o *OVNMonitor) Connect() (error bool) {
 		o.ovsClient = ovsClient
 	}
 
-	/* register notifiers */
+	// register notifiers
 	var notifier MyNotifier
 	notifier.monitor = o;
 	o.ovsClient.Register(notifier)
@@ -170,28 +159,23 @@ func (o *OVNMonitor) Connect() (error bool) {
 }
 
 func (o *OVNMonitor) Register(handler NotificationHandler) {
-	/*
-	 * TODO:
-	 * Add mutex
-	*/
+
+	// TODO: Add mutex
+
 	o.handler = handler
 }
 
-/*
- * TODO:
- * Add unregister function
-*/
 
+// TODO: Add unregister function
 func UpdateDB(db *OvnDB, updates libovsdb.TableUpdates) {
 	log.Noticef("UpdateDB()\n")
 
-	/*
-	 * I know that you can think that this is a silly imlementation because the
-	 * three conditionals could be places on the same loop.  But It is not true,
-	 * in this way we can guarantee that all the ports are processed before all
-	 * the switchs, this avoids having a switch with a reference to a non-existing
-	 * port
-	 */
+	// I know that you can think that this is a silly imlementation because the
+	// three conditionals could be places on the same loop.  But It is not true,
+	// in this way we can guarantee that all the ports are processed before all
+	// the switchs, this avoids having a switch with a reference to a non-existing
+	// port
+
 	for table, tableUpdate := range updates.Updates {
 		switch table {
 		case "Logical_Switch_Port":
@@ -222,17 +206,17 @@ func UpdateDB(db *OvnDB, updates libovsdb.TableUpdates) {
 
 func ProcessLogicalSwitch(db *OvnDB, uuid string, row libovsdb.RowUpdate) {
 	log.Noticef("ProcessLogicalSwitch()")
-	if sw, ok := db.logicalSwitches[uuid]; ok {	/* the switch is already on the db */
+	if sw, ok := db.logicalSwitches[uuid]; ok {	// the switch is already on the db
 		empty := libovsdb.Row{}
 		if reflect.DeepEqual(row.New, empty) {
 			delete(db.logicalSwitches, uuid)
 			delete(db.Switches, sw.Name)
-		} else { /* update switch */
+		} else { // update switch
 			ParseLogicalSwitch(sw, row.New)
 			UpdateSwitchPorts(db, sw, row.New.Fields["ports"])
 			sw.Modified = true
 		}
-	} else { /* create new switch */
+	} else { // create new switch
 		sw := new(LogicalSwitch)
 		sw.uuid = uuid
 		ParseLogicalSwitch(sw, row.New)
@@ -248,7 +232,7 @@ func ParseLogicalSwitch(s *LogicalSwitch, row libovsdb.Row) {
 }
 
 func UpdateSwitchPorts(db *OvnDB, sw *LogicalSwitch, ports interface{}) {
-	/* firstly convert the port list into a more handable data structure*/
+	// firstly convert the port list into a more handable data structure
 	portsMap := make(map[string]string)
 	switch ports.(type) {
 	case libovsdb.UUID:
@@ -259,7 +243,7 @@ func UpdateSwitchPorts(db *OvnDB, sw *LogicalSwitch, ports interface{}) {
 		}
 	}
 
-	/* secondly update pointers to ports inside the switch */
+	// secondly update pointers to ports inside the switch
 	sw.Ports = make(map[string]*LogicalSwitchPort)
 
 		for uuid, _ := range portsMap {
@@ -275,18 +259,18 @@ func UpdateSwitchPorts(db *OvnDB, sw *LogicalSwitch, ports interface{}) {
 
 func ProcessLogicalSwitchPort(db *OvnDB, uuid string, row libovsdb.RowUpdate) {
 	log.Noticef("ProcessLogicalSwitchPort()")
-	if port, ok := db.logicalSwitchPorts[uuid]; ok {	/* the port is already on the db */
+	if port, ok := db.logicalSwitchPorts[uuid]; ok {	// the port is already on the db
 		empty := libovsdb.Row{}
 		if reflect.DeepEqual(row.New, empty) {
 			delete(db.logicalSwitchPorts, uuid)
-		} else {	/* update port */
+		} else {	// update port
 			ParseLogicalSwitchPort(port, row.New)
 			port.Modified = true
 			if port.parent != nil {
 				port.parent.Modified = true
 			}
 		}
-	} else {	/* new logical switch port*/
+	} else {	// new logical switch port
 		port := new(LogicalSwitchPort)
 		port.uuid = uuid
 		ParseLogicalSwitchPort(port, row.New)
@@ -299,36 +283,33 @@ func ProcessLogicalSwitchPort(db *OvnDB, uuid string, row libovsdb.RowUpdate) {
 func ParseLogicalSwitchPort(s *LogicalSwitchPort, row libovsdb.Row) {
 	s.Name = row.Fields["name"].(string)
 
-	/* addresses and port security to do */
+	// addresses and port security to do
 }
 
 func ProcessInterface(db *OvnDB, uuid string, row libovsdb.RowUpdate) {
 
 	log.Noticef("ProcessInterface()")
 
-	if iface, ok := db.ovsInterfaces[uuid]; ok {	/* the interface is already on the db */
+	if iface, ok := db.ovsInterfaces[uuid]; ok {	// the interface is already on the db
 		empty := libovsdb.Row{}
 
-		if reflect.DeepEqual(row.New, empty) {	/* deleted */
-			/*
-			 * If the interface has been deleted it is necessary to remove the
-			 * bounding (if existed)
-			 */
+		if reflect.DeepEqual(row.New, empty) {	// deleted
+			// If the interface has been deleted it is necessary to remove the
+			// bounding (if existed)
 			CleanBounding(iface)
 			delete(db.ovsInterfaces, uuid)
-		} else {	/* modified */
-			/*
-			 * for us there is just a single field that is important in the
-			 * interface, this is the external id. To save computing time, check
-			 * only if it has changed
-			 *
-			 * TODO: Can the name of an interface change?
-			 */
+		} else {	//  modified
+			// for us there is just a single field that is important in the
+			// interface, this is the external id. To save computing time, check
+			// only if it has changed
+			//
+			// TODO: Can the name of an interface change?
+
 			newIface:= new(OvsInterface)
 			ParseOvsInterface(newIface, row.New)
 
 			if iface.ExternalIdIface != newIface.ExternalIdIface {
-				/* the interface is now bound do a different port. Update it. */
+				// the interface is now bound do a different port. Update it
 				CleanBounding(iface)
 				iface.ExternalIdIface = newIface.ExternalIdIface
 				UpdateBounding(&db.logicalSwitchPorts, iface)
@@ -344,9 +325,8 @@ func ProcessInterface(db *OvnDB, uuid string, row libovsdb.RowUpdate) {
 	}
 }
 
-/*
- * looks if there is a port that matches the interface external id
- */
+// looks if there is a port that matches the interface external id
+
 func UpdateBounding(ports *map[string]*LogicalSwitchPort, iface *OvsInterface) {
 	if iface.ExternalIdIface == "" {
 		return
@@ -354,7 +334,7 @@ func UpdateBounding(ports *map[string]*LogicalSwitchPort, iface *OvsInterface) {
 
 	for _, port := range *ports {
 		if port.Name == iface.ExternalIdIface {
-			/* voila! we have  a match*/
+			// voila! we have  a match
 
 			iface.LogicalPort = port
 			port.IfaceName = iface.Name
@@ -381,9 +361,8 @@ func CleanBounding(iface *OvsInterface) {
 	iface.LogicalPort = nil
 }
 
-/*
- * looks if there is an Interface that matches this port
- */
+// looks if there is an Interface that matches this port
+
 func UpdateBoundingPort(ifaces *map[string]*OvsInterface, port *LogicalSwitchPort) {
 	for _, iface := range *ifaces {
 		if iface.ExternalIdIface != "" && iface.ExternalIdIface == port.Name {
@@ -412,7 +391,7 @@ func ParseOvsInterface(ovs *OvsInterface, row libovsdb.Row) {
 }
 
 type MyNotifier struct {
-	monitor *OVNMonitor	/* points to the struct that should be updated*/
+	monitor *OVNMonitor	// points to the struct that should be updated
 }
 
 func (n MyNotifier) Update(context interface{}, tableUpdates libovsdb.TableUpdates) {
