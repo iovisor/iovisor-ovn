@@ -77,6 +77,21 @@ BPF_TABLE("hash", u32, struct r_port, router_port, ROUTER_PORT_N);
 */
 BPF_TABLE("hash", struct arp_table_key, u64, arp_table, ARP_TABLE_DIM);
 
+/*
+  checks if ip_dst matches entry table at index, if yes the entry table is
+  returned, otherwise NULL
+ */
+static inline struct rt_entry * try_match(u32 ip_dst, int index) {
+  struct rt_entry *rt_entry_p = routing_table.lookup(&index);
+  if (rt_entry_p) {
+    if ((ip_dst & rt_entry_p->netmask) == rt_entry_p->network) {
+      return rt_entry_p;
+    }
+  }
+
+  return NULL;
+}
+
 static int handle_rx(void *skb, struct metadata *md) {
   u8 *cursor = 0;
   struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
@@ -137,125 +152,32 @@ static int handle_rx(void *skb, struct metadata *md) {
   int i = 0;
   struct rt_entry * rt_entry_p = 0;
 
-  u32 ip_dst_masked = 0;
   u64 new_src_mac = 0;
   u64 new_dst_mac = 0;
   u32 out_port = 0;
   struct r_port * r_port_p = 0;
 
-  //i:0
-  rt_entry_p = routing_table.lookup(&i);
-  if(rt_entry_p){
-    ip_dst_masked = ip->dst & rt_entry_p->netmask;
-    if (ip_dst_masked == rt_entry_p->network){
-      goto FORWARD;
-      }
-  }
-
-  //i:1
-  i++;
-  rt_entry_p = routing_table.lookup(&i);
-  if(rt_entry_p){
-    ip_dst_masked = ip->dst & rt_entry_p->netmask;
-    if (ip_dst_masked == rt_entry_p->network){
+  #pragma unroll
+  for (i = 0; i < ROUTING_TABLE_DIM; i++) {
+    if ((rt_entry_p = try_match(ip->dst, i)) != NULL) {
       goto FORWARD;
     }
   }
 
-  //i:2
-  i++;
-  rt_entry_p = routing_table.lookup(&i);
-  if(rt_entry_p){
-    ip_dst_masked = ip->dst & rt_entry_p->netmask;
-    if (ip_dst_masked == rt_entry_p->network){
-    goto FORWARD;
-    }
-  }
-
-  //i:3
-  i++;
-  rt_entry_p = routing_table.lookup(&i);
-  if(rt_entry_p){
-    ip_dst_masked = ip->dst & rt_entry_p->netmask;
-    if (ip_dst_masked == rt_entry_p->network){
-      goto FORWARD;
-    }
-  }
-
-  //i:4
-  i++;
-  rt_entry_p = routing_table.lookup(&i);
-  if(rt_entry_p){
-    ip_dst_masked = ip->dst & rt_entry_p->netmask;
-    if (ip_dst_masked == rt_entry_p->network){
-      goto FORWARD;
-    }
-  }
-
-  //i:5
-  i++;
-  rt_entry_p = routing_table.lookup(&i);
-  if(rt_entry_p){
-    ip_dst_masked = ip->dst & rt_entry_p->netmask;
-    if (ip_dst_masked == rt_entry_p->network){
-      goto FORWARD;
-    }
-  }
-
-  //i:6
-  i++;
-  rt_entry_p = routing_table.lookup(&i);
-  if(rt_entry_p){
-    ip_dst_masked = ip->dst & rt_entry_p->netmask;
-    if (ip_dst_masked == rt_entry_p->network){
-      goto FORWARD;
-    }
-  }
-
-  //i:7
-  i++;
-  rt_entry_p = routing_table.lookup(&i);
-  if(rt_entry_p){
-    ip_dst_masked = ip->dst & rt_entry_p->netmask;
-    if (ip_dst_masked == rt_entry_p->network){
-      goto FORWARD;
-    }
-  }
-
-  //i:8
-  i++;
-  rt_entry_p = routing_table.lookup(&i);
-  if(rt_entry_p){
-    ip_dst_masked = ip->dst & rt_entry_p->netmask;
-    if (ip_dst_masked == rt_entry_p->network){
-      goto FORWARD;
-    }
-  }
-
-  //i:9
-  i++;
-  rt_entry_p = routing_table.lookup(&i);
-  if(rt_entry_p){
-    ip_dst_masked = ip->dst & rt_entry_p->netmask;
-    if (ip_dst_masked == rt_entry_p->network){
-      goto FORWARD;
-    }
-  }
-
-  DROP:
+DROP:
   #ifdef BPF_LOG
     bpf_trace_printk("in: %d out: -- DROP\n",md->in_ifc);
   #endif
   return RX_DROP;
 
-  FORWARD:
+FORWARD:
   //Select out interface
   out_port = rt_entry_p->port;
   if (out_port<=0)
     goto DROP;
 
   #ifdef BPF_LOG
-    bpf_trace_printk("ROUTING TABLE MATCH (#%d) network: %x netmask: %x\n", i, ip_dst_masked, rt_entry_p->netmask);
+    bpf_trace_printk("ROUTING TABLE MATCH (#%d) network: %x netmask: %x\n", i, rt_entry_p->network, rt_entry_p->netmask);
   #endif
 
   //change src mac
