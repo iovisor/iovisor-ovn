@@ -78,7 +78,7 @@ static int handle_rx(void *skb, struct metadata *md) {
   struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
 
   #ifdef BPF_TRACE
-    bpf_trace_printk("in_ifc=%d\n",md->in_ifc);
+    bpf_trace_printk("[switch]: in_ifc=%d\n", md->in_ifc);
   #endif
 
   //set in-interface for lookup ports security
@@ -91,7 +91,7 @@ static int handle_rx(void *skb, struct metadata *md) {
   if (mac_lookup)
     if (ethernet->src != mac_lookup->mac) {
       #ifdef BPF_TRACE
-        bpf_trace_printk("mac %lx mismatch %lx -> DROP\n",
+        bpf_trace_printk("[switch]: mac %lx mismatch %lx -> DROP\n",
           ethernet->src, mac_lookup->mac);
       #endif
       return RX_DROP;
@@ -105,7 +105,7 @@ static int handle_rx(void *skb, struct metadata *md) {
       struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
       if (ip->src != ip_lookup->ip) {
         #ifdef BPF_TRACE
-          bpf_trace_printk("IP %x mismatch %x -> DROP\n", ip->src, ip_lookup->ip);
+          bpf_trace_printk("[switch]: IP %x mismatch %x -> DROP\n", ip->src, ip_lookup->ip);
         #endif
         return RX_DROP;
       }
@@ -113,7 +113,7 @@ static int handle_rx(void *skb, struct metadata *md) {
   }
 
   #ifdef BPF_TRACE
-    bpf_trace_printk("mac src:%lx dst:%lx\n", ethernet->src, ethernet->dst);
+    bpf_trace_printk("[switch]: mac src:%lx dst:%lx\n", ethernet->src, ethernet->dst);
   #endif
 
   //LEARNING PHASE: mapping in_iface with src_interface
@@ -145,7 +145,7 @@ static int handle_rx(void *skb, struct metadata *md) {
     pkt_redirect(skb, md, dst_interface->ifindex);
 
     #ifdef BPF_TRACE
-      bpf_trace_printk("redirect out_ifc=%d\n", dst_interface->ifindex);
+      bpf_trace_printk("[switch]: redirect out_ifc=%d\n", dst_interface->ifindex);
     #endif
 
     return RX_REDIRECT;
@@ -153,7 +153,7 @@ static int handle_rx(void *skb, struct metadata *md) {
   } else {
     //MISS in forwarding table
     #ifdef BPF_TRACE
-      bpf_trace_printk("broadcast\n");
+      bpf_trace_printk("[switch]: broadcast\n");
     #endif
 
     u32 i = 0;
