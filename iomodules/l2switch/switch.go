@@ -42,33 +42,33 @@ BPF_TABLE("hash", struct mac_t, struct interface, fwdtable, 10240);
   This array is not ordered. The index of the array does NOT represent the
   interface number.
 */
-BPF_TABLE("array",u32,u32,ports,MAX_PORTS);
+BPF_TABLE("array", u32, u32, ports, MAX_PORTS);
 
 /*
   The Security Mac Table (securitymac) associate to each port the allowed mac
   address. If no entry is associated with the port, the port security is not
   applied to the port.
 */
-BPF_TABLE("hash",struct ifindex,struct mac_t, securitymac, MAX_PORTS*2);
+BPF_TABLE("hash", struct ifindex, struct mac_t, securitymac, MAX_PORTS*2);
 
 /*
   The Security Ip Table (securityip) associate to each port the allowed ip
   address. If no entry is associated with the port, the port security is not
   applied to the port.
 */
-BPF_TABLE("hash",struct ifindex,struct ip_leaf, securityip, MAX_PORTS*2);
+BPF_TABLE("hash", struct ifindex, struct ip_leaf, securityip, MAX_PORTS*2);
 
 /*
   Clone the packet to the net-dev indicated by the file descriptor contained
   in the ports table, using bpf_clone_redirect helper.
 */
-static inline void clone_on_port(void *skb, u32 i){
+static inline void clone_on_port(void *skb, u32 i) {
   u32 *iface_p;
   iface_p = ports.lookup(&i);
 
-  if(iface_p)
-    if(*iface_p != 0)
-      bpf_clone_redirect(skb,*iface_p,0);
+  if (iface_p)
+    if (*iface_p != 0)
+      bpf_clone_redirect(skb, *iface_p, 0);
 
   return;
 }
@@ -89,22 +89,23 @@ static int handle_rx(void *skb, struct metadata *md) {
   struct mac_t * mac_lookup;
   mac_lookup = securitymac.lookup(&in_iface);
   if (mac_lookup)
-    if (ethernet->src != mac_lookup->mac){
+    if (ethernet->src != mac_lookup->mac) {
       #ifdef BPF_TRACE
-        bpf_trace_printk("mac %lx mismatch %lx -> DROP\n",ethernet->src, mac_lookup->mac);
+        bpf_trace_printk("mac %lx mismatch %lx -> DROP\n",
+          ethernet->src, mac_lookup->mac);
       #endif
       return RX_DROP;
     }
 
   //port security on source ip
-  if(ethernet->type == 0x0800){
-    struct ip_leaf * ip_lookup;
+  if (ethernet->type == 0x0800) {
+    struct ip_leaf *ip_lookup;
     ip_lookup = securityip.lookup(&in_iface);
-    if (ip_lookup){
-      struct ip_t *ip = cursor_advance(cursor,sizeof(*ip));
-      if (ip->src != ip_lookup->ip){
+    if (ip_lookup) {
+      struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
+      if (ip->src != ip_lookup->ip) {
         #ifdef BPF_TRACE
-          bpf_trace_printk("IP %x mismatch %x -> DROP\n",ip->src, ip_lookup->ip);
+          bpf_trace_printk("IP %x mismatch %x -> DROP\n", ip->src, ip_lookup->ip);
         #endif
         return RX_DROP;
       }
@@ -112,7 +113,7 @@ static int handle_rx(void *skb, struct metadata *md) {
   }
 
   #ifdef BPF_TRACE
-    bpf_trace_printk("mac src:%lx dst:%lx\n",ethernet->src,ethernet->dst);
+    bpf_trace_printk("mac src:%lx dst:%lx\n", ethernet->src, ethernet->dst);
   #endif
 
   //LEARNING PHASE: mapping in_iface with src_interface
@@ -129,7 +130,7 @@ static int handle_rx(void *skb, struct metadata *md) {
   struct interface *interface_lookup = fwdtable.lookup_or_init(&src_key, &interface);
 
   //if the same mac has changed interface, update it
-  if(interface_lookup->ifindex!=md->in_ifc)
+  if (interface_lookup->ifindex != md->in_ifc)
     interface_lookup->ifindex = md->in_ifc;
 
   //FORWARDING PHASE: select interface(s) to send the packet
@@ -144,7 +145,7 @@ static int handle_rx(void *skb, struct metadata *md) {
     pkt_redirect(skb, md, dst_interface->ifindex);
 
     #ifdef BPF_TRACE
-      bpf_trace_printk("redirect out_ifc=%d\n",dst_interface->ifindex);
+      bpf_trace_printk("redirect out_ifc=%d\n", dst_interface->ifindex);
     #endif
 
     return RX_REDIRECT;
@@ -157,8 +158,8 @@ static int handle_rx(void *skb, struct metadata *md) {
 
     u32 i = 0;
     #pragma unroll
-    for(i = 1 ; i <= 32 ; i++ ){
-      clone_on_port(skb,i);
+    for (i = 1; i <= 32; i++) {
+      clone_on_port(skb, i);
     }
 
     return RX_DROP;
