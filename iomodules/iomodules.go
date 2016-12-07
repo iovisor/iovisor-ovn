@@ -33,6 +33,7 @@ func AttachIoModules(dataplane *hoverctl.Dataplane,
 	// inside each module
 	m1id := -1
 	m2id := -1
+
 	if link.From == m1.GetModuleId() {
 		m1id = link.FromId
 		m2id = link.ToId

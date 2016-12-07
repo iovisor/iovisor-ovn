@@ -2,7 +2,7 @@ package ovnmonitor
 
 import (
 	"reflect"
-	"fmt"
+	"sync"
 
 	"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/socketplane/libovsdb"
@@ -33,6 +33,8 @@ type LogicalSwitchPort struct {
 	IfaceName	string // name of the virtual interface in the host. if empty
 					   //means that the interfaces has not been bound
 
+	Type	string 		// interface type: "" -> VIF, "router" connected to a router
+	RouterPort string	// name of the router interface that the switch is connected to
 	// TODO: Addresses and port security
 
 	Modified bool // modified in the last update?
@@ -45,6 +47,27 @@ type OvsInterface struct {
 	ExternalIdIface string 	// external id of that interface if set
 
 	LogicalPort *LogicalSwitchPort	// point to the port that owns this interface
+}
+
+// A logical router in the NB db
+type LogicalRouter struct {
+	uuid 	string
+	Name 	string
+	Ports	map[string]*LogicalRouterPort
+	// TODO: static routes
+	Enabled	bool
+	Modified bool // was it modified in the last update?
+}
+
+// A port in a logical router
+type LogicalRouterPort struct {
+	uuid 	string
+	parent	*LogicalRouter
+	Name	string
+	Mac		string
+	Networks string	// TODO: convert to array in the future
+	Enabled	bool
+	Modified bool // was it modified in the last update?
 }
 
 type OvnDB struct {
@@ -60,6 +83,12 @@ type OvnDB struct {
 
 	// Contains all the interfaces present in OVS DB. Indexed by UUID
 	ovsInterfaces map[string]*OvsInterface
+
+	// Contains all the routers present in the NB DB.  Indexed by UUID
+	logicalRouters map[string]*LogicalRouter
+
+	// Contains all the logical router ports.  Indexed by UUID
+	logicalRouterPorts map[string]*LogicalRouterPort
 }
 
 func CreateMonitor() *OVNMonitor{
@@ -68,6 +97,9 @@ func CreateMonitor() *OVNMonitor{
 	mon.DB.logicalSwitches = make(map[string]*LogicalSwitch)
 	mon.DB.logicalSwitchPorts = make(map[string]*LogicalSwitchPort)
 	mon.DB.ovsInterfaces = make(map[string]*OvsInterface)
+	mon.DB.Routers = make(map[string]*LogicalRouter)
+	mon.DB.logicalRouters = make(map[string]*LogicalRouter)
+	mon.DB.logicalRouterPorts = make(map[string]*LogicalRouterPort)
 	return mon
 }
 
@@ -79,7 +111,7 @@ type OVNMonitor struct {
 	handler 	NotificationHandler
 }
 
-func (o *OVNMonitor) Connect() (error bool) {
+func (o *OVNMonitor) Connect() (db *OvnDB, error bool) {
 	// first connect to the NB DB
 	ovnnbdb_sock := ""
 	if config.Sandbox == true {
@@ -89,7 +121,7 @@ func (o *OVNMonitor) Connect() (error bool) {
 
 		if err != nil {
 			log.Errorf("unable to Connect to %s - %s\n", ovnnbdb_sock, err)
-			return false
+			return nil, false
 		}
 
 		o.nbClient = nbClient
@@ -100,7 +132,7 @@ func (o *OVNMonitor) Connect() (error bool) {
 
 		if err != nil {
 			log.Errorf("unable to Connect to %s - %s\n", ovnnbdb_sock, err)
-			return false
+			return nil, false
 		}
 
 		o.nbClient = nbClient
@@ -115,7 +147,7 @@ func (o *OVNMonitor) Connect() (error bool) {
 
 		if err != nil {
 			log.Errorf("unable to Connect to %s - %s\n", ovsdb_sock, err)
-			return false
+			return nil, false
 		}
 
 		o.ovsClient = ovsClient
@@ -127,7 +159,7 @@ func (o *OVNMonitor) Connect() (error bool) {
 
 		if err != nil {
 			log.Errorf("unable to Connect to %s - %s\n", ovsdb_sock, err)
-			return false
+			return nil, false
 		}
 
 		o.ovsClient = ovsClient
@@ -136,13 +168,14 @@ func (o *OVNMonitor) Connect() (error bool) {
 	// register notifiers
 	var notifier MyNotifier
 	notifier.monitor = o;
+	notifier.mutex = new(sync.Mutex)
 	o.ovsClient.Register(notifier)
 	o.nbClient.Register(notifier)
 
 	initialNb, err := o.nbClient.MonitorAll("OVN_Northbound", "")
 	if err != nil {
 		log.Errorf("unable to Monitor OVN_Northbound - %s\n", err)
-		return false
+		return nil, false
 	}
 
 	UpdateDB(&o.DB, *initialNb)
@@ -150,12 +183,12 @@ func (o *OVNMonitor) Connect() (error bool) {
 	initialOvs, err := o.ovsClient.MonitorAll("Open_vSwitch", "")
 	if err != nil {
 		log.Errorf("unable to Monitor Open_vSwitch - %s\n", err)
-		return false
+		return nil, false
 	}
 
 	UpdateDB(&o.DB, *initialOvs)
 
-	return true
+	return &o.DB, true
 }
 
 func (o *OVNMonitor) Register(handler NotificationHandler) {
@@ -168,7 +201,7 @@ func (o *OVNMonitor) Register(handler NotificationHandler) {
 
 // TODO: Add unregister function
 func UpdateDB(db *OvnDB, updates libovsdb.TableUpdates) {
-	log.Noticef("UpdateDB()\n")
+	log.Noticef("UpdateDB() init\n")
 
 	// I know that you can think that this is a silly imlementation because the
 	// three conditionals could be places on the same loop.  But It is not true,
@@ -202,6 +235,26 @@ func UpdateDB(db *OvnDB, updates libovsdb.TableUpdates) {
 			}
 		}
 	}
+
+	for table, tableUpdate := range updates.Updates {
+		switch table {
+		case "Logical_Router_Port":
+			for uuid, row := range tableUpdate.Rows {
+				ProcessLogicalRouterPort(db, uuid, row)
+			}
+		}
+	}
+
+	for table, tableUpdate := range updates.Updates {
+		switch table {
+		case "Logical_Router":
+			for uuid, row := range tableUpdate.Rows {
+				ProcessLogicalRouter(db, uuid, row)
+			}
+		}
+	}
+
+	log.Noticef("UpdateDB() finish\n")
 }
 
 func ProcessLogicalSwitch(db *OvnDB, uuid string, row libovsdb.RowUpdate) {
@@ -282,7 +335,13 @@ func ProcessLogicalSwitchPort(db *OvnDB, uuid string, row libovsdb.RowUpdate) {
 
 func ParseLogicalSwitchPort(s *LogicalSwitchPort, row libovsdb.Row) {
 	s.Name = row.Fields["name"].(string)
+	s.Type = row.Fields["type"].(string)
 
+	if s.Type == "router" {
+		// TODO: are security checks needed?
+		mymap := row.Fields["options"].(libovsdb.OvsMap).GoMap
+		s.RouterPort = mymap["router-port"].(string)
+	}
 	// addresses and port security to do
 }
 
@@ -390,15 +449,106 @@ func ParseOvsInterface(ovs *OvsInterface, row libovsdb.Row) {
 	}
 }
 
+func ProcessLogicalRouter(db *OvnDB, uuid string, row libovsdb.RowUpdate) {
+	log.Noticef("ProcessLogicalRouter()")
+	if router, ok := db.logicalRouters[uuid]; ok {	// the router is already on the db
+		empty := libovsdb.Row{}
+		if reflect.DeepEqual(row.New, empty) {
+			delete(db.logicalRouters, uuid)
+			delete(db.Routers, router.Name)
+		} else { // update router
+			ParseLogicalRouter(router, row.New)
+			UpdateRouterPorts(db, router, row.New.Fields["ports"])
+			router.Modified = true
+		}
+	} else { // create new router
+		router := new(LogicalRouter)
+		router.uuid = uuid
+		ParseLogicalRouter(router, row.New)
+		UpdateRouterPorts(db, router, row.New.Fields["ports"])
+		router.Modified = true
+		db.logicalRouters[uuid] = router
+		db.Routers[router.Name] = router
+	}
+}
+
+func ParseLogicalRouter(r *LogicalRouter, row libovsdb.Row) {
+	r.Name = row.Fields["name"].(string)
+	//r.Enabled = row.Fields["enabled"].(bool)
+}
+
+func UpdateRouterPorts(db *OvnDB, r *LogicalRouter, ports interface{}) {
+	// firstly convert the port list into a more handable data structure
+	portsMap := make(map[string]string)
+	switch ports.(type) {
+	case libovsdb.UUID:
+		portsMap[ports.(libovsdb.UUID).GoUUID] = ports.(libovsdb.UUID).GoUUID
+	case libovsdb.OvsSet:
+		for _, uuids := range ports.(libovsdb.OvsSet).GoSet {
+			portsMap[uuids.(libovsdb.UUID).GoUUID] = uuids.(libovsdb.UUID).GoUUID
+		}
+	}
+
+	// secondly update pointers to ports inside the router
+	r.Ports = make(map[string]*LogicalRouterPort)
+
+	for uuid, _ := range portsMap {
+		port := db.logicalRouterPorts[uuid]
+
+		if port == nil {
+			log.Noticef("OMG, we have a port without a port")
+		}
+		r.Ports[port.Name] = port
+		port.parent = r
+	}
+}
+
+func ProcessLogicalRouterPort(db *OvnDB, uuid string, row libovsdb.RowUpdate) {
+	log.Noticef("ProcessLogicalRouterPort()")
+
+	if port, ok := db.logicalRouterPorts[uuid]; ok {	// the port is already on the db
+		empty := libovsdb.Row{}
+		if reflect.DeepEqual(row.New, empty) {
+			delete(db.logicalRouterPorts, uuid)
+		} else {	// update port
+			ParseLogicalRouterPort(port, row.New)
+			port.Modified = true
+			if port.parent != nil {
+				port.parent.Modified = true
+			}
+		}
+	} else {	// new logical router port
+		port := new(LogicalRouterPort)
+		port.uuid = uuid
+		ParseLogicalRouterPort(port, row.New)
+		port.Modified = true
+		db.logicalRouterPorts[uuid] = port
+	}
+}
+
+func ParseLogicalRouterPort(r *LogicalRouterPort, row libovsdb.Row) {
+	r.Name = row.Fields["name"].(string)
+	r.Mac = row.Fields["mac"].(string)
+	r.Networks = row.Fields["networks"].(string)
+
+	// TODO: networks
+}
+
 type MyNotifier struct {
 	monitor *OVNMonitor	// points to the struct that should be updated
+	mutex *sync.Mutex
 }
 
 func (n MyNotifier) Update(context interface{}, tableUpdates libovsdb.TableUpdates) {
+	// It is necessary to use a mutex because it is possible that a notification
+	// arrives while the last one is still being processed.
+	// TODO: How does this mutex affect scalability?
+	n.mutex.Lock()
 	UpdateDB(&n.monitor.DB, tableUpdates)
 	if n.monitor.handler != nil {
 		n.monitor.handler.Update(&n.monitor.DB)
 	}
+	n.mutex.Unlock()
 }
 
 func (n MyNotifier) Locked([]interface{}) {
