@@ -97,8 +97,8 @@ static int handle_rx(void *skb, struct metadata *md) {
   struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
 
   #ifdef BPF_TRACE
-    bpf_trace_printk("in_ifc:%d\n", md->in_ifc);
-    bpf_trace_printk("eth_type:%x mac_scr:%lx mac_dst:%lx\n",
+    bpf_trace_printk("[router]: in_ifc:%d\n", md->in_ifc);
+    bpf_trace_printk("[router]: eth_type:%x mac_scr:%lx mac_dst:%lx\n",
       ethernet->type, ethernet->src, ethernet->dst);
   #endif
 
@@ -109,8 +109,8 @@ static int handle_rx(void *skb, struct metadata *md) {
   struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
 
   #ifdef BPF_TRACE
-    bpf_trace_printk("ttl:%u ip_scr:%x ip_dst:%x \n", ip->ttl, ip->src, ip->dst);
-    // bpf_trace_printk("(before) ttl: %d checksum: %x\n", ip->ttl, ip->hchecksum);
+    bpf_trace_printk("[router]: ttl:%u ip_scr:%x ip_dst:%x \n", ip->ttl, ip->src, ip->dst);
+    // bpf_trace_printk("[router]: (before) ttl: %d checksum: %x\n", ip->ttl, ip->hchecksum);
   #endif
 
   /*
@@ -125,7 +125,7 @@ static int handle_rx(void *skb, struct metadata *md) {
 
   if (old_ttl <= 1) {
     #ifdef BPF_TRACE
-      bpf_trace_printk("packet DROP (ttl <= 1)\n");
+      bpf_trace_printk("[router]: packet DROP (ttl <= 1)\n");
     #endif
     return RX_DROP;
   }
@@ -135,7 +135,7 @@ static int handle_rx(void *skb, struct metadata *md) {
   bpf_skb_store_bytes(skb, sizeof(*ethernet) + IP_TTL_OFFSET , &new_ttl, sizeof(old_ttl), 0);
 
   #ifdef BPF_TRACE
-    // bpf_trace_printk("(after ) ttl: %d checksum: %x\n",ip->ttl,ip->hchecksum);
+    // bpf_trace_printk("[router]: (after ) ttl: %d checksum: %x\n",ip->ttl,ip->hchecksum);
   #endif
 
   /*
@@ -167,7 +167,7 @@ static int handle_rx(void *skb, struct metadata *md) {
 
 DROP:
   #ifdef BPF_LOG
-    bpf_trace_printk("in: %d out: -- DROP\n", md->in_ifc);
+    bpf_trace_printk("[router]: in: %d out: -- DROP\n", md->in_ifc);
   #endif
   return RX_DROP;
 
@@ -178,7 +178,7 @@ FORWARD:
     goto DROP;
 
   #ifdef BPF_LOG
-    bpf_trace_printk("ROUTING TABLE MATCH (#%d) network: %x netmask: %x\n",
+    bpf_trace_printk("[router]: routing table match (#%d) network: %x netmask: %x\n",
       i, rt_entry_p->network, rt_entry_p->netmask);
   #endif
 
@@ -194,13 +194,13 @@ FORWARD:
   bpf_skb_store_bytes(skb, ETH_DST_OFFSET, &new_dst_mac, 6, 0);
 
   #ifdef BPF_TRACE
-    bpf_trace_printk("eth_type:%x mac_scr:%lx mac_dst:%lx\n",
+    bpf_trace_printk("[router]: eth_type:%x mac_scr:%lx mac_dst:%lx\n",
       ethernet->type, ethernet->src, ethernet->dst);
-    bpf_trace_printk("out_ifc: %d\n", out_port);
+    bpf_trace_printk("[router]: out_ifc: %d\n", out_port);
   #endif
 
   #ifdef BPF_LOG
-    bpf_trace_printk("in: %d out: %d REDIRECT\n", md->in_ifc, out_port);
+    bpf_trace_printk("[router]: in: %d out: %d REDIRECT\n", md->in_ifc, out_port);
   #endif
 
   pkt_redirect(skb,md,out_port);
