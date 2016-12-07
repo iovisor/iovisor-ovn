@@ -97,19 +97,20 @@ static int handle_rx(void *skb, struct metadata *md) {
   struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
 
   #ifdef BPF_TRACE
-    bpf_trace_printk("in_ifc:%d\n",md->in_ifc);
-    bpf_trace_printk("eth_type:%x mac_scr:%lx mac_dst:%lx\n",ethernet->type,ethernet->src,ethernet->dst);
+    bpf_trace_printk("in_ifc:%d\n", md->in_ifc);
+    bpf_trace_printk("eth_type:%x mac_scr:%lx mac_dst:%lx\n",
+      ethernet->type, ethernet->src, ethernet->dst);
   #endif
 
   //TODO
   //sanity check of the packet.
   //if something wrong -> DROP the packet
 
-  struct ip_t *ip = cursor_advance(cursor,sizeof(*ip));
+  struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
 
   #ifdef BPF_TRACE
-    bpf_trace_printk("ttl:%u ip_scr:%x ip_dst:%x \n",ip->ttl,ip->src,ip->dst);
-    // bpf_trace_printk("(before) ttl: %d checksum: %x\n",ip->ttl,ip->hchecksum);
+    bpf_trace_printk("ttl:%u ip_scr:%x ip_dst:%x \n", ip->ttl, ip->src, ip->dst);
+    // bpf_trace_printk("(before) ttl: %d checksum: %x\n", ip->ttl, ip->hchecksum);
   #endif
 
   /*
@@ -122,7 +123,7 @@ static int handle_rx(void *skb, struct metadata *md) {
   __u8 old_ttl = ip->ttl;
   __u8 new_ttl;
 
-  if(old_ttl <= 1){
+  if (old_ttl <= 1) {
     #ifdef BPF_TRACE
       bpf_trace_printk("packet DROP (ttl <= 1)\n");
     #endif
@@ -150,12 +151,12 @@ static int handle_rx(void *skb, struct metadata *md) {
   */
 
   int i = 0;
-  struct rt_entry * rt_entry_p = 0;
+  struct rt_entry *rt_entry_p = 0;
 
   u64 new_src_mac = 0;
   u64 new_dst_mac = 0;
   u32 out_port = 0;
-  struct r_port * r_port_p = 0;
+  struct r_port *r_port_p = 0;
 
   #pragma unroll
   for (i = 0; i < ROUTING_TABLE_DIM; i++) {
@@ -166,38 +167,40 @@ static int handle_rx(void *skb, struct metadata *md) {
 
 DROP:
   #ifdef BPF_LOG
-    bpf_trace_printk("in: %d out: -- DROP\n",md->in_ifc);
+    bpf_trace_printk("in: %d out: -- DROP\n", md->in_ifc);
   #endif
   return RX_DROP;
 
 FORWARD:
   //Select out interface
   out_port = rt_entry_p->port;
-  if (out_port<=0)
+  if (out_port <= 0)
     goto DROP;
 
   #ifdef BPF_LOG
-    bpf_trace_printk("ROUTING TABLE MATCH (#%d) network: %x netmask: %x\n", i, rt_entry_p->network, rt_entry_p->netmask);
+    bpf_trace_printk("ROUTING TABLE MATCH (#%d) network: %x netmask: %x\n",
+      i, rt_entry_p->network, rt_entry_p->netmask);
   #endif
 
   //change src mac
   r_port_p = router_port.lookup(&out_port);
-  if(r_port_p){
+  if (r_port_p) {
     new_src_mac = r_port_p->mac;
-    bpf_skb_store_bytes(skb,ETH_SRC_OFFSET,&new_src_mac,6,0);
+    bpf_skb_store_bytes(skb,ETH_SRC_OFFSET, &new_src_mac, 6, 0);
   }
 
   //change dst mac to ff:ff:ff:ff:ff:ff (TODO arp table)
   new_dst_mac = 0xffffffffffff;
-  bpf_skb_store_bytes(skb,ETH_DST_OFFSET,&new_dst_mac,6,0);
+  bpf_skb_store_bytes(skb, ETH_DST_OFFSET, &new_dst_mac, 6, 0);
 
   #ifdef BPF_TRACE
-    bpf_trace_printk("eth_type:%x mac_scr:%lx mac_dst:%lx\n",ethernet->type,ethernet->src,ethernet->dst);
-    bpf_trace_printk("out_ifc: %d\n",out_port);
+    bpf_trace_printk("eth_type:%x mac_scr:%lx mac_dst:%lx\n",
+      ethernet->type, ethernet->src, ethernet->dst);
+    bpf_trace_printk("out_ifc: %d\n", out_port);
   #endif
 
   #ifdef BPF_LOG
-    bpf_trace_printk("in: %d out: %d REDIRECT\n",md->in_ifc,out_port);
+    bpf_trace_printk("in: %d out: %d REDIRECT\n", md->in_ifc, out_port);
   #endif
 
   pkt_redirect(skb,md,out_port);
