@@ -77,21 +77,6 @@ BPF_TABLE("hash", u32, struct r_port, router_port, ROUTER_PORT_N);
 */
 BPF_TABLE("hash", struct arp_table_key, u64, arp_table, ARP_TABLE_DIM);
 
-/*
-  checks if ip_dst matches entry table at index, if yes the entry table is
-  returned, otherwise NULL
- */
-static inline struct rt_entry * try_match(u32 ip_dst, int index) {
-  struct rt_entry *rt_entry_p = routing_table.lookup(&index);
-  if (rt_entry_p) {
-    if ((ip_dst & rt_entry_p->netmask) == rt_entry_p->network) {
-      return rt_entry_p;
-    }
-  }
-
-  return NULL;
-}
-
 static int handle_rx(void *skb, struct metadata *md) {
   u8 *cursor = 0;
   struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
@@ -160,8 +145,12 @@ static int handle_rx(void *skb, struct metadata *md) {
 
   #pragma unroll
   for (i = 0; i < ROUTING_TABLE_DIM; i++) {
-    if ((rt_entry_p = try_match(ip->dst, i)) != NULL) {
-      goto FORWARD;
+    u32 t = i;
+    rt_entry_p = routing_table.lookup(&t);
+     if (rt_entry_p) {
+      if ((ip->dst & rt_entry_p->netmask) == rt_entry_p->network) {
+        goto FORWARD;
+      }
     }
   }
 
@@ -178,8 +167,8 @@ FORWARD:
     goto DROP;
 
   #ifdef BPF_LOG
-    bpf_trace_printk("[router]: routing table match (#%d) network: %x netmask: %x\n",
-      i, rt_entry_p->network, rt_entry_p->netmask);
+    bpf_trace_printk("[router]: routing table match (#%d) network: %x\n",
+      i, rt_entry_p->network);
   #endif
 
   //change src mac
