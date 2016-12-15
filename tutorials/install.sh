@@ -4,9 +4,8 @@ local _pwd=$(pwd)
 
 # install bcc and dependencies
 echo "installing bcc dependencies"
-install_package bison build-essential cmake flex git libedit-dev
-install_package libllvm3.7 llvm-3.7-dev libclang-3.7-dev python zlib1g-dev libelf-dev
-install_package luajit luajit-5.1-dev
+sudo apt-get install -y bison build-essential cmake flex git libedit-dev \
+libllvm3.7 llvm-3.7-dev libclang-3.7-dev python zlib1g-dev libelf-dev
 
 # echo installing bcc
 cd $DATA_DIR

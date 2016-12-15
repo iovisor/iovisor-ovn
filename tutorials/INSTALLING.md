@@ -8,8 +8,14 @@ Ubuntu Xenial as all the examples have been tested on that platform.
 
 ## Automatic Installation
 
-The script install.sh tries to automatically download and install all the
-components that are necessary, it is only designed to work on Debian based distros.
+In order to automatically install all the required components please execute the
+following commands, please consider that they only work on Debian based distros.
+
+```bash
+git clone https://github.com/netgroup-polito/iovisor-ovn.git
+cd iovisor-ovn/tutorials/
+./install.sh
+```
 
 ## Manual Installation
 
