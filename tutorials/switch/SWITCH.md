@@ -41,5 +41,5 @@ Now you are able to test the connectivity pinging between the network interfaces
 in the different network spaces
 
 ```bash
-sudo ip netns exec ns1 ping 10.10.1.2
+sudo ip netns exec ns1 ping 10.0.0.2
 ```

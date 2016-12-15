@@ -62,12 +62,12 @@ func main() {
 	}
 
 	log.Noticef("Attaching external interfaces...")
-	if err := l2.AttachExternalInterface("veth1_"); err != nil {
+	if err := l2.AttachExternalInterface("veth1"); err != nil {
 		log.Errorf("%s", err)
 		return
 	}
 
-	if err := l2.AttachExternalInterface("veth2_"); err != nil {
+	if err := l2.AttachExternalInterface("veth2"); err != nil {
 		log.Errorf("%s", err)
 		return
 	}
