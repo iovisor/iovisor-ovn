@@ -4,6 +4,8 @@ In this example a switch module is deployed and two virtual network interfaces
 in different network namespaces are connected to it.
 Connectivity is tested by pinging between the different namespaces
 
+<center><a href="../../images/switch_tutorial.png"><img src="../../images/switch_tutorial.png" width=500></a></center>
+
 ## Preparing the network namespaces
 
 In order to work, it is necessary to create two network namespaces and set two
