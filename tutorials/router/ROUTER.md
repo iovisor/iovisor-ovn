@@ -6,6 +6,8 @@ In this case the three virtual network interfaces are configured in different
 subnets, then a router mechanishm is needed to allow them to exchange data packets.
 Connectivity is tested by pinging between the different namespaces
 
+<center><a href="../../images/router_tutorial.png"><img src="../../images/router_tutorial.png" width=500></a></center>
+
 ## Preparing the network namespaces
 
 The configuration of the network namespaces and the virtual ethernet interfaces
