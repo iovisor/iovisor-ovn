@@ -24,6 +24,7 @@ package router
 var RouterCode = `
 #include <linux/ip.h>
 #include <linux/bpf.h>
+#include <linux/kernel.h>
 
 // #define BPF_TRACE
 #undef BPF_TRACE
@@ -88,7 +89,7 @@ BPF_TABLE("hash", u32, struct r_port, router_port, ROUTER_PORT_N);
   One possible implementation using one single map is the following
   key{ ip + port number } -> value {mac_address}
 */
-BPF_TABLE("hash", struct arp_table_key, u64, arp_table, ARP_TABLE_DIM);
+BPF_TABLE("hash", u32, u64, arp_table, ARP_TABLE_DIM);
 
 static int handle_rx(void *skb, struct metadata *md) {
   u8 *cursor = 0;
@@ -104,109 +105,162 @@ static int handle_rx(void *skb, struct metadata *md) {
   //sanity check of the packet.
   //if something wrong -> DROP the packet
 
-  struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
+  // is it an ipv4 packet?
+  if (ethernet->type == 0x0800) {
+    struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
 
-  #ifdef BPF_TRACE
-    bpf_trace_printk("[router]: ttl:%u ip_scr:%x ip_dst:%x \n", ip->ttl, ip->src, ip->dst);
-    // bpf_trace_printk("[router]: (before) ttl: %d checksum: %x\n", ip->ttl, ip->hchecksum);
-  #endif
-
-  /*
-    decrement TTL and recompute packet checksum (l3 recompute checksum).
-    if ttl <= 1 DROP the packet.
-    eventually send ICMP message for the packet dropped.
-    (maybe to avoid for security reasons)
-  */
-
-  __u8 old_ttl = ip->ttl;
-  __u8 new_ttl;
-
-  if (old_ttl <= 1) {
     #ifdef BPF_TRACE
-      bpf_trace_printk("[router]: packet DROP (ttl <= 1)\n");
+      bpf_trace_printk("[router]: ttl:%u ip_scr:%x ip_dst:%x \n", ip->ttl, ip->src, ip->dst);
+      // bpf_trace_printk("[router]: (before) ttl: %d checksum: %x\n", ip->ttl, ip->hchecksum);
     #endif
-    return RX_DROP;
-  }
 
-  new_ttl = old_ttl - 1;
-  bpf_l3_csum_replace(skb, sizeof(*ethernet) + IP_CSUM_OFFSET , old_ttl, new_ttl, sizeof(__u16));
-  bpf_skb_store_bytes(skb, sizeof(*ethernet) + IP_TTL_OFFSET , &new_ttl, sizeof(old_ttl), 0);
+    /*
+      decrement TTL and recompute packet checksum (l3 recompute checksum).
+      if ttl <= 1 DROP the packet.
+      eventually send ICMP message for the packet dropped.
+      (maybe to avoid for security reasons)
+    */
 
-  #ifdef BPF_TRACE
-    // bpf_trace_printk("[router]: (after ) ttl: %d checksum: %x\n",ip->ttl,ip->hchecksum);
-  #endif
+    __u8 old_ttl = ip->ttl;
+    __u8 new_ttl;
 
-  /*
-    ROUTING ALGORITHM (simplified)
+    if (old_ttl <= 1) {
+      #ifdef BPF_TRACE
+        bpf_trace_printk("[router]: packet DROP (ttl <= 1)\n");
+      #endif
+      return RX_DROP;
+    }
 
-    for each item in the routing table (upbounded loop)
-    apply the netmask on dst_ip_address
-    (possible optimization, not recompute if at next iteration the netmask is the same)
-    if masked address == network in the routing table
-      1- change src mac to otuput port mac
-      2- change dst mac to lookup arp table (or send to fffffffffffff)
-      3- forward the packet to dst port
-  */
+    new_ttl = old_ttl - 1;
+    bpf_l3_csum_replace(skb, sizeof(*ethernet) + IP_CSUM_OFFSET , old_ttl, new_ttl, sizeof(__u16));
+    bpf_skb_store_bytes(skb, sizeof(*ethernet) + IP_TTL_OFFSET , &new_ttl, sizeof(old_ttl), 0);
 
-  int i = 0;
-  struct rt_entry *rt_entry_p = 0;
+    #ifdef BPF_TRACE
+      // bpf_trace_printk("[router]: (after ) ttl: %d checksum: %x\n",ip->ttl,ip->hchecksum);
+    #endif
 
-  u64 new_src_mac = 0;
-  u64 new_dst_mac = 0;
-  u32 out_port = 0;
-  struct r_port *r_port_p = 0;
+    /*
+      ROUTING ALGORITHM (simplified)
 
-  #pragma unroll
-  for (i = 0; i < ROUTING_TABLE_DIM; i++) {
-    u32 t = i;
-    rt_entry_p = routing_table.lookup(&t);
-     if (rt_entry_p) {
-      if ((ip->dst & rt_entry_p->netmask) == rt_entry_p->network) {
-        goto FORWARD;
+      for each item in the routing table (upbounded loop)
+      apply the netmask on dst_ip_address
+      (possible optimization, not recompute if at next iteration the netmask is the same)
+      if masked address == network in the routing table
+        1- change src mac to otuput port mac
+        2- change dst mac to lookup arp table (or send to fffffffffffff)
+        3- forward the packet to dst port
+    */
+
+    int i = 0;
+    struct rt_entry *rt_entry_p = 0;
+
+    u64 new_src_mac = 0;
+    u64 new_dst_mac = 0;
+    u32 out_port = 0;
+    struct r_port *r_port_p = 0;
+
+    #pragma unroll
+    for (i = 0; i < ROUTING_TABLE_DIM; i++) {
+      u32 t = i;
+      rt_entry_p = routing_table.lookup(&t);
+       if (rt_entry_p) {
+        if ((ip->dst & rt_entry_p->netmask) == rt_entry_p->network) {
+          goto FORWARD;
+        }
       }
     }
-  }
 
-DROP:
-  #ifdef BPF_LOG
-    bpf_trace_printk("[router]: in: %d out: -- DROP\n", md->in_ifc);
-  #endif
+  DROP:
+    #ifdef BPF_LOG
+      bpf_trace_printk("[router]: in: %d out: -- DROP\n", md->in_ifc);
+    #endif
+    return RX_DROP;
+
+  FORWARD:
+    //Select out interface
+    out_port = rt_entry_p->port;
+    if (out_port <= 0)
+      goto DROP;
+
+    #ifdef BPF_LOG
+      bpf_trace_printk("[router]: routing table match (#%d) network: %x\n",
+        i, rt_entry_p->network);
+    #endif
+
+    //change src mac
+    r_port_p = router_port.lookup(&out_port);
+    if (r_port_p) {
+      new_src_mac = cpu_to_be64(r_port_p->mac<<16);
+      bpf_skb_store_bytes(skb,ETH_SRC_OFFSET, &new_src_mac, 6, 0);
+    }
+
+    //change dst mac to ff:ff:ff:ff:ff:ff (TODO arp table)
+    new_dst_mac = 0xffffffffffff;
+    bpf_skb_store_bytes(skb, ETH_DST_OFFSET, &new_dst_mac, 6, 0);
+
+    #ifdef BPF_TRACE
+      bpf_trace_printk("[router]: eth_type:%x mac_scr:%lx mac_dst:%lx\n",
+        ethernet->type, ethernet->src, ethernet->dst);
+      bpf_trace_printk("[router]: out_ifc: %d\n", out_port);
+    #endif
+
+    #ifdef BPF_LOG
+      bpf_trace_printk("[router]: in: %d out: %d REDIRECT\n", md->in_ifc, out_port);
+    #endif
+
+    pkt_redirect(skb,md,out_port);
+    return RX_REDIRECT;
+  }
+  else if(ethernet->type == 0x0806) { // is it ARP?
+    struct arp_t *arp = cursor_advance(cursor, sizeof(*arp));
+    if (arp->oper == 1) {	// arp request?
+      bpf_trace_printk("[arp]: packet is arp request\n");
+
+      struct r_port *port = router_port.lookup(&md->in_ifc);
+      if (!port)
+        return RX_DROP;
+      if (arp->tpa == port->ip) {
+        bpf_trace_printk("[arp]: Somebody is asking for my address\n");
+
+        /* answer arp request */
+
+        u16 two = cpu_to_be16(0x0002);
+        u64 mymac = cpu_to_be64(port->mac<<16);
+        u64 remotemac = arp->sha;
+        remotemac = cpu_to_be64(remotemac<<16);
+        u32 myip = cpu_to_be32(port->ip);
+        u32 remoteip = arp->spa;
+        remoteip = cpu_to_be32(remoteip);
+
+        bpf_skb_store_bytes(skb, 0, &remotemac, 6, 0); // dst_mac
+        bpf_skb_store_bytes(skb, 6, &mymac, 6, 0); // src_mac
+        bpf_skb_store_bytes(skb, sizeof(*ethernet)+6, &two, 2, 0); // operation
+        bpf_skb_store_bytes(skb, sizeof(*ethernet)+8, &mymac, 6, 0);// sha
+        bpf_skb_store_bytes(skb, sizeof(*ethernet)+14, &myip, 4, 1);// spa
+        bpf_skb_store_bytes(skb, sizeof(*ethernet)+18, &remotemac, 6, 0);// tha
+        bpf_skb_store_bytes(skb, sizeof(*ethernet)+24, &remoteip, 4, 0);// tpa
+
+        pkt_redirect(skb, md, md->in_ifc);
+
+        return RX_REDIRECT;
+
+      }
+    }
+    else if (arp->oper == 2) { //arp reply
+      bpf_trace_printk("[arp]: packet is arp reply\n");
+
+      struct r_port *port = router_port.lookup(&md->in_ifc);
+      if (!port)
+        return RX_DROP;
+      if (arp->sha == port->mac && arp->spa == port->ip) {
+        u64 mac_ = port->mac;
+        u32 ip_ = port->ip;
+        arp_table.update(&ip_, &mac_);
+        return RX_DROP;
+      }
+    }
+	}
+
   return RX_DROP;
-
-FORWARD:
-  //Select out interface
-  out_port = rt_entry_p->port;
-  if (out_port <= 0)
-    goto DROP;
-
-  #ifdef BPF_LOG
-    bpf_trace_printk("[router]: routing table match (#%d) network: %x\n",
-      i, rt_entry_p->network);
-  #endif
-
-  //change src mac
-  r_port_p = router_port.lookup(&out_port);
-  if (r_port_p) {
-    new_src_mac = r_port_p->mac;
-    bpf_skb_store_bytes(skb,ETH_SRC_OFFSET, &new_src_mac, 6, 0);
-  }
-
-  //change dst mac to ff:ff:ff:ff:ff:ff (TODO arp table)
-  new_dst_mac = 0xffffffffffff;
-  bpf_skb_store_bytes(skb, ETH_DST_OFFSET, &new_dst_mac, 6, 0);
-
-  #ifdef BPF_TRACE
-    bpf_trace_printk("[router]: eth_type:%x mac_scr:%lx mac_dst:%lx\n",
-      ethernet->type, ethernet->src, ethernet->dst);
-    bpf_trace_printk("[router]: out_ifc: %d\n", out_port);
-  #endif
-
-  #ifdef BPF_LOG
-    bpf_trace_printk("[router]: in: %d out: %d REDIRECT\n", md->in_ifc, out_port);
-  #endif
-
-  pkt_redirect(skb,md,out_port);
-  return RX_REDIRECT;
-
 }
 `
