@@ -1,9 +1,9 @@
 # Installing
 
-This guide includes the instructions to install bcc, go, hover and iovisor-ovnm
+This guide includes the instructions to install bcc, go, hover and iovisor-ovn.
 those are the necessary components to run the examples.
 
-A linux kernel with a version 4.1 or newer is required, we recommend to use
+A Linux kernel with a version 4.4 or newer is required, we recommend to use
 Ubuntu Xenial as all the examples have been tested on that platform.
 
 ## Automatic Installation
