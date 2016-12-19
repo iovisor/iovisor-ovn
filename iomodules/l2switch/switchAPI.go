@@ -228,12 +228,27 @@ func (sw *L2SwitchModule) AttachToIoModule(ifaceId int, ifaceName string) (err e
 	iface := new(L2SwitchModuleInterface)
 
 	sw.PortsCount++
+
+	portNumber := config.SwitchPortsNumber - 1
+
 	iface.IfaceIdRedirectHover = ifaceId
 	iface.IfaceName = ifaceName
+	iface.IfaceIdArrayBroadcast = portNumber
+	iface.IfaceFd = ifaceId
 
 	sw.Interfaces[ifaceName] = iface
 
 	// TODO: security policies
+
+	tablePutError, _ := hoverctl.TableEntryPUT(sw.dataplane, sw.ModuleId, "ports",
+		strconv.Itoa(portNumber), strconv.Itoa(ifaceId))
+	if tablePutError != nil {
+		log.Warningf("Error in PUT entry into ports table... ",
+			"Probably problems with broadcast in the module. Error: %s\n", tablePutError)
+		return tablePutError
+	}
+
+	sw.PortsArray[portNumber] = ifaceId
 
 	return nil
 }
