@@ -17,8 +17,8 @@ var SwitchSecurityPolicy = `
 #define BPF_TRACE
 //#undef BPF_TRACE
 
-//Ports 32+1
-#define MAX_PORTS 33
+//Ports 32
+#define MAX_PORTS 32
 
 struct mac_t {
   u64 mac;
@@ -157,7 +157,7 @@ static int handle_rx(void *skb, struct metadata *md) {
     u32 i = 0;
     u32 t;
     #pragma unroll
-    for (i = 1; i <= 32; i++) {
+    for (i = 0; i < MAX_PORTS; i++) {
       u32 *iface_p;
       // For some reason the compiler does not unroll the loop if the 'i'
       // variable is used in the lookup function
