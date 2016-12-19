@@ -96,9 +96,9 @@ static int handle_rx(void *skb, struct metadata *md) {
   struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
 
   #ifdef BPF_TRACE
-    bpf_trace_printk("[router]: in_ifc:%d\n", md->in_ifc);
-    bpf_trace_printk("[router]: eth_type:%x mac_scr:%lx mac_dst:%lx\n",
-      ethernet->type, ethernet->src, ethernet->dst);
+    bpf_trace_printk("[router-%d]: in_ifc:%d\n", md->module_id, md->in_ifc);
+    bpf_trace_printk("[router-%d]: eth_type:%x mac_scr:%lx mac_dst:%lx\n",
+      md->module_id, ethernet->type, ethernet->src, ethernet->dst);
   #endif
 
   //TODO
@@ -110,8 +110,8 @@ static int handle_rx(void *skb, struct metadata *md) {
     struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
 
     #ifdef BPF_TRACE
-      bpf_trace_printk("[router]: ttl:%u ip_scr:%x ip_dst:%x \n", ip->ttl, ip->src, ip->dst);
-      // bpf_trace_printk("[router]: (before) ttl: %d checksum: %x\n", ip->ttl, ip->hchecksum);
+      bpf_trace_printk("[router-%d]: ttl:%u ip_scr:%x ip_dst:%x \n", md->module_id, ip->ttl, ip->src, ip->dst);
+      // bpf_trace_printk("[router-%d]: (before) ttl: %d checksum: %x\n", ip->ttl, ip->hchecksum);
     #endif
 
     /*
@@ -126,7 +126,7 @@ static int handle_rx(void *skb, struct metadata *md) {
 
     if (old_ttl <= 1) {
       #ifdef BPF_TRACE
-        bpf_trace_printk("[router]: packet DROP (ttl <= 1)\n");
+        bpf_trace_printk("[router-%d]: packet DROP (ttl <= 1)\n", md->module_id);
       #endif
       return RX_DROP;
     }
@@ -136,7 +136,7 @@ static int handle_rx(void *skb, struct metadata *md) {
     bpf_skb_store_bytes(skb, sizeof(*ethernet) + IP_TTL_OFFSET , &new_ttl, sizeof(old_ttl), 0);
 
     #ifdef BPF_TRACE
-      // bpf_trace_printk("[router]: (after ) ttl: %d checksum: %x\n",ip->ttl,ip->hchecksum);
+      // bpf_trace_printk("[router-%d]: (after ) ttl: %d checksum: %x\n",ip->ttl,ip->hchecksum);
     #endif
 
     /*
@@ -172,7 +172,7 @@ static int handle_rx(void *skb, struct metadata *md) {
 
   DROP:
     #ifdef BPF_LOG
-      bpf_trace_printk("[router]: in: %d out: -- DROP\n", md->in_ifc);
+      bpf_trace_printk("[router-%d]: in: %d out: -- DROP\n", md->module_id, md->in_ifc);
     #endif
     return RX_DROP;
 
@@ -183,8 +183,8 @@ static int handle_rx(void *skb, struct metadata *md) {
       goto DROP;
 
     #ifdef BPF_LOG
-      bpf_trace_printk("[router]: routing table match (#%d) network: %x\n",
-        i, rt_entry_p->network);
+      bpf_trace_printk("[router-%d]: routing table match (#%d) network: %x\n",
+        md->module_id, i, rt_entry_p->network);
     #endif
 
     //change src mac
@@ -199,13 +199,13 @@ static int handle_rx(void *skb, struct metadata *md) {
     bpf_skb_store_bytes(skb, ETH_DST_OFFSET, &new_dst_mac, 6, 0);
 
     #ifdef BPF_TRACE
-      bpf_trace_printk("[router]: eth_type:%x mac_scr:%lx mac_dst:%lx\n",
-        ethernet->type, ethernet->src, ethernet->dst);
-      bpf_trace_printk("[router]: out_ifc: %d\n", out_port);
+      bpf_trace_printk("[router-%d]: eth_type:%x mac_scr:%lx mac_dst:%lx\n",
+        md->module_id, ethernet->type, ethernet->src, ethernet->dst);
+      bpf_trace_printk("[router-%d]: out_ifc: %d\n", out_port);
     #endif
 
     #ifdef BPF_LOG
-      bpf_trace_printk("[router]: in: %d out: %d REDIRECT\n", md->in_ifc, out_port);
+      bpf_trace_printk("[router-%d]: in: %d out: %d REDIRECT\n", md->module_id, md->in_ifc, out_port);
     #endif
 
     pkt_redirect(skb,md,out_port);
@@ -214,13 +214,13 @@ static int handle_rx(void *skb, struct metadata *md) {
   else if(ethernet->type == 0x0806) { // is it ARP?
     struct arp_t *arp = cursor_advance(cursor, sizeof(*arp));
     if (arp->oper == 1) {	// arp request?
-      bpf_trace_printk("[arp]: packet is arp request\n");
+      //bpf_trace_printk("[arp]: packet is arp request\n");
 
       struct r_port *port = router_port.lookup(&md->in_ifc);
       if (!port)
         return RX_DROP;
       if (arp->tpa == port->ip) {
-        bpf_trace_printk("[arp]: Somebody is asking for my address\n");
+        //bpf_trace_printk("[arp]: Somebody is asking for my address\n");
 
         /* answer arp request */
 
@@ -247,7 +247,7 @@ static int handle_rx(void *skb, struct metadata *md) {
       }
     }
     else if (arp->oper == 2) { //arp reply
-      bpf_trace_printk("[arp]: packet is arp reply\n");
+      bpf_trace_printk("[router-%d]: packet is arp reply\n", md->module_id);
 
       struct r_port *port = router_port.lookup(&md->in_ifc);
       if (!port)
