@@ -14,18 +14,16 @@
 package mainlogic
 
 import (
-	//"strconv"
-	//"time"
-	"os"
-	"net"
-	"fmt"
 	"encoding/hex"
+	"fmt"
+	"net"
+	"os"
 
 	"github.com/netgroup-polito/iovisor-ovn/config"
+	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/l2switch"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/router"
-	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
 	l "github.com/op/go-logging"
 )
@@ -35,27 +33,27 @@ const brint = "br-int"
 var log = l.MustGetLogger("mainlogic")
 
 type L2Switch struct {
-	Name string
-	swIomodule 	*l2switch.L2SwitchModule
-	ports map[string]*L2SwitchPort
+	Name       string
+	swIomodule *l2switch.L2SwitchModule
+	ports      map[string]*L2SwitchPort
 }
 
 type L2SwitchPort struct {
-	Name string
-	IfaceName 	string
+	Name      string
+	IfaceName string
 }
 
 type Router struct {
-	Name string
+	Name      string
 	rIoModule *router.RouterModule
-	ports map[string]*RouterPort
+	ports     map[string]*RouterPort
 }
 
 type RouterPort struct {
 	Name string
-	IP string	// TODO: change this to a better data structure
+	IP   string // TODO: change this to a better data structure
 	Mask string
-	Mac string
+	Mac  string
 }
 
 /*
@@ -67,13 +65,13 @@ var switches map[string]*L2Switch
 // Contains the routers that haven been created.  Indexed by named
 var routers map[string]*Router
 
-var dataplane *hoverctl.Dataplane
+var Dataplane *hoverctl.Dataplane
 
 func MainLogic() {
 
 	mon := ovnmonitor.CreateMonitor()
 	db, err := mon.Connect()
-	if err == false {	// it is a quite odd that false means error
+	if err == false { // it is a quite odd that false means error
 		log.Errorf("Error connecting to OVN databases\n")
 		return
 	}
@@ -81,8 +79,8 @@ func MainLogic() {
 	switches = make(map[string]*L2Switch)
 	routers = make(map[string]*Router)
 
-	dataplane = hoverctl.NewDataplane()
-	if err := dataplane.Init(config.Hover); err != nil {
+	Dataplane = hoverctl.NewDataplane()
+	if err := Dataplane.Init(config.Hover); err != nil {
 		log.Errorf("unable to conect to Hover %s\n%s\n", config.Hover, err)
 		os.Exit(1)
 	}
@@ -90,10 +88,10 @@ func MainLogic() {
 	var notifier MyNotifier
 	notifier.Update(db) // I think that there is an instant of time where the info could be lost
 	mon.Register(&notifier)
+
 }
 
 type MyNotifier struct {
-
 }
 
 func (m *MyNotifier) Update(db *ovnmonitor.OvnDB) {
@@ -137,12 +135,12 @@ func (m *MyNotifier) Update(db *ovnmonitor.OvnDB) {
 	/* process modified switches */
 	for _, lsw := range db.Switches {
 		if lsw.Modified {
-				updateSwitch(lsw)
+			updateSwitch(lsw)
 		}
 	}
 
 	log.Noticef("Mainlogic update() finished")
- }
+}
 
 func removeRouter(r *Router) {
 	r.rIoModule.Destroy()
@@ -153,7 +151,7 @@ func addRouter(lr *ovnmonitor.LogicalRouter) {
 	r := new(Router)
 	r.Name = lr.Name
 	r.ports = make(map[string]*RouterPort)
-	r.rIoModule = router.Create(dataplane)
+	r.rIoModule = router.Create(Dataplane)
 	routers[r.Name] = r
 
 	r.rIoModule.Deploy()
@@ -193,11 +191,11 @@ func removeRouterPort(r *Router, port *RouterPort) {
 func addRouterPort(r *Router, lrp *ovnmonitor.LogicalRouterPort) {
 	port := new(RouterPort)
 	port.Name = lrp.Name
-	ip, ipnet,_ := net.ParseCIDR(lrp.Networks)
+	ip, ipnet, _ := net.ParseCIDR(lrp.Networks)
 	if ip.To4() != nil {
 		port.IP = ip.String()
 		a, _ := hex.DecodeString(ipnet.Mask.String())
-		port.Mask = fmt.Sprintf("%v.%v.%v.%v",a[0],a[1],a[2],a[3])
+		port.Mask = fmt.Sprintf("%v.%v.%v.%v", a[0], a[1], a[2], a[3])
 	}
 	port.Mac = lrp.Mac
 	r.ports[port.Name] = port
@@ -219,7 +217,7 @@ func addSwitch(lsw *ovnmonitor.LogicalSwitch) {
 	sw := new(L2Switch)
 	sw.Name = lsw.Name
 	sw.ports = make(map[string]*L2SwitchPort)
-	sw.swIomodule = l2switch.Create(dataplane)
+	sw.swIomodule = l2switch.Create(Dataplane)
 	switches[sw.Name] = sw
 }
 
@@ -267,7 +265,7 @@ func updatePort(sw *L2Switch, lport *ovnmonitor.LogicalSwitchPort) {
 	port := sw.ports[lport.Name]
 
 	if lport.Type == "" {
-			/* is IfaceChanged? */
+		/* is IfaceChanged? */
 		if port.IfaceName != lport.IfaceName {
 			/* if it was connected to an iface */
 			if port.IfaceName != "" {
@@ -299,7 +297,7 @@ func updatePort(sw *L2Switch, lport *ovnmonitor.LogicalSwitchPort) {
 			}
 
 			// attach both iomodules
-			if err := iomodules.AttachIoModules(dataplane,
+			if err := iomodules.AttachIoModules(Dataplane,
 				sw.swIomodule, port.Name, r.rIoModule, lrp.Name); err != nil {
 
 				log.Errorf("Unable attach router to switch")
