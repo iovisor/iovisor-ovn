@@ -15,7 +15,9 @@ package main
 
 import (
 	"flag"
+	"time"
 
+	"github.com/netgroup-polito/iovisor-ovn/cli"
 	"github.com/netgroup-polito/iovisor-ovn/config"
 	l "github.com/op/go-logging"
 
@@ -60,6 +62,10 @@ func main() {
 
 	//Monitors started here!
 	mainlogic.MainLogic()
+
+	//Cli start
+	time.Sleep(1 * time.Second)
+	go cli.Cli(mainlogic.Dataplane)
 
 	quit := make(chan bool)
 	<-quit
