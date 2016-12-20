@@ -25,6 +25,7 @@ import (
 
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/l2switch"
+	"github.com/netgroup-polito/iovisor-ovn/mainlogic"
 )
 
 func Cli(dataplaneref *hoverctl.Dataplane) {
@@ -39,6 +40,23 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 
 		if len(args) >= 1 {
 			switch args[0] {
+			case "mainlogic", "ml":
+				if len(args) >= 2 {
+					switch args[1] {
+					case "switch":
+						if len(args) >= 3 {
+							fmt.Printf("\nMainLogic Switch %s\n\n", args[2])
+							mainlogic.PrintL2Switch(args[2])
+						} else {
+							fmt.Printf("\nMainLogic Switches \n\n")
+							mainlogic.PrintL2Switches()
+						}
+					}
+				} else {
+					fmt.Printf("\nMainLogic\n\n")
+					mainlogic.PrintMainLogic()
+				}
+
 			// case "test":
 			// 	fmt.Printf("\ntest\n\n")
 			// 	//tests.TestModule(dataplane)
@@ -356,6 +374,13 @@ func PrintModulesUsage() {
 	fmt.Printf("	modules delete <module-id>\n")
 }
 
+func PrintMainLogicUsage() {
+	fmt.Printf("\nMainLogic Usage\n\n")
+	fmt.Printf("	mainlogic get\n")
+	fmt.Printf("	mainlogic get switch\n")
+	fmt.Printf("	mainlogic get switch <switch-name>\n")
+}
+
 func PrintHelp() {
 	fmt.Printf("\n")
 	fmt.Printf("IOVisor-OVN Command Line Interface HELP\n\n")
@@ -363,6 +388,7 @@ func PrintHelp() {
 	fmt.Printf("	modules, m       prints /modules/\n")
 	fmt.Printf("	links, l         prints /links/\n")
 	fmt.Printf("	table, t         prints tables\n\n")
+	fmt.Printf("  mainlogic, ml    prints mainlogic\n\n")
 	// fmt.Printf("	nb               prints NorthBound database local structs\n")
 	// fmt.Printf("	ovs              prints Ovs local database local structs\n\n")
 	// fmt.Printf("	config,c         config print and modify\n\n")
@@ -372,6 +398,7 @@ func PrintHelp() {
 	PrintModulesUsage()
 	PrintLinksUsage()
 	PrintTableUsage()
+	PrintMainLogicUsage()
 	// PrintNbUsage()
 	// PrintOvsUsage()
 	// PrintConfigUsage()
