@@ -32,7 +32,22 @@ func PrintL2Switches() {
 	}
 }
 
+func PrintRouter(name string) {
+	if router, ok := routers[name]; ok {
+		//TODO Improve. First implementation
+		spew.Dump(router)
+	}
+}
+
+func PrintRouters() {
+	for routername, _ := range routers {
+		PrintRouter(routername)
+	}
+}
+
 func PrintMainLogic() {
 	fmt.Printf("\nSwitches\n\n")
 	PrintL2Switches()
+	fmt.Printf("\nRouters\n\n")
+	PrintRouters()
 }

@@ -51,6 +51,14 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 							fmt.Printf("\nMainLogic Switches \n\n")
 							mainlogic.PrintL2Switches()
 						}
+					case "router":
+						if len(args) >= 3 {
+							fmt.Printf("\nMainLogic Router %s\n\n", args[2])
+							mainlogic.PrintRouter(args[2])
+						} else {
+							fmt.Printf("\nMainLogic Routers \n\n")
+							mainlogic.PrintRouters()
+						}
 					}
 				} else {
 					fmt.Printf("\nMainLogic\n\n")
@@ -376,9 +384,11 @@ func PrintModulesUsage() {
 
 func PrintMainLogicUsage() {
 	fmt.Printf("\nMainLogic Usage\n\n")
-	fmt.Printf("	mainlogic get\n")
-	fmt.Printf("	mainlogic get switch\n")
-	fmt.Printf("	mainlogic get switch <switch-name>\n")
+	fmt.Printf("	mainlogic\n")
+	fmt.Printf("	mainlogic switch\n")
+	fmt.Printf("	mainlogic switch <switch-name>\n")
+	fmt.Printf("	mainlogic router\n")
+	fmt.Printf("	mainlogic router <router-name>\n")
 }
 
 func PrintHelp() {
