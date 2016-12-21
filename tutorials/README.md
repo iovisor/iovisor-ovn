@@ -10,11 +10,11 @@ Each subfolder contains a different example, usually on these there are three fi
 * example.go: injects and configures the eBPF IOModules
 
 Before running the examples it is necessary to install some components.
-Please see [Installing](#installing).
+Please see [Installing Minimal](#installing-minimal).
 
 # Examples
-* [switch](/switch/): L2 switch connected to two virtual network interfaces
-* [router](/router/): L3 router connected to three virtual network interfaces
+* [switch](/switch): L2 switch connected to two virtual network interfaces
+* [router](/router): L3 router connected to three virtual network interfaces
 
 # Installing Minimal
 
@@ -26,4 +26,4 @@ cd iovisor-ovn/tutorials/
 ./install-minimal.sh
 ```
 
-For more details please follow [INSTALL-MINIMAL](INSTALL-MINIMAL.md).
+For more details please follow minimal [INSTALL](INSTALL-MINIMAL.md) guide.
