@@ -48,7 +48,7 @@ struct ip_leaf{
 BPF_TABLE("hash", struct mac_t, struct interface, fwdtable, 10240);
 
 /*
-  The Ports Table (ports) is a fixed lenght array that identifies the fd (file
+  The Ports Table (ports) is a fixed length array that identifies the fd (file
   descriptors) of the network interfaces attached to the switch.
   This is a workaround for broadcast implementation, in order to be able to call
   bpf_clone_redirect that accepts as parameter the fd of the network interface.

@@ -146,7 +146,7 @@ func (r *RouterModule) AttachExternalInterface(ifaceName string) (err error) {
 		ifacenumber = linkHover.ToId
 	}
 	if ifacenumber == -1 {
-		log.Warningf("IfaceIdRedirectHover == -1 something wrong happend...\n")
+		log.Warningf("IfaceIdRedirectHover == -1 something wrong happened...\n")
 	}
 
 	iface := new(RouterModuleInterface)
