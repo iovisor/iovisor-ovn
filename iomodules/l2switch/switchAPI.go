@@ -14,10 +14,10 @@
 package l2switch
 
 import (
-	"strconv"
 	"bytes"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
@@ -27,14 +27,14 @@ import (
 var log = l.MustGetLogger("iomodules-switch")
 
 type L2SwitchModule struct {
-	ModuleId	string
-	PortsArray	[config.SwitchPortsNumber + 1]int //[0]=empty [1..8]=contains the port allocation(with fd) for broadcast tricky implemented inside hover
-	PortsCount	int                               //number of allocated ports
+	ModuleId   string
+	PortsArray [config.SwitchPortsNumber + 1]int //[0]=empty [1..8]=contains the port allocation(with fd) for broadcast tricky implemented inside hover
+	PortsCount int                               //number of allocated ports
 
 	Interfaces map[string]*L2SwitchModuleInterface
 
-	deployed	bool
-	dataplane	*hoverctl.Dataplane	// used to send commands to hover
+	deployed  bool
+	dataplane *hoverctl.Dataplane // used to send commands to hover
 }
 
 type L2SwitchModuleInterface struct {
@@ -70,7 +70,7 @@ func (sw *L2SwitchModule) Deploy() (err error) {
 	}
 
 	switchError, switchHover := hoverctl.ModulePOST(sw.dataplane, "bpf",
-									"Switch", SwitchSecurityPolicy)
+		"Switch", SwitchSecurityPolicy)
 	if switchError != nil {
 		log.Errorf("Error in POST Switch IOModule: %s\n", switchError)
 		return switchError
@@ -113,7 +113,7 @@ func (sw *L2SwitchModule) AttachExternalInterface(ifaceName string) (err error) 
 		return errors.New(errString)
 	}
 
-	linkError, linkHover := hoverctl.LinkPOST(sw.dataplane, "i:" + ifaceName, sw.ModuleId)
+	linkError, linkHover := hoverctl.LinkPOST(sw.dataplane, "i:"+ifaceName, sw.ModuleId)
 	if linkError != nil {
 		log.Errorf("Error in POSTing the Link: %s\n", linkError)
 		return linkError
@@ -208,7 +208,7 @@ func (sw *L2SwitchModule) DetachExternalInterface(ifaceName string) (err error) 
 
 		sw.PortsArray[iface.IfaceIdArrayBroadcast] = 0
 		sw.PortsCount--
-    }
+	}
 
 	// TODO: clean up port security tables
 
@@ -266,7 +266,7 @@ func (sw *L2SwitchModule) DetachFromIoModule(ifaceName string) (err error) {
 }
 
 func (sw *L2SwitchModule) FindFirstFreeLogicalPort() int {
-	for i := 1; i < config.SwitchPortsNumber + 1; i++ {
+	for i := 1; i < config.SwitchPortsNumber+1; i++ {
 		if sw.PortsArray[i] == 0 {
 			return i
 		}
