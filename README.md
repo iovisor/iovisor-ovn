@@ -52,6 +52,10 @@ For more details about how to install and test this software please see [INSTALL
 
 * **tutorials**: simple tutorials to try IOModules contained in the repository
 
+## Presentations
+
+  * OVS Fall Conference, San Jose, Oct 2016: [Slides](http://openvswitch.org/support/ovscon2016/7/1245-bertrone.pdf), [Video](https://www.youtube.com/watch?v=9cmR2NuAGz0)
+
 ## Licence
 
-The IOVisor-OVN is licensed under the [Apache License, Version 2.0](./LICENCE.txt).
+The IOVisor-OVN is licensed under the [Apache License, Version 2.0](./LICENSE.txt).
