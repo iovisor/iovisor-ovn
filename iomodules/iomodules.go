@@ -42,7 +42,7 @@ func AttachIoModules(dataplane *hoverctl.Dataplane,
 	}
 
 	// hover does not guarantee that the order of the link is conserved, then
-	// it is necessary to check it explicitely to realize the interface id
+	// it is necessary to check it explicitly to realize the interface id
 	// inside each module
 	m1id := -1
 	m2id := -1

@@ -14,11 +14,11 @@
 package router
 
 import (
-	"strconv"
 	"bytes"
-	"net"
-	"fmt"
 	"errors"
+	"fmt"
+	"net"
+	"strconv"
 
 	//"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
@@ -28,28 +28,28 @@ import (
 var log = l.MustGetLogger("iomodules-switch")
 
 type RouterModule struct {
-	ModuleId	string
-	PortsCount	int                               //number of allocated ports
+	ModuleId     string
+	PortsCount   int //number of allocated ports
 	RoutingTable [10]RoutingTableEntry
-	Interfaces map[string]*RouterModuleInterface
+	Interfaces   map[string]*RouterModuleInterface
 
-	deployed	bool
-	dataplane	*hoverctl.Dataplane	// used to send commands to hover
+	deployed  bool
+	dataplane *hoverctl.Dataplane // used to send commands to hover
 }
 
 type RouterModuleInterface struct {
-	IfaceIdRedirectHover  int    //Iface id inside hover (relative to the m:1234 the interface is attached to ...) and provided my the extended hover /links/ API
-	IfaceFd               int    //Interface Fd inside External_Ids (42, etc...)
-	LinkIdHover           string //iomodules Link Id
-	IfaceName             string
-	IP                    string
-	Netmask               string
-	MAC                   string
+	IfaceIdRedirectHover int    //Iface id inside hover (relative to the m:1234 the interface is attached to ...) and provided my the extended hover /links/ API
+	IfaceFd              int    //Interface Fd inside External_Ids (42, etc...)
+	LinkIdHover          string //iomodules Link Id
+	IfaceName            string
+	IP                   string
+	Netmask              string
+	MAC                  string
 }
 
 type RoutingTableEntry struct {
 	network string
-	netmask    string
+	netmask string
 	port    int
 }
 
@@ -78,7 +78,7 @@ func (r *RouterModule) Deploy() (err error) {
 	}
 
 	routerError, routerHover := hoverctl.ModulePOST(r.dataplane, "bpf",
-									"Router", RouterCode)
+		"Router", RouterCode)
 	if routerError != nil {
 		log.Errorf("Error in POST Router IOModule: %s\n", routerError)
 		return routerError
@@ -127,7 +127,7 @@ func (r *RouterModule) AttachExternalInterface(ifaceName string) (err error) {
 		return errors.New(errString)
 	}
 
-	linkError, linkHover := hoverctl.LinkPOST(r.dataplane, "i:" + ifaceName, r.ModuleId)
+	linkError, linkHover := hoverctl.LinkPOST(r.dataplane, "i:"+ifaceName, r.ModuleId)
 	if linkError != nil {
 		log.Errorf("Error in POSTing the Link: %s\n", linkError)
 		return linkError
@@ -146,7 +146,7 @@ func (r *RouterModule) AttachExternalInterface(ifaceName string) (err error) {
 		ifacenumber = linkHover.ToId
 	}
 	if ifacenumber == -1 {
-		log.Warningf("IfaceIdRedirectHover == -1 something wrong happend...\n")
+		log.Warningf("IfaceIdRedirectHover == -1 something wrong happened...\n")
 	}
 
 	iface := new(RouterModuleInterface)

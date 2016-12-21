@@ -14,11 +14,10 @@
 package main
 
 import (
-	"flag"
-	"os"
 	"bufio"
-	//"time"
+	"flag"
 	"fmt"
+	"os"
 
 	"github.com/netgroup-polito/iovisor-ovn/common"
 	"github.com/netgroup-polito/iovisor-ovn/config"

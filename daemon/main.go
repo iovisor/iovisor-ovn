@@ -55,7 +55,7 @@ func main() {
 	//Init Logger
 	common.LogInit()
 
-	//simple test enviroment (see testenv/env.go)
+	//simple test environment (see testenv/env.go)
 	//if config.TestEnv {
 	//	go tests.TestEnv(dataplane)
 	//}
