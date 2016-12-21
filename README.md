@@ -5,8 +5,6 @@ It creates a new data plane that is semantically equivalent to the original OvS-
 
 ### Why?
 
-Because:
-
  - Complex and efficient virtualized network services are becoming important, which cannot simply implemented using the match/action paradigm implemented by current virtual switches;
  - Complex services cannot be implemented with only OpenFlow-based switches (as OvS), and the current model that mixes different technologies (Linux containers, openFlow switches with the associated controller for the control plane, virtual machines, and more) in order to setup a complex network service is difficult to manage;
  - eBPF is integrated in the Linux kernel and allows to create and deploy (i.e., *inject*) new functions at runtime, without having to upgrade/modify anything in the hosting server.
@@ -28,28 +26,25 @@ For more details about the architecture please see [architecture details](./ARCH
 
 It is possible to install and deploy a complete OpenStack environment with IOVisor-OVN as network backend.
 The process is automatically managed by DevStack scripts.
-Currently only L2 networks are supported.
 
-For more details about how to install and test this software please see [INSTALL.md](./INSTALL.md)
+For more details about how to install please see [installation guide](./INSTALL.md)
+
+## Tutorials
+
+[Tutorials folder](/tutorials) contains a step-by-step guide to try the current IOMdoules available.
+* [switch](tutorials/switch): L2 switch
+* [router](tutorials/router): L3 router
 
 ## Repository Organization:
 
 * **iomodules**: contains eBPF code (i.e., available IOModules).
-
 * **cli**: tool that implements the command line interface of IOVisor-OVN daemon.
-
 * **config**: contains a file with the default configuration parameters used when the daemon start.
-
 * **daemon**: contains the daemon main program entry point.
-
 * **docs**: documentation about this project, presentations, talks.
-
 * **hoverctl**: hover restful api wrapper and utilities.
-
 * **mainlogic**: tool that performs the mapping between the network configuration of OVN and IOModules.
-
 * **ovnmonitor**:  monitors for OVN northbound database, southbound database and local ovs database. Implemented using libovsdb.
-
 * **tutorials**: simple tutorials to try IOModules contained in the repository
 
 ## Presentations
