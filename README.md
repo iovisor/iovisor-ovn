@@ -11,8 +11,7 @@ It creates a new data plane that is semantically equivalent to the original OvS-
 
 ### How?
 
-In this project we replace the current backend of OVN with a new implementation based on IOVisor.
-This proposal maintains the current OVN architecture that handles orchestration across a datacenter-wise environment, and keeps compatibility with current Cloud Management Systems as OpenStack, Apache Mesos, and other.
+ - In this project we replace the current backend of OVN with a new implementation based on IOVisor. This proposal maintains the current OVN architecture that handles orchestration across a datacenter-wise environment, and keeps compatibility with current Cloud Management Systems as OpenStack, Apache Mesos, and other.
 
 ## Architecture
 
@@ -27,7 +26,7 @@ For more details about the architecture please see [architecture details](./ARCH
 It is possible to install and deploy a complete OpenStack environment with IOVisor-OVN as network backend.
 The process is automatically managed by DevStack scripts.
 
-For more details about how to install please see [installation guide](./INSTALL.md)
+Please see [installation guide](./INSTALL.md)
 
 ## Tutorials
 
@@ -49,7 +48,7 @@ For more details about how to install please see [installation guide](./INSTALL.
 
 ## Presentations
 
-  * OVS Fall Conference, San Jose, Oct 2016: [Slides](http://openvswitch.org/support/ovscon2016/7/1245-bertrone.pdf), [Video](https://www.youtube.com/watch?v=9cmR2NuAGz0)
+  * OVS Fall Conference, San Jose, Nov 2016: [Slides](http://openvswitch.org/support/ovscon2016/7/1245-bertrone.pdf), [Video](https://www.youtube.com/watch?v=9cmR2NuAGz0)
 
 ## Licence
 
