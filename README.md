@@ -22,7 +22,7 @@ This proposal maintains the current OVN architecture that handles orchestration 
 
 IOVisor-OVN sits on side of the traditional OVN architecture, it intercepts the contents of the different databases and it deploys the required network services using the IOVisor technology.
 
-For more details about the architecture please see [ARCHITECTURE.md](./ARCHITECTURE.md)
+For more details about the architecture please see [architecture details](./ARCHITECTURE.md).
 
 ## Install
 
@@ -32,9 +32,7 @@ Currently only L2 networks are supported.
 
 For more details about how to install and test this software please see [INSTALL.md](./INSTALL.md)
 
-## Repository organization
-
-The repository is organized in the following way
+## Repository Organization:
 
 * **iomodules**: contains eBPF code (i.e., available IOModules).
 
@@ -51,3 +49,9 @@ The repository is organized in the following way
 * **mainlogic**: tool that performs the mapping between the network configuration of OVN and IOModules.
 
 * **ovnmonitor**:  monitors for OVN northbound database, southbound database and local ovs database. Implemented using libovsdb.
+
+* **tutorials**: simple tutorials to try IOModules contained in the repository
+
+## Licence
+
+The IOVisor-OVN is licensed under the [Apache License, Version 2.0](./LICENCE.txt).
