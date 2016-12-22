@@ -60,7 +60,7 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 							mainlogic.PrintRouter(args[2])
 						} else {
 							fmt.Printf("\nMainLogic Routers \n\n")
-							mainlogic.PrintRouters()
+							mainlogic.PrintRouters(true)
 						}
 					}
 				} else {
