@@ -15,20 +15,61 @@ package mainlogic
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/olekukonko/tablewriter"
 )
 
 func PrintL2Switch(name string) {
 	if sw, ok := switches[name]; ok {
-		//TODO Improve. First implementation
-		spew.Dump(sw)
+		table := tablewriter.NewWriter(os.Stdout)
+		if sw.swIomodule != nil {
+			// table = tablewriter.NewWriter(os.Stdout)
+			table.SetHeader([]string{"SWITCH", "MODULE-ID", "PORTS#"})
+			table.Append([]string{sw.Name, sw.swIomodule.ModuleId, strconv.Itoa(sw.swIomodule.PortsCount)})
+			table.Render()
+		} else {
+			// table = tablewriter.NewWriter(os.Stdout)
+			table.SetHeader([]string{"SWITCH", "MODULE-ID", "PORTS#"})
+			table.Append([]string{sw.Name, sw.swIomodule.ModuleId, " "})
+			table.Render()
+		}
+
+		table = tablewriter.NewWriter(os.Stdout)
+		table.SetHeader([]string{"SWITCH", "NAME", "IFACE"})
+		for _, swp := range sw.ports {
+			table.Append([]string{sw.Name, swp.Name, swp.IfaceName})
+		}
+		table.Render()
+
+		if sw.swIomodule != nil {
+			table = tablewriter.NewWriter(os.Stdout)
+			table.SetHeader([]string{"SWITCH", "NAME", "LINK", "FD", "BCASTID", "REDIRECT"})
+			for _, iface := range sw.swIomodule.Interfaces {
+				table.Append([]string{sw.Name, iface.IfaceName, iface.LinkIdHover, strconv.Itoa(iface.IfaceFd), strconv.Itoa(iface.IfaceIdArrayBroadcast), strconv.Itoa(iface.IfaceIdRedirectHover)})
+			}
+			table.Render()
+		}
+		//TODO We need to print ports array?
+		//spew.Dump(sw.swIomodule.PortsArray)
 	}
 }
 
-func PrintL2Switches() {
-	for swname, _ := range switches {
-		PrintL2Switch(swname)
+func PrintL2Switches(verbose bool) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"SWITCHES", "MODULE-ID", "PORTS#"})
+	for swname, sw := range switches {
+		table.Append([]string{swname, sw.swIomodule.ModuleId, strconv.Itoa(sw.swIomodule.PortsCount)})
+	}
+	table.Render()
+
+	if verbose {
+		for swname, _ := range switches {
+			fmt.Printf("\n")
+			PrintL2Switch(swname)
+		}
 	}
 }
 
@@ -45,9 +86,9 @@ func PrintRouters() {
 	}
 }
 
-func PrintMainLogic() {
+func PrintMainLogic(verbose bool) {
 	fmt.Printf("\nSwitches\n\n")
-	PrintL2Switches()
+	PrintL2Switches(verbose)
 	fmt.Printf("\nRouters\n\n")
 	PrintRouters()
 }

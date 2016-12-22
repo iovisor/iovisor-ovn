@@ -43,13 +43,16 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 			case "mainlogic", "ml":
 				if len(args) >= 2 {
 					switch args[1] {
+					case "-v":
+						fmt.Printf("\nMainLogic (verbose)\n\n")
+						mainlogic.PrintMainLogic(true)
 					case "switch":
 						if len(args) >= 3 {
 							fmt.Printf("\nMainLogic Switch %s\n\n", args[2])
 							mainlogic.PrintL2Switch(args[2])
 						} else {
 							fmt.Printf("\nMainLogic Switches \n\n")
-							mainlogic.PrintL2Switches()
+							mainlogic.PrintL2Switches(true)
 						}
 					case "router":
 						if len(args) >= 3 {
@@ -62,7 +65,7 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 					}
 				} else {
 					fmt.Printf("\nMainLogic\n\n")
-					mainlogic.PrintMainLogic()
+					mainlogic.PrintMainLogic(false)
 				}
 
 			// case "test":
@@ -385,6 +388,7 @@ func PrintModulesUsage() {
 func PrintMainLogicUsage() {
 	fmt.Printf("\nMainLogic Usage\n\n")
 	fmt.Printf("	mainlogic\n")
+	fmt.Printf("	mainlogic -v (verbose)\n")
 	fmt.Printf("	mainlogic switch\n")
 	fmt.Printf("	mainlogic switch <switch-name>\n")
 	fmt.Printf("	mainlogic router\n")
@@ -398,7 +402,7 @@ func PrintHelp() {
 	fmt.Printf("	modules, m       prints /modules/\n")
 	fmt.Printf("	links, l         prints /links/\n")
 	fmt.Printf("	table, t         prints tables\n\n")
-	fmt.Printf("  mainlogic, ml    prints mainlogic\n\n")
+	fmt.Printf("	mainlogic, ml    prints mainlogic\n\n")
 	// fmt.Printf("	nb               prints NorthBound database local structs\n")
 	// fmt.Printf("	ovs              prints Ovs local database local structs\n\n")
 	// fmt.Printf("	config,c         config print and modify\n\n")
