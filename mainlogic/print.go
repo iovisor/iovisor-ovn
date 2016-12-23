@@ -113,7 +113,6 @@ func PrintRouters(verbose bool) {
 	table.SetHeader([]string{"ROUTER", "MODULE-ID", "PORTS#"})
 	for _, r := range routers {
 		table.Append([]string{r.Name, r.rIoModule.ModuleId, strconv.Itoa(r.rIoModule.PortsCount)})
-		table.Render()
 	}
 	table.Render()
 
