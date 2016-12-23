@@ -18,7 +18,6 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -74,9 +73,7 @@ func PrintL2Switches(verbose bool) {
 }
 
 func PrintRouter(name string) {
-	if router, ok := routers[name]; ok {
-		//TODO Improve. First implementation
-		spew.Dump(router)
+	if _, ok := routers[name]; ok {
 
 		if r, ok := routers[name]; ok {
 			table := tablewriter.NewWriter(os.Stdout)
