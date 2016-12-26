@@ -28,8 +28,8 @@ var log = l.MustGetLogger("iomodules-switch")
 
 type L2SwitchModule struct {
 	ModuleId   string
-	PortsArray [config.SwitchPortsNumber + 1]int //[0]=empty [1..8]=contains the port allocation(with fd) for broadcast tricky implemented inside hover
-	PortsCount int                               //number of allocated ports
+	PortsArray [config.SwitchPortsNumber + 1]int // Saves the network interfaces file ids used to implement the broadcast
+	PortsCount int                               // number of allocated ports
 
 	Interfaces map[string]*L2SwitchModuleInterface
 
@@ -119,12 +119,10 @@ func (sw *L2SwitchModule) AttachExternalInterface(ifaceName string) (err error) 
 		return linkError
 	}
 
-	portNumber := sw.FindFirstFreeLogicalPort()
-
-	if portNumber == 0 {
-		errString := fmt.Sprintf("Switch '%s': no free ports.\n", sw.ModuleId)
-		log.Warningf(errString)
-		return errors.New(errString)
+	portNumber, err := sw.FindFirstFreeLogicalPort()
+	if err != nil {
+		log.Errorf("Error in finding free port: %s\n", err)
+		return err
 	}
 
 	_, external_interfaces := hoverctl.ExternalInterfacesListGET(sw.dataplane)
@@ -230,12 +228,27 @@ func (sw *L2SwitchModule) AttachToIoModule(ifaceId int, ifaceName string) (err e
 	iface := new(L2SwitchModuleInterface)
 
 	sw.PortsCount++
+
+	portNumber := config.SwitchPortsNumber - 1
+
 	iface.IfaceIdRedirectHover = ifaceId
 	iface.IfaceName = ifaceName
+	iface.IfaceIdArrayBroadcast = portNumber
+	iface.IfaceFd = ifaceId
 
 	sw.Interfaces[ifaceName] = iface
 
 	// TODO: security policies
+
+	tablePutError, _ := hoverctl.TableEntryPUT(sw.dataplane, sw.ModuleId, "ports",
+		strconv.Itoa(portNumber), strconv.Itoa(ifaceId))
+	if tablePutError != nil {
+		log.Warningf("Error in PUT entry into ports table... ",
+			"Probably problems with broadcast in the module. Error: %s\n", tablePutError)
+		return tablePutError
+	}
+
+	sw.PortsArray[portNumber] = ifaceId
 
 	return nil
 }
@@ -265,13 +278,13 @@ func (sw *L2SwitchModule) DetachFromIoModule(ifaceName string) (err error) {
 	return nil
 }
 
-func (sw *L2SwitchModule) FindFirstFreeLogicalPort() int {
-	for i := 1; i < config.SwitchPortsNumber+1; i++ {
+func (sw *L2SwitchModule) FindFirstFreeLogicalPort() (portNumber int, err error) {
+	for i := 0; i < config.SwitchPortsNumber; i++ {
 		if sw.PortsArray[i] == 0 {
-			return i
+			return i, nil
 		}
 	}
-	return 0
+	return -1, errors.New("No free port found")
 }
 
 // adds a entry in the forwarding table of the switch
