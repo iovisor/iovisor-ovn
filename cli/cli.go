@@ -101,107 +101,6 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 					ovnmonitor.PrintOvnMonitor(false, db)
 				}
 
-			// case "test":
-			// 	fmt.Printf("\ntest\n\n")
-			// 	//tests.TestModule(dataplane)
-			// case "config":
-			// 	config.PrintConfigCli()
-			// 	if len(args) == 3 {
-			// 		switch args[1] {
-			// 		case "PrintOvnNbChanges":
-			// 			switch args[2] {
-			// 			case "true":
-			// 				config.PrintOvnNbChanges = true
-			// 				fmt.Printf("OK\n")
-			// 			case "false":
-			// 				config.PrintOvnNbChanges = false
-			// 				fmt.Printf("OK\n")
-			// 			}
-			// 		case "PrintOvnSbChanges":
-			// 			switch args[2] {
-			// 			case "true":
-			// 				config.PrintOvnSbChanges = true
-			// 				fmt.Printf("OK\n")
-			// 			case "false":
-			// 				config.PrintOvnSbChanges = false
-			// 				fmt.Printf("OK\n")
-			// 			}
-			// 		case "PrintOvsChanges":
-			// 			switch args[2] {
-			// 			case "true":
-			// 				config.PrintOvsChanges = true
-			// 				fmt.Printf("OK\n")
-			// 			case "false":
-			// 				config.PrintOvsChanges = false
-			// 				fmt.Printf("OK\n")
-			// 			}
-			// 		}
-			// 	}
-			// case "ovncontroller", "o":
-			// 	if len(args) >= 1 {
-			// 		if len(args) == 1 {
-			// 			fmt.Printf("\n*********************OVN-NorthBound-Database***********************\n\n")
-			// 			ovnmonitor.PrintCache(hh.Nb)
-			// 			fmt.Printf("\n*********************OVN-SouthBound-Database***********************\n\n")
-			// 			ovnmonitor.PrintCache(hh.Sb)
-			// 			fmt.Printf("\n************************OVS-Local-Database*************************\n\n")
-			// 			ovnmonitor.PrintCache(hh.Ovs)
-			// 		}
-			// 		if len(args) == 2 {
-			// 			//switch
-			// 			switch args[1] {
-			// 			case "nb":
-			// 				fmt.Printf("\n*********************OVN-NorthBound-Database***********************\n\n")
-			// 				ovnmonitor.PrintCache(hh.Nb)
-			// 			case "sb":
-			// 				fmt.Printf("\n*********************OVN-SouthBound-Database***********************\n\n")
-			// 				ovnmonitor.PrintCache(hh.Sb)
-			// 			case "ovs":
-			// 				fmt.Printf("\n************************OVS-Local-Database*************************\n\n")
-			// 				ovnmonitor.PrintCache(hh.Ovs)
-			// 			default:
-			// 				PrintOvnControllerUsage()
-			// 			}
-			// 		}
-			// 		if len(args) >= 3 {
-			// 			PrintOvnControllerUsage()
-			// 		}
-			// 	} else {
-			// 		PrintOvnControllerUsage()
-			// 	}
-			// case "ovs":
-			// 	if len(args) >= 1 {
-			// 		if len(args) == 1 {
-			// 			ovnmonitor.PrintOvs(hh)
-			// 		} else {
-			// 			PrintOvsUsage()
-			// 		}
-			// 	} else {
-			// 		PrintOvsUsage()
-			// 	}
-			// case "nb":
-			// 	if len(args) >= 1 {
-			// 		if len(args) == 1 {
-			// 			ovnmonitor.PrintNb(hh)
-			// 		} else {
-			// 			if len(args) == 3 {
-			// 				switch args[2] {
-			// 				case "ls":
-			// 					ovnmonitor.PrintNbLogicalSwitch(hh, args[2])
-			// 				case "lsp":
-			// 					ovnmonitor.PrintNbLogicalSwitchPort(hh, args[2])
-			// 				default:
-			// 					PrintNbUsage()
-			// 				}
-			// 			} else {
-			// 				PrintNbUsage()
-			// 			}
-			// 		}
-			// 	} else {
-			// 		PrintNbUsage()
-			// 	}
-			// 	//fmt.Printf("\nNorthBound DB\n\n")
-			// 	//ovnmonitor.PrintNb(hh)
 			case "interfaces", "i":
 				fmt.Printf("\nInterfaces\n\n")
 				_, external_interfaces := hoverctl.ExternalInterfacesListGET(dataplane)
@@ -365,33 +264,6 @@ func TrimSuffix(s, suffix string) string {
 	return s
 }
 
-//
-// func PrintConfigUsage() {
-// 	fmt.Printf("\nConfig Usage\n\n")
-// 	fmt.Printf("	config              print Config\n")
-// 	fmt.Printf("	config <parameter> <value>\n")
-// }
-//
-// func PrintOvnControllerUsage() {
-// 	fmt.Printf("\nOvn Controller Usage\n\n")
-// 	fmt.Printf("	ovncontroller       print Databases\n")
-// 	fmt.Printf("	ovncontroller nb		print Nb\n")
-// 	fmt.Printf("	ovncontroller sb		print Sb\n")
-// 	fmt.Printf("	ovncontroller ovs		print Ovs\n")
-// }
-//
-// func PrintOvsUsage() {
-// 	fmt.Printf("\nOVS Usage\n\n")
-// 	fmt.Printf("	ovs     print the whole Ovs Local Database\n")
-// }
-//
-// func PrintNbUsage() {
-// 	fmt.Printf("\nNB Usage\n\n")
-// 	fmt.Printf("	nb                  print the whole NorthBound\n")
-// 	fmt.Printf("	nb ls   <ls-name>   print the Logical Switch table\n")
-// 	fmt.Printf("	nb lsp  <lsp-name>  print the Logical Switch Port table\n")
-// }
-
 func PrintTableUsage() {
 	fmt.Printf("\nTable Usage\n\n")
 	fmt.Printf("	table get\n")
@@ -443,10 +315,6 @@ func PrintHelp() {
 	fmt.Printf("	mainlogic, ml    prints mainlogic\n")
 	fmt.Printf("	ovnmonitor, ovn  prints ovnmonitor\n\n")
 
-	// fmt.Printf("	nb               prints NorthBound database local structs\n")
-	// fmt.Printf("	ovs              prints Ovs local database local structs\n\n")
-	// fmt.Printf("	config,c         config print and modify\n\n")
-	// fmt.Printf("	ovncontroller,o  prints OVN Databases\n\n")
 	fmt.Printf("	help, h          print help\n")
 	fmt.Printf("\n")
 	PrintModulesUsage()
@@ -454,8 +322,4 @@ func PrintHelp() {
 	PrintTableUsage()
 	PrintMainLogicUsage()
 	PrintOvnMonitorUsage()
-	// PrintNbUsage()
-	// PrintOvsUsage()
-	// PrintConfigUsage()
-	// PrintOvnControllerUsage()
 }
