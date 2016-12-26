@@ -168,7 +168,7 @@ static int handle_rx(void *skb, struct metadata *md) {
       iface_p = ports.lookup(&t);
 
       if (iface_p)
-        if (*iface_p != 0)
+        if (*iface_p != 0 && *iface_p != md->in_ifc)
           bpf_clone_redirect(skb, *iface_p, 0);
     }
 
