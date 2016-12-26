@@ -26,9 +26,11 @@ import (
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/l2switch"
 	"github.com/netgroup-polito/iovisor-ovn/mainlogic"
+	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
 )
 
 func Cli(dataplaneref *hoverctl.Dataplane) {
+	db := &mainlogic.Mon.DB
 	dataplane := dataplaneref
 	for {
 		reader := bufio.NewReader(os.Stdin)
@@ -66,6 +68,37 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 				} else {
 					fmt.Printf("\nMainLogic\n\n")
 					mainlogic.PrintMainLogic(false)
+				}
+
+			case "ovnmonitor", "ovn", "o":
+				if len(args) >= 2 {
+					switch args[1] {
+					case "-v":
+						fmt.Printf("\nOvnMonitor (verbose)\n\n")
+						ovnmonitor.PrintOvnMonitor(true, db)
+					case "switch", "s":
+						if len(args) >= 3 {
+							fmt.Printf("\nOvnMonitor Logical Switch %s\n\n", args[2])
+							ovnmonitor.PrintLogicalSwitchByName(args[2], db)
+						} else {
+							fmt.Printf("\nOvnMonitor Logical Switches \n\n")
+							ovnmonitor.PrintLogicalSwitches(true, db)
+						}
+					case "router", "r":
+						if len(args) >= 3 {
+							fmt.Printf("\nOvnMonitor Logical Router %s\n\n", args[2])
+							ovnmonitor.PrintLogicalRouterByName(args[2], db)
+						} else {
+							fmt.Printf("\nOvnMonitor Logical Routers \n\n")
+							ovnmonitor.PrintLogicalRouters(true, db)
+						}
+					case "interface", "i":
+						fmt.Printf("\nOvnMonitor Ovs Interfaces\n\n")
+						ovnmonitor.PrintOvsInterfaces(db)
+					}
+				} else {
+					fmt.Printf("\nOvn Monitor\n\n")
+					ovnmonitor.PrintOvnMonitor(false, db)
 				}
 
 			// case "test":
@@ -387,12 +420,17 @@ func PrintModulesUsage() {
 
 func PrintMainLogicUsage() {
 	fmt.Printf("\nMainLogic Usage\n\n")
-	fmt.Printf("	mainlogic\n")
-	fmt.Printf("	mainlogic -v (verbose)\n")
-	fmt.Printf("	mainlogic switch\n")
-	fmt.Printf("	mainlogic switch <switch-name>\n")
-	fmt.Printf("	mainlogic router\n")
-	fmt.Printf("	mainlogic router <router-name>\n")
+	fmt.Printf("	mainlogic (-v)\n")
+	fmt.Printf("	mainlogic switch (<switch-name>)\n")
+	fmt.Printf("	mainlogic router (<router-name>)\n")
+}
+
+func PrintOvnMonitorUsage() {
+	fmt.Printf("\nOvnMonitor Usage\n\n")
+	fmt.Printf("	ovnmonitor (-v)\n")
+	fmt.Printf("	ovnmonitor switch (<switch-name>)\n")
+	fmt.Printf("	ovnmonitor router (<router-name>)\n")
+	fmt.Printf("	ovnmonitor interface\n")
 }
 
 func PrintHelp() {
@@ -402,7 +440,9 @@ func PrintHelp() {
 	fmt.Printf("	modules, m       prints /modules/\n")
 	fmt.Printf("	links, l         prints /links/\n")
 	fmt.Printf("	table, t         prints tables\n\n")
-	fmt.Printf("	mainlogic, ml    prints mainlogic\n\n")
+	fmt.Printf("	mainlogic, ml    prints mainlogic\n")
+	fmt.Printf("	ovnmonitor, ovn  prints ovnmonitor\n\n")
+
 	// fmt.Printf("	nb               prints NorthBound database local structs\n")
 	// fmt.Printf("	ovs              prints Ovs local database local structs\n\n")
 	// fmt.Printf("	config,c         config print and modify\n\n")
@@ -413,6 +453,7 @@ func PrintHelp() {
 	PrintLinksUsage()
 	PrintTableUsage()
 	PrintMainLogicUsage()
+	PrintOvnMonitorUsage()
 	// PrintNbUsage()
 	// PrintOvsUsage()
 	// PrintConfigUsage()
