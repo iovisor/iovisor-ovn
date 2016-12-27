@@ -240,6 +240,9 @@ static int handle_rx(void *skb, struct metadata *md) {
         bpf_skb_store_bytes(skb, sizeof(*ethernet)+18, &remotemac, 6, 0);// tha
         bpf_skb_store_bytes(skb, sizeof(*ethernet)+24, &remoteip, 4, 0);// tpa
 
+        /* register the requesting mac and ips */
+        arp_table.update(&remoteip, &remotemac);
+
         pkt_redirect(skb, md, md->in_ifc);
 
         return RX_REDIRECT;
