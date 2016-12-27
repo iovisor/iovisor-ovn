@@ -222,23 +222,27 @@ static int handle_rx(void *skb, struct metadata *md) {
       if (arp->tpa == port->ip) {
         //bpf_trace_printk("[arp]: Somebody is asking for my address\n");
 
-        /* answer arp request */
-
-        u16 two = cpu_to_be16(0x0002);
-        u64 mymac = cpu_to_be64(port->mac<<16);
+        /* due to a bcc issue: https://github.com/iovisor/bcc/issues/537 it
+         * is necessary to copy the data field into a temporal variable
+         */
+        u64 mymac = port->mac;
         u64 remotemac = arp->sha;
-        remotemac = cpu_to_be64(remotemac<<16);
-        u32 myip = cpu_to_be32(port->ip);
+        u32 myip = port->ip;
         u32 remoteip = arp->spa;
-        remoteip = cpu_to_be32(remoteip);
 
-        bpf_skb_store_bytes(skb, 0, &remotemac, 6, 0); // dst_mac
-        bpf_skb_store_bytes(skb, 6, &mymac, 6, 0); // src_mac
-        bpf_skb_store_bytes(skb, sizeof(*ethernet)+6, &two, 2, 0); // operation
-        bpf_skb_store_bytes(skb, sizeof(*ethernet)+8, &mymac, 6, 0);// sha
-        bpf_skb_store_bytes(skb, sizeof(*ethernet)+14, &myip, 4, 1);// spa
-        bpf_skb_store_bytes(skb, sizeof(*ethernet)+18, &remotemac, 6, 0);// tha
-        bpf_skb_store_bytes(skb, sizeof(*ethernet)+24, &remoteip, 4, 0);// tpa
+        ethernet->dst = remotemac;
+        ethernet->src = mymac;
+
+        /* please note that the mac has to be copied before that the ips.  This
+         * is because the temporal variable used to save the mac has 8 byes, 2
+         * more than the mac itself.  Then when copying the mac into the packet
+         * the two first bytes of the ip are also modified.
+         */
+        arp->oper = 2;
+        arp->tha = remotemac;
+        arp->sha = mymac;
+        arp->tpa = remoteip;
+        arp->spa = myip;
 
         pkt_redirect(skb, md, md->in_ifc);
 
