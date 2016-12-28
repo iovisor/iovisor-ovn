@@ -13,8 +13,8 @@ Before running the examples it is necessary to install some components.
 Please see [installing minimal](#installing-minimal).
 
 # Examples
-* [switch](/switch): L2 switch connected to two virtual network interfaces
-* [router](/router): L3 router connected to three virtual network interfaces
+* [switch](switch): L2 switch connected to two virtual network interfaces
+* [router](router): L3 router connected to three virtual network interfaces
 
 # Installing Minimal
 
