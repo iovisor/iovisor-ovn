@@ -154,8 +154,6 @@ static int handle_rx(void *skb, struct metadata *md) {
     int i = 0;
     struct rt_entry *rt_entry_p = 0;
 
-    u64 new_src_mac = 0;
-    u64 new_dst_mac = 0;
     u32 out_port = 0;
     struct r_port *r_port_p = 0;
 
@@ -190,13 +188,18 @@ static int handle_rx(void *skb, struct metadata *md) {
     //change src mac
     r_port_p = router_port.lookup(&out_port);
     if (r_port_p) {
-      new_src_mac = cpu_to_be64(r_port_p->mac<<16);
-      bpf_skb_store_bytes(skb,ETH_SRC_OFFSET, &new_src_mac, 6, 0);
+      ethernet->src = r_port_p->mac;
     }
 
-    //change dst mac to ff:ff:ff:ff:ff:ff (TODO arp table)
-    new_dst_mac = 0xffffffffffff;
-    bpf_skb_store_bytes(skb, ETH_DST_OFFSET, &new_dst_mac, 6, 0);
+    //change dst mac
+    u32 dst_ip = ip->dst;
+    u64 new_dst_mac = 0xffffffffffff;
+    u64 *mac_entry = arp_table.lookup(&dst_ip);
+    if (mac_entry) {
+      new_dst_mac = *mac_entry;
+    }
+
+    ethernet->dst = new_dst_mac;
 
     #ifdef BPF_TRACE
       bpf_trace_printk("[router-%d]: eth_type:%x mac_scr:%lx mac_dst:%lx\n",
