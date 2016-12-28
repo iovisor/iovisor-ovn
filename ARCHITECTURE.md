@@ -4,6 +4,7 @@ IOVisor-OVN sits on side of the traditional OVN architecture, it intercepts the 
 
 ![IOVisor-OVN architecture](https://raw.githubusercontent.com/netgroup-polito/iovisor-ovn/master/images/iovisor-ovn-architecture.png)
 
+<center><a href="images/iovisor-ovn-architecture.png"><img src="images/iovisor-ovn-architecture.png" width=700></a></center>
 
 ## IOVisor-OVN daemon
 
