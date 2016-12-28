@@ -15,7 +15,7 @@ It creates a new data plane that is semantically equivalent to the original OvS-
 
 ## Architecture
 
-![IOVisor-OVN architecture](https://raw.githubusercontent.com/netgroup-polito/iovisor-ovn/master/images/iovisor-ovn-overview.png)
+<center><a href="images/iovisor-ovn-overview.png"><img src="images/iovisor-ovn-overview.png" width=700></a></center>
 
 IOVisor-OVN sits on side of the traditional OVN architecture, it intercepts the contents of the different databases and it deploys the required network services using the IOVisor technology.
 
