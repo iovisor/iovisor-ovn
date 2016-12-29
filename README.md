@@ -1,7 +1,7 @@
 # IOVisor-OVN
 
-IOVisor-OVN extends the current [OVN](https://github.com/openvswitch/ovs/) backend with [IOVisor](https://www.iovisor.org/) technology.
-It creates a new data plane that is semantically equivalent to the original OvS-based one, but based on IOVisor, that is exploits the eBPF virtual machine and can be integrated with the eXpress Data Path (XDP) technology for improved performance.
+IOVisor-OVN extends the current [Open Virtual Networking (OVN) project](https://github.com/openvswitch/ovs/) with a new backend absed on the [IOVisor](https://www.iovisor.org/) technology.
+In a nutshell, IOVisor-ION defines a new data plane that is semantically equivalent to the original one, mostly based on Open vSwitch. The new data plane exploits the eBPF virtual machine (also known as IOVisor) and in future it could be integrated with the eXpress Data Path (XDP) technology for improved performance.
 
 ### Why?
 
@@ -30,9 +30,8 @@ Please see [installation guide](./INSTALL.md)
 
 ## Tutorials
 
-[Tutorials folder](/tutorials) contains a step-by-step guide to try the current IOMdoules available.
-* [switch](tutorials/switch): L2 switch
-* [router](tutorials/router): L3 router
+Some tutorials intendend to provide a step-by-step guide to play with the existing IOModules are available in the [tutorial folder](/tutorials).
+
 
 ## Repository Organization:
 
