@@ -66,11 +66,13 @@ var switches map[string]*L2Switch
 var routers map[string]*Router
 
 var Dataplane *hoverctl.Dataplane
+var Mon *ovnmonitor.OVNMonitor
 
 func MainLogic() {
 
-	mon := ovnmonitor.CreateMonitor()
-	db, err := mon.Connect()
+	Mon = ovnmonitor.CreateMonitor()
+	db, err := Mon.Connect()
+
 	if err == false { // it is a quite odd that false means error
 		log.Errorf("Error connecting to OVN databases\n")
 		return
@@ -87,7 +89,7 @@ func MainLogic() {
 
 	var notifier MyNotifier
 	notifier.Update(db) // I think that there is an instant of time where the info could be lost
-	mon.Register(&notifier)
+	Mon.Register(&notifier)
 
 }
 
