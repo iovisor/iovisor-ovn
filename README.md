@@ -1,6 +1,6 @@
 # IOVisor-OVN
 
-IOVisor-OVN extends the current [Open Virtual Networking (OVN) project](https://github.com/openvswitch/ovs/) with a new backend absed on the [IOVisor](https://www.iovisor.org/) technology.
+IOVisor-OVN extends the current [Open Virtual Networking (OVN) project](https://github.com/openvswitch/ovs/) with a new backend based on the [IOVisor](https://www.iovisor.org/) technology.
 In a nutshell, IOVisor-ION defines a new data plane that is semantically equivalent to the original one, mostly based on Open vSwitch. The new data plane exploits the eBPF virtual machine (also known as IOVisor) and in future it could be integrated with the eXpress Data Path (XDP) technology for improved performance.
 
 ### Why?
