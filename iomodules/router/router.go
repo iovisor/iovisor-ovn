@@ -26,11 +26,8 @@ var RouterCode = `
 #include <linux/bpf.h>
 #include <linux/kernel.h>
 
-// #define BPF_TRACE
 #undef BPF_TRACE
-
 #define BPF_LOG
-// #undef BPF_LOG
 
 #define ROUTING_TABLE_DIM 10
 #define ROUTER_PORT_N     10
@@ -42,6 +39,9 @@ var RouterCode = `
 #define ETH_DST_OFFSET  0
 #define ETH_SRC_OFFSET  6
 #define ETH_TYPE_OFFSET 12
+
+#define ETH_TYPE_IP 0x0800
+#define ETH_TYPE_ARP 0x0806
 
 /*Routing Table Entry*/
 struct rt_entry{
@@ -101,13 +101,17 @@ static int handle_rx(void *skb, struct metadata *md) {
       md->module_id, ethernet->type, ethernet->src, ethernet->dst);
   #endif
 
-  //TODO
-  //sanity check of the packet.
-  //if something wrong -> DROP the packet
+  switch (ethernet->type) {
+    case ETH_TYPE_IP: goto IP;   //ipv4 packet
+    case ETH_TYPE_ARP: goto ARP; //arp packet
+  }
 
-  // is it an ipv4 packet?
-  if (ethernet->type == 0x0800) {
+  IP: ; //ipv4 packet
     struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
+
+    //TODO
+    //sanity check of the packet.
+    //if something wrong -> DROP the packet
 
     #ifdef BPF_TRACE
       bpf_trace_printk("[router-%d]: ttl:%u ip_scr:%x ip_dst:%x \n", md->module_id, ip->ttl, ip->src, ip->dst);
@@ -213,8 +217,8 @@ static int handle_rx(void *skb, struct metadata *md) {
 
     pkt_redirect(skb,md,out_port);
     return RX_REDIRECT;
-  }
-  else if(ethernet->type == 0x0806) { // is it ARP?
+
+  ARP: ; //arp packet
     struct arp_t *arp = cursor_advance(cursor, sizeof(*arp));
     if (arp->oper == 1) {	// arp request?
       //bpf_trace_printk("[arp]: packet is arp request\n");
@@ -254,9 +258,7 @@ static int handle_rx(void *skb, struct metadata *md) {
         arp_table.update(&remoteip, &remotemac);
 
         pkt_redirect(skb, md, md->in_ifc);
-
         return RX_REDIRECT;
-
       }
     }
     else if (arp->oper == 2) { //arp reply
@@ -272,8 +274,6 @@ static int handle_rx(void *skb, struct metadata *md) {
         return RX_DROP;
       }
     }
-  }
-
   return RX_DROP;
 }
 `
