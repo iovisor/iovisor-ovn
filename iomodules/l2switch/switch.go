@@ -62,14 +62,14 @@ BPF_TABLE("array", u32, u32, ports, MAX_PORTS);
   address. If no entry is associated with the port, the port security is not
   applied to the port.
 */
-BPF_TABLE("hash", struct ifindex, struct mac_t, securitymac, MAX_PORTS*2);
+BPF_TABLE("hash", struct ifindex, struct mac_t, securitymac, MAX_PORTS + 1);
 
 /*
   The Security Ip Table (securityip) associate to each port the allowed ip
   address. If no entry is associated with the port, the port security is not
   applied to the port.
 */
-BPF_TABLE("hash", struct ifindex, struct ip_leaf, securityip, MAX_PORTS*2);
+BPF_TABLE("hash", struct ifindex, struct ip_leaf, securityip, MAX_PORTS + 1);
 
 static int handle_rx(void *skb, struct metadata *md) {
   u8 *cursor = 0;
