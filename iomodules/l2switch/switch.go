@@ -15,12 +15,11 @@ package l2switch
 
 var SwitchSecurityPolicy = `
 #define BPF_TRACE
-//#undef BPF_TRACE
 
-//#define MAC_SECURITY_EGRESS
+#define IP_SECURITY_INGRESS
+#define MAC_SECURITY_INGRESS
 #undef MAC_SECURITY_EGRESS
 
-//Ports 32
 #define MAX_PORTS 32
 
 struct mac_t {
@@ -87,6 +86,7 @@ static int handle_rx(void *skb, struct metadata *md) {
   in_iface.ifindex = md->in_ifc;
 
   //port security on source mac
+  #ifdef MAC_SECURITY_INGRESS
   struct mac_t * mac_lookup;
   mac_lookup = securitymac.lookup(&in_iface);
   if (mac_lookup)
@@ -97,8 +97,10 @@ static int handle_rx(void *skb, struct metadata *md) {
       #endif
       return RX_DROP;
     }
+  #endif
 
   //port security on source ip
+  #ifdef IP_SECURITY_INGRESS
   if (ethernet->type == 0x0800) {
     struct ip_leaf *ip_lookup;
     ip_lookup = securityip.lookup(&in_iface);
@@ -112,6 +114,7 @@ static int handle_rx(void *skb, struct metadata *md) {
       }
     }
   }
+  #endif
 
   #ifdef BPF_TRACE
     bpf_trace_printk("[switch-%d]: mac src:%lx dst:%lx\n", md->module_id, ethernet->src, ethernet->dst);
@@ -204,7 +207,6 @@ static int handle_rx(void *skb, struct metadata *md) {
         pkt_redirect(skb, md, *iface_p);
         return RX_REDIRECT;
       }
-
 
     return RX_DROP;
   }
