@@ -29,6 +29,8 @@ var RouterCode = `
 #undef BPF_TRACE
 #define BPF_LOG
 
+#undef CHECK_MAC_DST
+
 #define ROUTING_TABLE_DIM 10
 #define ROUTER_PORT_N     10
 #define ARP_TABLE_DIM     10
@@ -42,6 +44,9 @@ var RouterCode = `
 
 #define ETH_TYPE_IP 0x0800
 #define ETH_TYPE_ARP 0x0806
+
+#define MAC_BROADCAST 0xffffffffffff
+#define MAC_MULTICAST_MASK 0x010000000000
 
 /*Routing Table Entry*/
 struct rt_entry{
@@ -79,6 +84,20 @@ BPF_TABLE("hash", u32, struct r_port, router_port, ROUTER_PORT_N);
 */
 BPF_TABLE("hash", u32, u64, arp_table, ARP_TABLE_DIM);
 
+/*
+  Check multicast bit of a mac address.
+  If the address is broadcast is also multicast, so test multicast condition
+  is enough.
+*/
+static inline bool is_multicast_or_broadcast(u64* mac){
+  u64 mask = 0;
+  mask = *mac & MAC_MULTICAST_MASK;
+  if (mask == 0)
+    return false;
+  else
+    return true;
+}
+
 static int handle_rx(void *skb, struct metadata *md) {
   u8 *cursor = 0;
   struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
@@ -89,6 +108,28 @@ static int handle_rx(void *skb, struct metadata *md) {
       md->module_id, ethernet->type, ethernet->src, ethernet->dst);
   #endif
 
+  /*
+    Check if the mac destination of the packet is multicast, broadcast, or the
+    unicast address of the router port.
+    If not, drop the packet.
+    Multicast addresses are managed as broadcast
+  */
+  #ifdef CHECK_MAC_DST
+  u64 ethdst = ethernet->dst;
+  if (!is_multicast_or_broadcast(&ethdst)){
+    struct r_port *r_port_p = 0;
+    r_port_p = router_port.lookup(&md->in_ifc);
+    if (r_port_p){
+      if (r_port_p->mac != ethernet->dst){
+        #ifdef BPF_LOG
+          bpf_trace_printk("[router-%d]: mac destination %lx MISMATCH %lx -> DROP packet.\n",md->module_id, ethernet->dst, r_port_p->mac);
+        #endif
+        return RX_DROP;
+      }
+    }
+  }
+  #endif
+
   switch (ethernet->type) {
     case ETH_TYPE_IP: goto IP;   //ipv4 packet
     case ETH_TYPE_ARP: goto ARP; //arp packet
@@ -96,10 +137,6 @@ static int handle_rx(void *skb, struct metadata *md) {
 
   IP: ; //ipv4 packet
     struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
-
-    //TODO
-    //sanity check of the packet.
-    //if something wrong -> DROP the packet
 
     #ifdef BPF_TRACE
       bpf_trace_printk("[router-%d]: ttl:%u ip_scr:%x ip_dst:%x \n", md->module_id, ip->ttl, ip->src, ip->dst);
