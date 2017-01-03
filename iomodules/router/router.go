@@ -57,12 +57,6 @@ struct r_port{
   u64 mac;      //mac addr: e.g. a1:b2:c3:ab:cd:ef
 };
 
-/*Arp Table Key*/
-struct arp_table_key{
-  u32 ip;       //ip addr : e.g. 192.168.1.2
-  u32 port;     //port    : e.g. 1
-};
-
 /*
   The Routing table is implemented as an array of struct rt_entry (Routing Table Entry)
   the longest prefix matching algorithm (at least a simplified version)
@@ -81,13 +75,7 @@ BPF_TABLE("array", u32, struct rt_entry, routing_table, ROUTING_TABLE_DIM);
 BPF_TABLE("hash", u32, struct r_port, router_port, ROUTER_PORT_N);
 
 /*
-  We shold have an arp table for each port of the router?
-  For now we assume to send packet exiting the router interfaces in broadcast
-  (mac dst = ff:ff:ff:ff:ff:ff)
-
-  How can we implement multiple arp tables?
-  One possible implementation using one single map is the following
-  key{ ip + port number } -> value {mac_address}
+  Arp Table implements a mapping between ip and mac addresses.
 */
 BPF_TABLE("hash", u32, u64, arp_table, ARP_TABLE_DIM);
 
