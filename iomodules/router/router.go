@@ -26,11 +26,10 @@ var RouterCode = `
 #include <linux/bpf.h>
 #include <linux/kernel.h>
 
-// #define BPF_TRACE
 #undef BPF_TRACE
-
 #define BPF_LOG
-// #undef BPF_LOG
+
+#undef CHECK_MAC_DST
 
 #define ROUTING_TABLE_DIM 10
 #define ROUTER_PORT_N     10
@@ -42,6 +41,12 @@ var RouterCode = `
 #define ETH_DST_OFFSET  0
 #define ETH_SRC_OFFSET  6
 #define ETH_TYPE_OFFSET 12
+
+#define ETH_TYPE_IP 0x0800
+#define ETH_TYPE_ARP 0x0806
+
+#define MAC_BROADCAST 0xffffffffffff
+#define MAC_MULTICAST_MASK 0x010000000000
 
 /*Routing Table Entry*/
 struct rt_entry{
@@ -55,12 +60,6 @@ struct r_port{
   u32 ip;       //ip addr : e.g. 192.168.1.254
   u32 netmask;  //netmask : e.g. 255.255.255.0
   u64 mac;      //mac addr: e.g. a1:b2:c3:ab:cd:ef
-};
-
-/*Arp Table Key*/
-struct arp_table_key{
-  u32 ip;       //ip addr : e.g. 192.168.1.2
-  u32 port;     //port    : e.g. 1
 };
 
 /*
@@ -81,15 +80,23 @@ BPF_TABLE("array", u32, struct rt_entry, routing_table, ROUTING_TABLE_DIM);
 BPF_TABLE("hash", u32, struct r_port, router_port, ROUTER_PORT_N);
 
 /*
-  We shold have an arp table for each port of the router?
-  For now we assume to send packet exiting the router interfaces in broadcast
-  (mac dst = ff:ff:ff:ff:ff:ff)
-
-  How can we implement multiple arp tables?
-  One possible implementation using one single map is the following
-  key{ ip + port number } -> value {mac_address}
+  Arp Table implements a mapping between ip and mac addresses.
 */
 BPF_TABLE("hash", u32, u64, arp_table, ARP_TABLE_DIM);
+
+/*
+  Check multicast bit of a mac address.
+  If the address is broadcast is also multicast, so test multicast condition
+  is enough.
+*/
+static inline bool is_multicast_or_broadcast(u64* mac){
+  u64 mask = 0;
+  mask = *mac & MAC_MULTICAST_MASK;
+  if (mask == 0)
+    return false;
+  else
+    return true;
+}
 
 static int handle_rx(void *skb, struct metadata *md) {
   u8 *cursor = 0;
@@ -101,12 +108,34 @@ static int handle_rx(void *skb, struct metadata *md) {
       md->module_id, ethernet->type, ethernet->src, ethernet->dst);
   #endif
 
-  //TODO
-  //sanity check of the packet.
-  //if something wrong -> DROP the packet
+  /*
+    Check if the mac destination of the packet is multicast, broadcast, or the
+    unicast address of the router port.
+    If not, drop the packet.
+    Multicast addresses are managed as broadcast
+  */
+  #ifdef CHECK_MAC_DST
+  u64 ethdst = ethernet->dst;
+  if (!is_multicast_or_broadcast(&ethdst)){
+    struct r_port *r_port_p = 0;
+    r_port_p = router_port.lookup(&md->in_ifc);
+    if (r_port_p){
+      if (r_port_p->mac != ethernet->dst){
+        #ifdef BPF_LOG
+          bpf_trace_printk("[router-%d]: mac destination %lx MISMATCH %lx -> DROP packet.\n",md->module_id, ethernet->dst, r_port_p->mac);
+        #endif
+        return RX_DROP;
+      }
+    }
+  }
+  #endif
 
-  // is it an ipv4 packet?
-  if (ethernet->type == 0x0800) {
+  switch (ethernet->type) {
+    case ETH_TYPE_IP: goto IP;   //ipv4 packet
+    case ETH_TYPE_ARP: goto ARP; //arp packet
+  }
+
+  IP: ; //ipv4 packet
     struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
 
     #ifdef BPF_TRACE
@@ -213,8 +242,8 @@ static int handle_rx(void *skb, struct metadata *md) {
 
     pkt_redirect(skb,md,out_port);
     return RX_REDIRECT;
-  }
-  else if(ethernet->type == 0x0806) { // is it ARP?
+
+  ARP: ; //arp packet
     struct arp_t *arp = cursor_advance(cursor, sizeof(*arp));
     if (arp->oper == 1) {	// arp request?
       //bpf_trace_printk("[arp]: packet is arp request\n");
@@ -254,9 +283,7 @@ static int handle_rx(void *skb, struct metadata *md) {
         arp_table.update(&remoteip, &remotemac);
 
         pkt_redirect(skb, md, md->in_ifc);
-
         return RX_REDIRECT;
-
       }
     }
     else if (arp->oper == 2) { //arp reply
@@ -272,8 +299,6 @@ static int handle_rx(void *skb, struct metadata *md) {
         return RX_DROP;
       }
     }
-  }
-
   return RX_DROP;
 }
 `
