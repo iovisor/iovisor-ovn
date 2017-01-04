@@ -53,6 +53,7 @@ struct rt_entry{
   u32 network;  //network: e.g. 192.168.1.0
   u32 netmask;  //netmask: e.g. 255.255.255.0
   u32 port;     //port of the router
+  u32 nexthop;  //next hop: e.g. 192.168.1.254 (0 if local)
 };
 
 /*Router Port*/
@@ -220,8 +221,14 @@ static int handle_rx(void *skb, struct metadata *md) {
       ethernet->src = r_port_p->mac;
     }
 
-    //change dst mac
-    u32 dst_ip = ip->dst;
+    u32 dst_ip = 0;
+    if (rt_entry_p->nexthop == 0){
+      //Next Hop is local, directly lookup in arp table for the destination ip.
+      dst_ip = ip->dst;
+    }else{
+      //Next Hop not local, lookup in arp table for the next hop ip address.
+      dst_ip = rt_entry_p->nexthop;
+    }
     u64 new_dst_mac = 0xffffffffffff;
     u64 *mac_entry = arp_table.lookup(&dst_ip);
     if (mac_entry) {
