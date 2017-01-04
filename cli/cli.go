@@ -231,6 +231,14 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 						} else {
 							PrintTableUsage()
 						}
+					case "post":
+						if len(args) == 6 {
+							fmt.Printf("\nTable POST\n\n")
+							_, tableEntry := hoverctl.TableEntryPOST(dataplane, args[2], args[3], args[4], args[5])
+							hoverctl.TableEntryPrint(tableEntry)
+						} else {
+							PrintTableUsage()
+						}
 					case "delete":
 						if len(args) == 5 {
 							fmt.Printf("\nTable DELETE\n\n")
