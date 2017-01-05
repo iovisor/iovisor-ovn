@@ -51,6 +51,7 @@ type RoutingTableEntry struct {
 	network string
 	netmask string
 	port    int
+	nexthop string
 }
 
 func Create(dp *hoverctl.Dataplane) *RouterModule {
@@ -228,6 +229,7 @@ func (r *RouterModule) DetachFromIoModule(ifaceName string) (err error) {
 
 // After a interface has been added, it is necessary to configure it before
 // it can be used to route packets
+//TODO I think we have to add next hop parameter here!
 func (r *RouterModule) ConfigureInterface(ifaceName string, ip string, netmask string, mac string) (err error) {
 	if !r.deployed {
 		errString := "Trying to configure an interface in undeployed router"
@@ -266,7 +268,7 @@ func (r *RouterModule) ConfigureInterface(ifaceName string, ip string, netmask s
 	network_ := ip_.Mask(netmask_)
 
 	// add route for that port
-	if !r.AddRoutingTableEntry(network_.String(), netmask, iface.IfaceIdRedirectHover) {
+	if !r.AddRoutingTableEntryLocal(network_.String(), netmask, iface.IfaceIdRedirectHover) {
 		errString := fmt.Sprintf("Error adding static route for port '%s' in router '%s'\n",
 			ifaceName, r.ModuleId)
 		log.Warningf(errString)
@@ -276,12 +278,20 @@ func (r *RouterModule) ConfigureInterface(ifaceName string, ip string, netmask s
 	return nil
 }
 
+// A local entry of the routing table indicates that the network interface is
+// directly attached, so there is no need of the next hop address.
+// This function force the routing table entry to be local, pushing 0 as nexthop
+func (r *RouterModule) AddRoutingTableEntryLocal(network string, netmask string, port int) (error bool) {
+	return r.AddRoutingTableEntry(network, netmask, port, "0")
+}
+
 // With the current implementation of the eBPF router this functions is a kind
 // of complicated.  This is because it has to add the routes in a sorte way in the
 // table, routes with the longest prefix should appear first.
 // However current implementation, it is the very first one, only adds the routes
 // one after the other, without performing this sorting
-func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, port int) (error bool) {
+// next hop is a string indicating the ip address of the nexthop, 0 if local iface
+func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, port int, nexthop string) (error bool) {
 
 	// look for a free entry in the routing table
 	index := -1
@@ -298,7 +308,7 @@ func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, port
 	}
 
 	stringIndex := strconv.Itoa(index)
-	toSend := "{" + ipToHexadecimalString(network) + " " + ipToHexadecimalString(netmask) + " " + strconv.Itoa(port) + "}"
+	toSend := "{" + ipToHexadecimalString(network) + " " + ipToHexadecimalString(netmask) + " " + strconv.Itoa(port) + " " + nexthop + "}"
 
 	hoverctl.TableEntryPUT(r.dataplane, r.ModuleId, "routing_table",
 		stringIndex, toSend)
@@ -306,6 +316,7 @@ func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, port
 	r.RoutingTable[index].network = network
 	r.RoutingTable[index].netmask = netmask
 	r.RoutingTable[index].port = port
+	r.RoutingTable[index].nexthop = nexthop
 
 	return true
 }
