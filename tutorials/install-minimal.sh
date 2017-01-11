@@ -11,10 +11,7 @@ libllvm3.7 llvm-3.7-dev libclang-3.7-dev python zlib1g-dev libelf-dev
 cd $DATA_DIR
 rm -rf bcc  # be sure that there is not al already git clone of bcc
 git clone https://github.com/iovisor/bcc.git
-# there is an issue with master bcc and hover. use a previous version of
-# bcc to avoid it.
 cd bcc
-git checkout d31f845e23899ff3b27b7e6f5a18330266fef2f3
 mkdir build; cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr
 make
