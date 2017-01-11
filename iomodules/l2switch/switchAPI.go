@@ -307,6 +307,22 @@ func (sw *L2SwitchModule) AddForwardingTableEntry(mac string, ifaceName string) 
 	return nil
 }
 
+func (sw *L2SwitchModule) AddPortSecurityMac(mac string, ifaceName string) (err error) {
+
+	swIface, ok := sw.Interfaces[ifaceName]
+	if !ok {
+		errString := fmt.Sprintf("Iface '%s' is not present in switch '%s'\n",
+			ifaceName, sw.ModuleId)
+		log.Warningf(errString)
+		return errors.New(errString)
+	}
+
+	macString := macToHexadecimalString(mac)
+
+	hoverctl.TableEntryPOST(sw.dataplane, sw.ModuleId, "securitymac", "{0x"+strconv.Itoa(swIface.IfaceIdRedirectHover)+"}", macString)
+	return nil
+}
+
 // TODO: this function should be smarter
 func macToHexadecimalString(s string) string {
 	var buffer bytes.Buffer
