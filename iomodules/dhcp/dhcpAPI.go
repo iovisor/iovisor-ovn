@@ -110,6 +110,13 @@ func (m *DhcpModule) AttachExternalInterface(ifaceName string) (err error) {
 		return errors.New(errString)
 	}
 
+	if m.ifaceName != "" {
+		errString := fmt.Sprintf("Module '%s' is already connected to interface '%s'\n",
+			m.ModuleId, ifaceName)
+		log.Errorf(errString)
+		return errors.New(errString)
+	}
+
 	linkError, linkHover := hoverctl.LinkPOST(m.dataplane, "i:"+ifaceName, m.ModuleId)
 	if linkError != nil {
 		log.Errorf("Error in POSTing the Link: %s\n", linkError)
@@ -143,6 +150,46 @@ func (m *DhcpModule) DetachExternalInterface(ifaceName string) (err error) {
 		log.Warningf("Problem removing iface '%s' from module '%s'\n",
 			ifaceName, m.ModuleId)
 		return linkDeleteError
+	}
+
+	m.linkIdHover = ""
+	m.ifaceName = ""
+	return nil
+}
+
+func (m *DhcpModule) AttachToIoModule(ifaceId int, ifaceName string) (err error) {
+
+	if !m.deployed {
+		errString := "Trying to attach port in undeployed module"
+		log.Errorf(errString)
+		return errors.New(errString)
+	}
+
+	if m.ifaceName != "" {
+		errString := fmt.Sprintf("Module '%s' is already connected to interface '%s'\n",
+			m.ModuleId, ifaceName)
+		log.Errorf(errString)
+		return errors.New(errString)
+	}
+
+	m.ifaceName = ifaceName
+	m.linkIdHover = ""
+
+	return nil
+}
+
+func (m *DhcpModule) DetachFromIoModule(ifaceName string) (err error) {
+	if !m.deployed {
+		errString := "Trying to detach port in undeployed module"
+		log.Errorf(errString)
+		return errors.New(errString)
+	}
+
+	if m.ifaceName != ifaceName {
+		errString := fmt.Sprintf("Iface '%s' is not present in module '%s'\n",
+			ifaceName, m.ModuleId)
+		log.Warningf(errString)
+		return errors.New(errString)
 	}
 
 	m.linkIdHover = ""
