@@ -22,9 +22,8 @@ package router
 //LONGEST PREFIX MATCHING trivialimplementation
 
 var RouterCode = `
-#include <linux/ip.h>
-#include <linux/bpf.h>
-#include <linux/kernel.h>
+#include <bcc/proto.h>
+#include <bcc/helpers.h>
 
 #undef BPF_TRACE
 #define BPF_LOG
