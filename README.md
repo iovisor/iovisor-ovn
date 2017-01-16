@@ -38,7 +38,7 @@ Some tutorials intendend to provide a step-by-step guide to play with the existi
 * **iomodules**: contains eBPF code (i.e., available IOModules).
 * **cli**: tool that implements the command line interface of IOVisor-OVN daemon.
 * **config**: contains a file with the default configuration parameters used when the daemon start.
-* **daemon**: contains the daemon main program entry point.
+* **iovisorovnd**: contains the daemon main program entry point.
 * **docs**: documentation about this project, presentations, talks.
 * **hoverctl**: hover restful api wrapper and utilities.
 * **mainlogic**: tool that performs the mapping between the network configuration of OVN and IOModules.

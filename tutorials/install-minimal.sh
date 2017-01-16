@@ -46,6 +46,6 @@ go get github.com/iovisor/iomodules/hover
 go install github.com/iovisor/iomodules/hover/hoverd
 
 echo "installing iovisor ovn"
-go get github.com/netgroup-polito/iovisor-ovn/daemon
+go get github.com/netgroup-polito/iovisor-ovn/iovisorovnd
 
 cd $_pwd
