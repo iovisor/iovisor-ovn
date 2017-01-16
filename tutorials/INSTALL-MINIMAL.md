@@ -44,7 +44,7 @@ In order to install hover please follow the steps in
 Installing iovisor-ovn is very easy, just use the go get command:
 
 ```bash
-go get github.com/netgroup-polito/iovisor-ovn/daemon
+go get github.com/netgroup-polito/iovisor-ovn/iovisorovnd
 ```
 
 After these steps you are ready to run the tutorials.
