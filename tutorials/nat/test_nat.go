@@ -85,6 +85,10 @@ func main() {
 		return
 	}
 
+	publicIp := "10.10.1.100"
+	log.Noticef("Set NAT public ip: " + publicIp)
+	n.SetPublicIp(publicIp)
+
 	log.Noticef("Attaching external interfaces...")
 
 	if err := n.AttachExternalInterface("veth1"); err != nil {

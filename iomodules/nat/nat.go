@@ -99,6 +99,23 @@ BPF_TABLE("hash", struct reverse_nat_key, struct reverse_nat_value, reverse_nat_
 BPF_TABLE("array", u32, u16, first_free_port, 1);
 
 /*
+  Public IP.
+*/
+BPF_TABLE("array", u32, u32, public_ip, 1);
+
+/*
+  returns the PUBLIC IP address set by control plane
+*/
+static inline u32 get_public_ip(){
+  u32 index = 0;
+  u32 * public_ip_p = 0;
+  public_ip_p = public_ip.lookup(&index);
+  if (public_ip_p)
+    return *public_ip_p;
+  return 0;
+}
+
+/*
   Allocates and returns the first free port for instantiate a new session.
 */
 static inline u16 get_free_port(){
@@ -133,7 +150,7 @@ static inline struct egress_nat_value * get_egress_value(u32 ip_src, u32 ip_dst,
   if (!egress_value_p){
     //Create rule for egress
     struct egress_nat_value egress_value = {};
-    egress_value.ip_src_new = PUBLIC_IP;
+    egress_value.ip_src_new = get_public_ip();
     egress_value.port_src_new = get_free_port();
 
     //push egress rule

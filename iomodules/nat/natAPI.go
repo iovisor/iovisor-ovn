@@ -16,6 +16,7 @@ package nat
 import (
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
@@ -204,6 +205,31 @@ func (n *NatModule) AttachToIoModule(ifaceId int, ifaceName string) (err error) 
 	return nil
 }
 
+func (n *NatModule) SetPublicIp(ip string) (err error) {
+	if !n.deployed {
+		errString := "undeployed nat"
+		log.Errorf(errString)
+		return errors.New(errString)
+	}
+
+	hoverctl.TableEntryPUT(n.dataplane, n.ModuleId, "public_ip", "0", ipToHexadecimalString(ip))
+
+	return nil
+}
+
 func (n *NatModule) DetachFromIoModule(ifaceName string) (err error) {
 	return errors.New("Not implemented")
+}
+
+func ipToHexadecimalString(ip string) string {
+
+	trial := net.ParseIP(ip)
+	if trial.To4() != nil {
+		ba := []byte(trial.To4())
+		// log.Debugf("0x%02x%02x%02x%02x\n", ba[0], ba[1], ba[2], ba[3])
+		ipv4HexStr := fmt.Sprintf("0x%02x%02x%02x%02x", ba[0], ba[1], ba[2], ba[3])
+		return ipv4HexStr
+	}
+
+	return ""
 }
