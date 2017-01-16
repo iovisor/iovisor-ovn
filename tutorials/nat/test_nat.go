@@ -43,6 +43,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/netgroup-polito/iovisor-ovn/common"
 	"github.com/netgroup-polito/iovisor-ovn/config"
@@ -89,6 +91,10 @@ func main() {
 	log.Noticef("Set NAT public ip: " + publicIp)
 	n.SetPublicIp(publicIp)
 
+	publicMac := getIfaceMacInNs("ns1", "veth1_")
+	log.Noticef("Set NAT public ip and mac : " + publicIp + " " + publicMac)
+	n.SetPublicPortAddresses(publicIp, publicMac)
+
 	log.Noticef("Attaching external interfaces...")
 
 	if err := n.AttachExternalInterface("veth1"); err != nil {
@@ -129,4 +135,22 @@ func getInterfaceMac(iface string) string {
 	}
 
 	return ifc.HardwareAddr.String()
+}
+
+func getIfaceMacInNs(namespace string, iface string) string {
+
+	var (
+		cmdOut []byte
+		err    error
+	)
+
+	cmdName := "sudo"
+	cmdArgs := []string{"ip", "netns", "exec", namespace, "ifconfig", iface /*, "|", "grep", "veth" "|", "awk", "'{print $5}'" */}
+	if cmdOut, err = exec.Command(cmdName, cmdArgs...).Output(); err == nil {
+		cmdStr := string(cmdOut)
+		res := strings.Fields(cmdStr)
+		return res[4]
+	} else {
+		return ""
+	}
 }

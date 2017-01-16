@@ -14,6 +14,7 @@
 package nat
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
@@ -217,6 +218,18 @@ func (n *NatModule) SetPublicIp(ip string) (err error) {
 	return nil
 }
 
+func (n *NatModule) SetPublicPortAddresses(ip string, mac string) (err error) {
+	if !n.deployed {
+		errString := "undeployed nat"
+		log.Errorf(errString)
+		return errors.New(errString)
+	}
+
+	hoverctl.TableEntryPUT(n.dataplane, n.ModuleId, "public_port", "0", "{ "+ipToHexadecimalString(ip)+" "+macToHexadecimalString(mac)+" }")
+
+	return nil
+}
+
 func (n *NatModule) DetachFromIoModule(ifaceName string) (err error) {
 	return errors.New("Not implemented")
 }
@@ -232,4 +245,19 @@ func ipToHexadecimalString(ip string) string {
 	}
 
 	return ""
+}
+
+// TODO: this function should be smarter
+func macToHexadecimalString(s string) string {
+	var buffer bytes.Buffer
+
+	buffer.WriteString("0x")
+	buffer.WriteString(s[0:2])
+	buffer.WriteString(s[3:5])
+	buffer.WriteString(s[6:8])
+	buffer.WriteString(s[9:11])
+	buffer.WriteString(s[12:14])
+	buffer.WriteString(s[15:17])
+
+	return buffer.String()
 }
