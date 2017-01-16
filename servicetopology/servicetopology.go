@@ -14,16 +14,12 @@
 package servicetopology
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
-	"flag"
-	"os"
 
 	"github.com/mvbpolito/gosexy/yaml"
 	"github.com/mvbpolito/gosexy/to"
 
-	"github.com/netgroup-polito/iovisor-ovn/common"
 	"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 
@@ -186,8 +182,8 @@ func DeployTopology(path string) error {
 	dataplane = hoverctl.NewDataplane()
 
 	// Connect to hover and initialize HoverDataplane
-	if err := dataplane.Init(config.hover); err != nil {
-		log.Errorf("unable to conect to Hover in '%s': %s", config.hover, err)
+	if err := dataplane.Init(config.Hover); err != nil {
+		log.Errorf("unable to conect to Hover in '%s': %s", config.Hover, err)
 		return err
 	}
 
@@ -196,7 +192,7 @@ func DeployTopology(path string) error {
 
 	conf, err := yaml.Open(path)
 	if err != nil {
-		fmt.Errorf("Failed to open configuraton fail '%s'", confFile)
+		fmt.Errorf("Failed to open configuraton fail '%s'", path)
 		return err
 	}
 
@@ -237,8 +233,7 @@ func DeployTopology(path string) error {
 		}
 	}
 
-	log.Noticef("Topology has been deployed correctly.");
-	log.Noticef("Press enter to destroy it: ");
+	return nil
 }
 
 func UndeployTopology() {

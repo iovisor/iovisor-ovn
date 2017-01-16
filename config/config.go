@@ -59,6 +59,9 @@ var PrintOvnNb = false
 var PrintOvnSb = false
 var PrintOvs = false
 
+// file with the topology to the used, if empty the deamon strats in "ovn mode"
+var TopologyFile = ""
+
 var log = l.MustGetLogger("iovisor-ovn-daemon")
 
 func PrintConfigCli() {
