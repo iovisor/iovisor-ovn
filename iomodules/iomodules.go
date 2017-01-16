@@ -28,6 +28,7 @@ type IoModule interface {
 	DetachExternalInterface(name string) (err error)
 	AttachToIoModule(IfaceId int, name string) (err error)
 	DetachFromIoModule(name string) (err error)
+	ConfigureFromMap(conf interface{}) (err error)
 }
 
 // this function attaches to modules together.  It performs the reques to hover

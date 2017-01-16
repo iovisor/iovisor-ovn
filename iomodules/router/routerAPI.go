@@ -20,6 +20,8 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/mvbpolito/gosexy/to"
+
 	//"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	l "github.com/op/go-logging"
@@ -325,6 +327,50 @@ func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, port
 //func (r *RouterModule) RemoveRoutingTableEntry(network string) {
 //
 //}
+
+func (r *RouterModule) ConfigureFromMap(conf interface{}) (err error) {
+	// The interface is a map that contains:
+	// interfaces: A list of maps for the interfaces present on the router, each
+	// of this has to have:
+	//		name, ip, netmask, mac
+	// static_router: A lis of map containing the static routes to be configured
+	// 		network: CIDR notation of the network
+	//		next_hop: how to reach that network
+	// FIXME: static routes interface is probably wrong
+	log.Infof("Configuring Router")
+	confMap := to.Map(conf)
+
+	// configure interfaces
+	if interfaces, ok := confMap["interfaces"]; ok {
+		for _, entry := range to.List(interfaces) {
+			entryMap := to.Map(entry)
+
+			name, ok1 := entryMap["name"]
+			ip, ok2 := entryMap["ip"]
+			netmask, ok3 := entryMap["netmask"]
+			mac, ok4 := entryMap["mac"]
+
+			if !ok1 || !ok2 || !ok3 || !ok4 {
+				log.Errorf("Skipping non valid interface")
+				continue
+			}
+
+			log.Infof("Configuring Interface '%s', '%s', '%s', '%s'",
+				name.(string), ip.(string), netmask.(string), mac.(string))
+
+			err := r.ConfigureInterface(name.(string), ip.(string),
+				netmask.(string), mac.(string))
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// TODO: configure static routes
+
+	return nil
+}
+
 
 // TODO: this function should be smarter
 func macToHexadecimalString(s string) string {
