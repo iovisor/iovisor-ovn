@@ -11,7 +11,7 @@ Connectivity is tested by pinging between the different namespaces
 In order to work, it is necessary to create two network namespaces and set two
 pairs of veth interfaces.
 
-Execute the 'setup.sh' script:
+Execute the [setup.sh](./setup.sh) script:
 
 ```bash
 sudo ./setup.sh
@@ -29,27 +29,9 @@ sudo $GOPATH/bin/hoverd -listen 127.0.0.1:5002
 
 ## Deploying the switch
 
-The `switch.yaml` file contains the  service topology for this example:
+The [switch.yaml](./switch.yaml) contains the configuration for this example.
 
-```
-modules:
-  - name: myswitch
-    type: switch
-
-external_interfaces:
-  - module: myswitch
-    iface: veth1
-  - module: myswitch
-    iface: veth2
-```
-
-In the section `modules` it is requested to deploy a switch.
-The switch implements a MAC learning algorithm, for that reason it is not necessary
-to pass any particular configuration.
-Section `external_interfaces` indicates that the switch module should be connected
-to `veth1` and `veth2` interfaces.
-
-Then, we are ready to launch it:
+In order to launch it please execute:
 
 ```bash
 export GOPATH=$HOME/go

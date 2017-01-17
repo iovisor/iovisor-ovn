@@ -15,7 +15,7 @@ is very similar to the switch case.
 The main difference here is that the three network interfaces are in different
 subnets and a default route is configured on each namespace.
 
-Execute the 'setup.sh' script:
+Execute the [setup.sh](./setup.sh) script:
 
 ```bash
 sudo ./setup.sh
@@ -33,45 +33,8 @@ sudo $GOPATH/bin/hoverd -listen 127.0.0.1:5002
 
 ## Deploying the router
 
-The `router.yaml` file describes the service topology, in this case it is composed
-of a single router module:
-
-```
-modules:
-  - name: myrouter
-    type: router
-    config:
-      interfaces:
-        - name: veth1
-          ip: 10.0.1.1
-          netmask: 255.255.255.0
-          mac: "82:73:8d:f3:62:01"
-
-        - name: veth2
-          ip: 10.0.2.1
-          netmask: 255.255.255.0
-          mac: "82:73:8d:f3:62:02"
-
-        - name: veth3
-          ip: 10.0.3.1
-          netmask: 255.255.255.0
-          mac: "82:73:8d:f3:62:03"
-
-external_interfaces:
-  - module: myrouter
-    iface: veth1
-  - module: myrouter
-    iface: veth2
-  - module: myrouter
-    iface: veth3
-```
-
-The file is very similar to the switch example, the only additional part is
-the router configuration.
-Each interface is configured with the name, ip, netmask and mac parameters, please
-note that the name of the interface must match an external interface or another
-module (covered in later examples), also the mac is the same assigned to the
-interfaces by the `setup.sh` script.
+The [router.yaml](./router.yaml) file contains the configuration of the router
+and its connections to the external interfaces.
 
 To launch the example please execute:
 
