@@ -27,4 +27,3 @@ mac1=$(sudo ip netns exec ns1 ifconfig | grep veth1 | awk '{print $5}')
 mac2=$(sudo ip netns exec ns2 ifconfig | grep veth2 | awk '{print $5}')
 
 sudo ip netns exec ns1 sudo arp -s 10.10.1.2 $mac2
-sudo ip netns exec ns2 sudo arp -s 10.10.1.100 $mac1
