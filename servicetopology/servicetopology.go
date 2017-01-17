@@ -235,7 +235,7 @@ func DeployTopology(path string) error {
 	log.Noticef("Configuring Modules")
 	for name, m := range modules {
 		if conf, ok := modulesConfig[name]; ok {
-			err := m.ConfigureFromMap(conf)
+			err := m.Configure(conf)
 			if err != nil {
 				log.Errorf("Error configuring Module '%s': %s", name, err)
 				return err

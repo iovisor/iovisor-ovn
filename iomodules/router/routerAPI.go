@@ -328,7 +328,7 @@ func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, port
 //
 //}
 
-func (r *RouterModule) ConfigureFromMap(conf interface{}) (err error) {
+func (r *RouterModule) Configure(conf interface{}) (err error) {
 	// The interface is a map that contains:
 	// interfaces: A list of maps for the interfaces present on the router, each
 	// of this has to have:

@@ -325,7 +325,7 @@ func (sw *L2SwitchModule) AddPortSecurityMac(mac string, ifaceName string) (err 
 	return nil
 }
 
-func (sw *L2SwitchModule) ConfigureFromMap(conf interface{}) (err error) {
+func (sw *L2SwitchModule) Configure(conf interface{}) (err error) {
 	// The interface is a map with the following elements:
 	// forwarding_table: a list of maps, each one has:
 	//		port: the port where mac can be reached

@@ -201,7 +201,8 @@ func (m *DhcpModule) DetachFromIoModule(ifaceName string) (err error) {
 	return nil
 }
 
-func (m *DhcpModule) Configure(pool net.IPNet, dns net.IP, router net.IP,
+// TODO: this function should be split on smaller pieces.
+func (m *DhcpModule) ConfigureParameters(pool net.IPNet, dns net.IP, router net.IP,
 	leaseTime uint32, serverMac net.HardwareAddr, serverIp net.IP) (err error) {
 	if !m.deployed {
 		errString := "Trying to configure undeployed module"
@@ -248,7 +249,7 @@ func (m *DhcpModule) Configure(pool net.IPNet, dns net.IP, router net.IP,
 	return nil
 }
 
-func (m *DhcpModule) ConfigureFromMap(conf interface{}) (err error) {
+func (m *DhcpModule) Configure(conf interface{}) (err error) {
 	// conf is a map that contains:
 	//		pool: CIDR notation of the address pool
 	// 		dns: ip address of the DNS given to clients
@@ -300,7 +301,7 @@ func (m *DhcpModule) ConfigureFromMap(conf interface{}) (err error) {
 	mac_server, _ := net.ParseMAC(server_mac_.(string))
 	ip_server := net.ParseIP(server_ip_.(string))
 
-	return m.Configure(*pool, dns, gw, lease_time, mac_server, ip_server)
+	return m.ConfigureParameters(*pool, dns, gw, lease_time, mac_server, ip_server)
 }
 
 // TODO: this function should be smarter
