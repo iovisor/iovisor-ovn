@@ -58,8 +58,7 @@ func deployModules(modulesRequested []interface{}) error {
 		mtype := mtype_.(string)
 		config_, configok := iMap["config"]
 		if !configok {
-			errString := fmt.Sprintf("config is missing in module '%s'", name)
-			return errors.New(errString)
+			log.Warningf("config is missing in module '%s'", name)
 		}
 		config := to.Map(config_)
 
@@ -84,7 +83,9 @@ func deployModules(modulesRequested []interface{}) error {
 		}
 
 		modules[name] = m
-		modulesConfig[name] = config
+		if configok {
+			modulesConfig[name] = config
+		}
 	}
 
 	return nil
@@ -192,13 +193,16 @@ func DeployTopology(path string) error {
 
 	conf, err := yaml.Open(path)
 	if err != nil {
-		fmt.Errorf("Failed to open configuraton fail '%s'", path)
+		log.Errorf("Failed to open configuraton fail '%s'", path)
 		return err
 	}
 
 	// deploy iomodules
 	log.Noticef("Deploying Modules")
 	modulesRequested := conf.Get("modules")
+	if modulesRequested == nil {
+		return errors.New("No modules present on tolology file")
+	}
 	if err := deployModules(to.List(modulesRequested)); err != nil {
 		log.Errorf("Error deploying modules: %s", err)
 		// TODO: undeploy modules
@@ -208,28 +212,36 @@ func DeployTopology(path string) error {
 	// link modules together
 	log.Noticef("Linking Modules")
 	linksRequested := conf.Get("links")
-	if err := linkModules(to.List(linksRequested)); err != nil {
-		log.Errorf("%s", err)
-		// TODO: remove links and undeploy modules
-		return err
+	if linksRequested != nil {
+		if err := linkModules(to.List(linksRequested)); err != nil {
+			log.Errorf("%s", err)
+			// TODO: remove links and undeploy modules
+			return err
+		}
 	}
 
 	// link modules to external interfaces
 	log.Noticef("Connecting external interfaces to Modules")
 	externalInterfacesRequested := conf.Get("external_interfaces")
-	if err := linkModulesToInterfaces(to.List(externalInterfacesRequested)); err != nil {
-		log.Errorf("%s", err)
-		// TODO: remove links and undeploy modules
-		return err
+	if externalInterfacesRequested != nil {
+		if err := linkModulesToInterfaces(to.List(externalInterfacesRequested)); err != nil {
+			log.Errorf("%s", err)
+			// TODO: remove links and undeploy modules
+			return err
+		}
 	}
 
 	// configure modules
 	log.Noticef("Configuring Modules")
 	for name, m := range modules {
-		err := m.ConfigureFromMap(modulesConfig[name])
-		if err != nil {
-			log.Errorf("Error configuring Module '%s': %s", name, err)
-			return err
+		if conf, ok := modulesConfig[name]; ok {
+			err := m.ConfigureFromMap(conf)
+			if err != nil {
+				log.Errorf("Error configuring Module '%s': %s", name, err)
+				return err
+			}
+		} else {
+			log.Warningf("sikipping module '%s' without configuration", name);
 		}
 	}
 
