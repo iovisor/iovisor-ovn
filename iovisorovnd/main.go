@@ -56,7 +56,6 @@ func main() {
 
 	//Parse Cmdline args
 	flag.Parse()
-	config.PrintConfig()
 
 	//Init Logger
 	common.LogInit()
@@ -72,6 +71,7 @@ func main() {
 		// TODO: defer call to servicetopologyUndeploy
 	} else {
 		// topologyFile argument was not passed, then connect to OVN
+		config.PrintConfig()
 		//Monitors started here!
 		mainlogic.MainLogic()
 
