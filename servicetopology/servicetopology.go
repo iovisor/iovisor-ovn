@@ -27,6 +27,7 @@ import (
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/dhcp"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/l2switch"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/router"
+	"github.com/netgroup-polito/iovisor-ovn/iomodules/nat"
 
 	l "github.com/op/go-logging"
 )
@@ -71,6 +72,8 @@ func deployModules(modulesRequested []interface{}) error {
 			m = router.Create(dataplane)
 		case "switch":
 			m = l2switch.Create(dataplane)
+		case "nat":
+			m = nat.Create(dataplane)
 		default:
 			errString := fmt.Sprintf("Invalid module type '%s' for module '%s'",
 				mtype, name)

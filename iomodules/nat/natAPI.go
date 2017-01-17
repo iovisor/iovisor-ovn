@@ -20,6 +20,8 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/mvbpolito/gosexy/to"
+
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	l "github.com/op/go-logging"
 )
@@ -232,6 +234,43 @@ func (n *NatModule) SetPublicPortAddresses(ip string, mac string) (err error) {
 
 func (n *NatModule) DetachFromIoModule(ifaceName string) (err error) {
 	return errors.New("Not implemented")
+}
+
+func (n *NatModule) Configure(conf interface{}) (err error) {
+	// conf is a map that contains:
+	//		public_ip: ip that is put as src address on the ongoing packets
+	//		public_port_ip:
+	//		public_port_mac:
+
+	log.Infof("Configuring NAT module")
+	confMap := to.Map(conf)
+
+	public_ip, ok1 := confMap["public_ip"]
+	if !ok1 {
+		return errors.New("Missing public_ip")
+	}
+
+	err = n.SetPublicIp(public_ip.(string))
+	if err != nil {
+		return
+	}
+
+	public_port_ip, ok2 := confMap["public_port_ip"]
+	if !ok2 {
+		return errors.New("Missing public_port_ip")
+	}
+
+	public_port_mac, ok3 := confMap["public_port_mac"]
+	if !ok3 {
+		return errors.New("Missing public_port_mac")
+	}
+
+	err = n.SetPublicPortAddresses(public_port_ip.(string), public_port_mac.(string))
+	if err != nil {
+		return
+	}
+
+	return nil;
 }
 
 func ipToHexadecimalString(ip string) string {
