@@ -29,13 +29,32 @@ sudo $GOPATH/bin/hoverd -listen 127.0.0.1:5002
 
 ## Deploying the switch
 
-The 'test_switch.go' script deploys a switch module and connects the veth1 and veth2
-interfaces to it
+The `switch.yaml` file contains the  service topology for this example:
+
+```
+modules:
+  - name: myswitch
+    type: switch
+
+external_interfaces:
+  - module: myswitch
+    iface: veth1
+  - module: myswitch
+    iface: veth2
+```
+
+In the section `modules` it is requested to deploy a switch.
+The switch implements a MAC learning algorithm, for that reason it is not necessary
+to pass any particular configuration.
+Section `external_interfaces` indicates that the switch module should be connected
+to `veth1` and `veth2` interfaces.
+
+Then, we are ready to launch it:
 
 ```bash
 export GOPATH=$HOME/go
-cd $GOPATH/src/github.com/netgroup-polito/iovisor-ovn/tutorials/switch
-go run test_switch.go -hover http://127.0.0.1:5002
+cd $GOPATH/src/github.com/netgroup-polito/iovisor-ovn/examples/switch
+$GOPATH/bin/iovisorovnd -topologyFile switch.yaml -hover http://127.0.0.1:5002
 ```
 
 ## Testing connectivity

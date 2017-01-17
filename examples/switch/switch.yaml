@@ -1,0 +1,13 @@
+# This is a simple service topology composed only by a switch.
+# No configuration is passed to the switch and it is connected to two external
+# interfaces
+
+modules:
+  - name: myswitch
+    type: switch
+
+external_interfaces:
+  - module: myswitch
+    iface: veth1
+  - module: myswitch
+    iface: veth2
