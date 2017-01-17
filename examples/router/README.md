@@ -33,13 +33,52 @@ sudo $GOPATH/bin/hoverd -listen 127.0.0.1:5002
 
 ## Deploying the router
 
-The 'test_router.go' script deploys a router module and connects the veth1,
-veth2 and veth3 interfaces to it
+The `router.yaml` file describes the service topology, in this case it is composed
+of a single router module:
+
+```
+modules:
+  - name: myrouter
+    type: router
+    config:
+      interfaces:
+        - name: veth1
+          ip: 10.0.1.1
+          netmask: 255.255.255.0
+          mac: "82:73:8d:f3:62:01"
+
+        - name: veth2
+          ip: 10.0.2.1
+          netmask: 255.255.255.0
+          mac: "82:73:8d:f3:62:02"
+
+        - name: veth3
+          ip: 10.0.3.1
+          netmask: 255.255.255.0
+          mac: "82:73:8d:f3:62:03"
+
+external_interfaces:
+  - module: myrouter
+    iface: veth1
+  - module: myrouter
+    iface: veth2
+  - module: myrouter
+    iface: veth3
+```
+
+The file is very similar to the switch example, the only additional part is
+the router configuration.
+Each interface is configured with the name, ip, netmask and mac parameters, please
+note that the name of the interface must match an external interface or another
+module (covered in later examples), also the mac is the same assigned to the
+interfaces by the `setup.sh` script.
+
+To launch the example please execute:
 
 ```bash
 export GOPATH=$HOME/go
-cd $GOPATH/src/github.com/netgroup-polito/iovisor-ovn/tutorials/router
-go run test_router.go -hover http://127.0.0.1:5002
+cd $GOPATH/src/github.com/netgroup-polito/iovisor-ovn/examples/switch
+$GOPATH/bin/iovisorovnd -topologyFile router.yaml -hover http://127.0.0.1:5002
 ```
 
 ## Testing connectivity
