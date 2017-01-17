@@ -59,8 +59,9 @@ var PrintOvnNb = false
 var PrintOvnSb = false
 var PrintOvs = false
 
-// file with the topology to the used, if empty the deamon strats in "ovn mode"
-var TopologyFile = ""
+// file with the iomodules configuration to the used, if empty the deamon starts
+// in "OpenStack/ovn mode"
+var File = ""
 
 var log = l.MustGetLogger("iovisor-ovn-daemon")
 

@@ -32,7 +32,7 @@ var log = l.MustGetLogger("iovisor-ovn-daemon")
 
 func init() {
 
-	flag.StringVar(&config.TopologyFile, "topologyFile", "", "path to topology file")
+	flag.StringVar(&config.File, "file", "", "path to configuration file")
 
 	flag.StringVar(&config.Nb, "nb", config.Nb, "nb db address:port")
 	flag.StringVar(&config.Sb, "sb", config.Sb, "sb db address:port")
@@ -60,9 +60,9 @@ func main() {
 	//Init Logger
 	common.LogInit()
 
-	if config.TopologyFile != "" {
-		// topologyFile has been passed, deploy this without connecting to OVN
-		err := servicetopology.DeployTopology(config.TopologyFile)
+	if config.File != "" {
+		// file has been passed, deploy this without connecting to OVN
+		err := servicetopology.DeployTopology(config.File)
 		if err != nil {
 			log.Errorf("Error deploying topology, please verify your topology file");
 		}

@@ -54,7 +54,7 @@ Then, we are ready to launch it:
 ```bash
 export GOPATH=$HOME/go
 cd $GOPATH/src/github.com/netgroup-polito/iovisor-ovn/examples/switch
-$GOPATH/bin/iovisorovnd -topologyFile switch.yaml -hover http://127.0.0.1:5002
+$GOPATH/bin/iovisorovnd -file switch.yaml -hover http://127.0.0.1:5002
 ```
 
 ## Testing connectivity

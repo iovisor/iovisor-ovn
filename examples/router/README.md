@@ -78,7 +78,7 @@ To launch the example please execute:
 ```bash
 export GOPATH=$HOME/go
 cd $GOPATH/src/github.com/netgroup-polito/iovisor-ovn/examples/switch
-$GOPATH/bin/iovisorovnd -topologyFile router.yaml -hover http://127.0.0.1:5002
+$GOPATH/bin/iovisorovnd -file router.yaml -hover http://127.0.0.1:5002
 ```
 
 ## Testing connectivity
