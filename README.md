@@ -21,12 +21,14 @@ IOVisor-OVN sits on side of the traditional OVN architecture, it intercepts the 
 
 For more details about the architecture please see [architecture details](./ARCHITECTURE.md).
 
-## Install
+## Getting Started
 
-It is possible to install and deploy a complete OpenStack environment with IOVisor-OVN as network backend.
-The process is automatically managed by DevStack scripts.
+IOVisor-OVN can be used in two different ways:
 
-Please see [installation guide](./INSTALL.md)
+- The default mode provides a network backend based on IOVisor for OpenStack. 
+Please read [README_OPENSTACK](./README_OPENSTACK.md) to get further details.
+- An additional mode allows to test the IOModules alone without using OVN. 
+Please see  [README_STANDALONE](./README_STANDALONE.md) 
 
 ## Tutorials
 
