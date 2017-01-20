@@ -12,8 +12,8 @@ In order to automatically install all the required components please execute the
 
 ```bash
 git clone https://github.com/netgroup-polito/iovisor-ovn.git
-cd iovisor-ovn/tutorials/
-./install-minimal.sh
+cd iovisor-ovn/
+./install_alone.sh
 ```
 
 ### Manual Installation
@@ -67,8 +67,8 @@ external_interfaces:
 ```
 The file is composed of three sections: modules, links and external_interfaces.
 
-1. **modules**: This section contains the modules to be deployed. 
-The name and type are mandatory, while the configuration is optional and different for each kind of IOModules. 
+1. **modules**: This section contains the modules to be deployed.
+The name and type are mandatory, while the configuration is optional and different for each kind of IOModules.
 Please see the documentation of each single IOModule to get information about the configuration parameters.
 
 2. **links**: These are the links between the different IOModules, "from" and "to" must correspond to the name of modules in the "modules" section.
