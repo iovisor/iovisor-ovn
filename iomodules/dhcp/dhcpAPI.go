@@ -69,7 +69,7 @@ func (m *DhcpModule) Deploy() (err error) {
 	dhcpError, dhcpHover := hoverctl.ModulePOST(m.dataplane, "bpf",
 		"DHCP", DhcpServer)
 	if dhcpError != nil {
-		log.Errorf("Error in POST Switch IOModule: %s\n", dhcpError)
+		log.Errorf("Error in POST dhcp IOModule: %s\n", dhcpError)
 		return dhcpError
 	}
 

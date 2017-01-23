@@ -25,7 +25,7 @@ import (
 	l "github.com/op/go-logging"
 )
 
-var log = l.MustGetLogger("iomodules-switch")
+var log = l.MustGetLogger("iomodules-router")
 
 type RouterModule struct {
 	ModuleId     string
@@ -165,7 +165,7 @@ func (r *RouterModule) AttachExternalInterface(ifaceName string) (err error) {
 func (r *RouterModule) DetachExternalInterface(ifaceName string) (err error) {
 
 	if !r.deployed {
-		errString := "Trying to detach port in undeployed switch"
+		errString := "Trying to detach port in undeployed router"
 		log.Errorf(errString)
 		return errors.New(errString)
 	}
