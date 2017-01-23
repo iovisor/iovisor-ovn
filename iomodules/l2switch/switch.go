@@ -162,6 +162,10 @@ static int handle_rx(void *skb, struct metadata *md) {
       }
     #endif
 
+    /* do not send packet back on the ingress interface */
+    if (dst_interface->ifindex == md->in_ifc)
+      return RX_DROP;
+
     pkt_redirect(skb, md, dst_interface->ifindex);
 
     #ifdef BPF_TRACE
