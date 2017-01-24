@@ -50,7 +50,7 @@ type RouterModuleInterface struct {
 type RoutingTableEntry struct {
 	network string
 	netmask string
-	port    int
+	outputIface string
 	nexthop string
 }
 
@@ -268,7 +268,7 @@ func (r *RouterModule) ConfigureInterface(ifaceName string, ip string, netmask s
 	network_ := ip_.Mask(netmask_)
 
 	// add route for that port
-	if !r.AddRoutingTableEntryLocal(network_.String(), netmask, iface.IfaceIdRedirectHover) {
+	if !r.AddRoutingTableEntryLocal(network_.String(), netmask, ifaceName) {
 		errString := fmt.Sprintf("Error adding static route for port '%s' in router '%s'\n",
 			ifaceName, r.ModuleId)
 		log.Warningf(errString)
@@ -281,8 +281,8 @@ func (r *RouterModule) ConfigureInterface(ifaceName string, ip string, netmask s
 // A local entry of the routing table indicates that the network interface is
 // directly attached, so there is no need of the next hop address.
 // This function force the routing table entry to be local, pushing 0 as nexthop
-func (r *RouterModule) AddRoutingTableEntryLocal(network string, netmask string, port int) (error bool) {
-	return r.AddRoutingTableEntry(network, netmask, port, "0")
+func (r *RouterModule) AddRoutingTableEntryLocal(network string, netmask string, outputIface string) (error bool) {
+	return r.AddRoutingTableEntry(network, netmask, outputIface, "0")
 }
 
 // With the current implementation of the eBPF router this functions is a kind
@@ -291,7 +291,7 @@ func (r *RouterModule) AddRoutingTableEntryLocal(network string, netmask string,
 // However current implementation, it is the very first one, only adds the routes
 // one after the other, without performing this sorting
 // next hop is a string indicating the ip address of the nexthop, 0 if local iface
-func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, port int, nexthop string) (error bool) {
+func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, outputIface string, nexthop string) (error bool) {
 
 	// look for a free entry in the routing table
 	index := -1
@@ -307,15 +307,26 @@ func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, port
 		return false
 	}
 
+	iface, ok := r.Interfaces[outputIface]
+
+	if !ok {
+		errString := fmt.Sprintf("Iface '%s' is not present in router '%s'\n",
+			outputIface, r.ModuleId)
+		log.Warningf(errString)
+		return false
+	}
+
 	stringIndex := strconv.Itoa(index)
-	toSend := "{" + ipToHexadecimalString(network) + " " + ipToHexadecimalString(netmask) + " " + strconv.Itoa(port) + " " + nexthop + "}"
+	toSend := "{" + ipToHexadecimalString(network) + " " +
+		ipToHexadecimalString(netmask) + " " +
+		strconv.Itoa(iface.IfaceIdRedirectHover) + " " + nexthop + "}"
 
 	hoverctl.TableEntryPUT(r.dataplane, r.ModuleId, "routing_table",
 		stringIndex, toSend)
 
 	r.RoutingTable[index].network = network
 	r.RoutingTable[index].netmask = netmask
-	r.RoutingTable[index].port = port
+	r.RoutingTable[index].outputIface = outputIface
 	r.RoutingTable[index].nexthop = nexthop
 
 	return true
