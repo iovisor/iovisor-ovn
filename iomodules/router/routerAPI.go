@@ -270,7 +270,7 @@ func (r *RouterModule) ConfigureInterface(ifaceName string, ip string, netmask s
 	network_ := ip_.Mask(netmask_)
 
 	// add route for that port
-	if !r.AddRoutingTableEntryLocal(network_.String(), netmask, ifaceName) {
+	if r.AddRoutingTableEntryLocal(network_.String(), netmask, ifaceName) != nil {
 		errString := fmt.Sprintf("Error adding static route for port '%s' in router '%s'\n",
 			ifaceName, r.ModuleId)
 		log.Warningf(errString)
@@ -283,8 +283,8 @@ func (r *RouterModule) ConfigureInterface(ifaceName string, ip string, netmask s
 // A local entry of the routing table indicates that the network interface is
 // directly attached, so there is no need of the next hop address.
 // This function force the routing table entry to be local, pushing 0 as nexthop
-func (r *RouterModule) AddRoutingTableEntryLocal(network string, netmask string, outputIface string) (error bool) {
-	return r.AddRoutingTableEntry(network, netmask, outputIface, "0")
+func (r *RouterModule) AddRoutingTableEntryLocal(network string, netmask string, outputIface string) (err error) {
+	return r.AddRoutingTableEntry(network, netmask, outputIface, "0.0.0.0")
 }
 
 // With the current implementation of the eBPF router this functions is a kind
@@ -293,7 +293,7 @@ func (r *RouterModule) AddRoutingTableEntryLocal(network string, netmask string,
 // However current implementation, it is the very first one, only adds the routes
 // one after the other, without performing this sorting
 // next hop is a string indicating the ip address of the nexthop, 0 if local iface
-func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, outputIface string, nexthop string) (error bool) {
+func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, outputIface string, nexthop string) (err error) {
 
 	// look for a free entry in the routing table
 	index := -1
@@ -305,8 +305,7 @@ func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, outp
 	}
 
 	if index == -1 {
-		log.Errorf("Routing table is full\n")
-		return false
+		return errors.New("Routing table is full")
 	}
 
 	iface, ok := r.Interfaces[outputIface]
@@ -315,13 +314,14 @@ func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, outp
 		errString := fmt.Sprintf("Iface '%s' is not present in router '%s'\n",
 			outputIface, r.ModuleId)
 		log.Warningf(errString)
-		return false
+		return errors.New(errString)
 	}
 
 	stringIndex := strconv.Itoa(index)
 	toSend := "{" + ipToHexadecimalString(network) + " " +
 		ipToHexadecimalString(netmask) + " " +
-		strconv.Itoa(iface.IfaceIdRedirectHover) + " " + nexthop + "}"
+		strconv.Itoa(iface.IfaceIdRedirectHover) + " " +
+		ipToHexadecimalString(nexthop) + "}"
 
 	hoverctl.TableEntryPUT(r.dataplane, r.ModuleId, "routing_table",
 		stringIndex, toSend)
@@ -331,7 +331,7 @@ func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, outp
 	r.RoutingTable[index].outputIface = outputIface
 	r.RoutingTable[index].nexthop = nexthop
 
-	return true
+	return nil
 }
 
 // TODO: Implement this function
@@ -344,10 +344,12 @@ func (r *RouterModule) Configure(conf interface{}) (err error) {
 	// interfaces: A list of maps for the interfaces present on the router, each
 	// of this has to have:
 	//		name, ip, netmask, mac
-	// static_router: A lis of map containing the static routes to be configured
-	// 		network: CIDR notation of the network
-	//		next_hop: how to reach that network
-	// FIXME: static routes interface is probably wrong
+	// static_routes: A list of map containing the static routes to be configured
+	// 		network: network address
+	//		netmask: netmask for network
+	//		interface: output interface where destination can be reached
+	//		next_hop: [optional] ip address of next hop
+
 	log.Infof("Configuring Router")
 	confMap := to.Map(conf)
 
@@ -377,7 +379,35 @@ func (r *RouterModule) Configure(conf interface{}) (err error) {
 		}
 	}
 
-	// TODO: configure static routes
+	// configure static routes
+	if static_routes, ok := confMap["static_routes"]; ok {
+		for _, entry := range to.List(static_routes) {
+			entryMap := to.Map(entry)
+
+			network, ok1 := entryMap["network"]
+			netmask, ok2 := entryMap["netmask"]
+			interface_, ok3 := entryMap["interface"]
+			next_hop, ok4 := entryMap["next_hop"]
+
+			if !ok1 || !ok2|| !ok3 {
+				log.Errorf("Skipping non valid static route")
+				continue
+			}
+
+			if !ok4 {
+				next_hop = "0"
+			}
+
+			log.Infof("Adding Static Route: '%s', '%s', '%s', '%s'",
+				network.(string), netmask.(string), interface_.(string), next_hop.(string))
+
+			err := r.AddRoutingTableEntry(network.(string), netmask.(string),
+				interface_.(string), next_hop.(string))
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }
