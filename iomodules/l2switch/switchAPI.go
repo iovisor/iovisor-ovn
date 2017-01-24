@@ -50,7 +50,7 @@ type L2SwitchModuleInterface struct {
 func Create(dp *hoverctl.Dataplane) *L2SwitchModule {
 
 	if dp == nil {
-		log.Errorf("Daplane is not valid\n")
+		log.Errorf("Dataplane is not valid")
 		return nil
 	}
 

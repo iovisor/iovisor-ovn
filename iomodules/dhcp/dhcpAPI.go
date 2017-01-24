@@ -50,7 +50,7 @@ type DhcpModule struct {
 func Create(dp *hoverctl.Dataplane) *DhcpModule {
 
 	if dp == nil {
-		log.Errorf("Daplane is not valid\n")
+		log.Errorf("Dataplane is not valid")
 		return nil
 	}
 

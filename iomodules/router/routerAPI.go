@@ -57,7 +57,7 @@ type RoutingTableEntry struct {
 func Create(dp *hoverctl.Dataplane) *RouterModule {
 
 	if dp == nil {
-		log.Errorf("Daplane is not valid\n")
+		log.Errorf("Dataplane is not valid")
 		return nil
 	}
 

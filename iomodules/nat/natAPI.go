@@ -47,7 +47,7 @@ type NatModuleInterface struct {
 func Create(dp *hoverctl.Dataplane) *NatModule {
 
 	if dp == nil {
-		log.Errorf("Daplane is not valid\n")
+		log.Errorf("Dataplane is not valid")
 		return nil
 	}
 
