@@ -27,7 +27,7 @@ import (
 	l "github.com/op/go-logging"
 )
 
-var log = l.MustGetLogger("iomodules-switch")
+var log = l.MustGetLogger("iomodules-router")
 
 type RouterModule struct {
 	ModuleId     string
@@ -52,7 +52,7 @@ type RouterModuleInterface struct {
 type RoutingTableEntry struct {
 	network string
 	netmask string
-	port    int
+	outputIface string
 	nexthop string
 }
 
@@ -167,7 +167,7 @@ func (r *RouterModule) AttachExternalInterface(ifaceName string) (err error) {
 func (r *RouterModule) DetachExternalInterface(ifaceName string) (err error) {
 
 	if !r.deployed {
-		errString := "Trying to detach port in undeployed switch"
+		errString := "Trying to detach port in undeployed router"
 		log.Errorf(errString)
 		return errors.New(errString)
 	}
@@ -328,7 +328,7 @@ func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, outp
 
 	r.RoutingTable[index].network = network
 	r.RoutingTable[index].netmask = netmask
-	r.RoutingTable[index].port = port
+	r.RoutingTable[index].outputIface = outputIface
 	r.RoutingTable[index].nexthop = nexthop
 
 	return true

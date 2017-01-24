@@ -78,7 +78,7 @@ static int handle_rx(void *skb, struct metadata *md) {
   struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
 
   #ifdef BPF_TRACE
-    bpf_trace_printk("[switch-%d]: in_ifc=%d\n", md->module_id, md->in_ifc);
+    // bpf_trace_printk("[switch-%d]: in_ifc=%d\n", md->module_id, md->in_ifc);
   #endif
 
   //set in-interface for lookup ports security
@@ -169,7 +169,8 @@ static int handle_rx(void *skb, struct metadata *md) {
     pkt_redirect(skb, md, dst_interface->ifindex);
 
     #ifdef BPF_TRACE
-      bpf_trace_printk("[switch-%d]: redirect out_ifc=%d\n", md->module_id, dst_interface->ifindex);
+      // bpf_trace_printk("[switch-%d]: redirect out_ifc=%d\n", md->module_id, dst_interface->ifindex);
+      bpf_trace_printk("[switch-0]: in: %d out: %d  REDIRECT\n", md->in_ifc, dst_interface->ifindex);
     #endif
 
     return RX_REDIRECT;
@@ -177,7 +178,7 @@ static int handle_rx(void *skb, struct metadata *md) {
   } else {
     //MISS in forwarding table
     #ifdef BPF_TRACE
-      bpf_trace_printk("[switch-%d]s: broadcast\n", md->module_id);
+      bpf_trace_printk("[switch-%d]: in: %d  BROADCAST\n", md->in_ifc);
     #endif
 
     /* this loop broadcasts the packet to the standard network interfaces, the

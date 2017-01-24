@@ -155,7 +155,7 @@ func (n *NatModule) AttachExternalInterface(ifaceName string) (err error) {
 func (n *NatModule) DetachExternalInterface(ifaceName string) (err error) {
 
 	if !n.deployed {
-		errString := "Trying to detach port in undeployed switch"
+		errString := "Trying to detach port in undeployed nat"
 		log.Errorf(errString)
 		return errors.New(errString)
 	}
