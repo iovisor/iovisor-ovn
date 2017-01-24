@@ -41,7 +41,6 @@ type RouterModule struct {
 
 type RouterModuleInterface struct {
 	IfaceIdRedirectHover int    //Iface id inside hover (relative to the m:1234 the interface is attached to ...) and provided my the extended hover /links/ API
-	IfaceFd              int    //Interface Fd inside External_Ids (42, etc...)
 	LinkIdHover          string //iomodules Link Id
 	IfaceName            string
 	IP                   string
@@ -136,8 +135,6 @@ func (r *RouterModule) AttachExternalInterface(ifaceName string) (err error) {
 		return linkError
 	}
 
-	_, external_interfaces := hoverctl.ExternalInterfacesListGET(r.dataplane)
-
 	r.PortsCount++
 
 	// Saving IfaceIdRedirectHover for this port. The number will be used by security policies
@@ -154,7 +151,6 @@ func (r *RouterModule) AttachExternalInterface(ifaceName string) (err error) {
 
 	iface := new(RouterModuleInterface)
 
-	iface.IfaceFd, _ = strconv.Atoi(external_interfaces[ifaceName].Id)
 	iface.IfaceIdRedirectHover = ifacenumber
 	iface.LinkIdHover = linkHover.Id
 	iface.IfaceName = ifaceName
@@ -215,7 +211,6 @@ func (r *RouterModule) AttachToIoModule(ifaceId int, ifaceName string) (err erro
 
 	iface := new(RouterModuleInterface)
 
-	iface.IfaceFd = -1
 	iface.IfaceIdRedirectHover = ifaceId
 	iface.LinkIdHover = ""
 	iface.IfaceName = ifaceName
