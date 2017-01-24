@@ -22,7 +22,6 @@ import (
 
 	"github.com/mvbpolito/gosexy/to"
 
-	//"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	l "github.com/op/go-logging"
 )
@@ -40,8 +39,8 @@ type RouterModule struct {
 }
 
 type RouterModuleInterface struct {
-	IfaceIdRedirectHover int    //Iface id inside hover (relative to the m:1234 the interface is attached to ...) and provided my the extended hover /links/ API
-	LinkIdHover          string //iomodules Link Id
+	IfaceIdRedirectHover int    // Iface id inside hover
+	LinkIdHover          string // iomodules Link Id
 	IfaceName            string
 	IP                   string
 	Netmask              string
@@ -180,7 +179,6 @@ func (r *RouterModule) DetachExternalInterface(ifaceName string) (err error) {
 	linkDeleteError, _ := hoverctl.LinkDELETE(r.dataplane, iface.LinkIdHover)
 
 	if linkDeleteError != nil {
-		//log.Debug("REMOVE Interface %s %s (1/1) LINK REMOVED\n", currentInterface.Name, currentInterface.IfaceIdExternalIds)
 		log.Warningf("Problem removing iface '%s' from router '%s'\n",
 			ifaceName, r.ModuleId)
 		return linkDeleteError
@@ -227,7 +225,8 @@ func (r *RouterModule) DetachFromIoModule(ifaceName string) (err error) {
 // After a interface has been added, it is necessary to configure it before
 // it can be used to route packets
 //TODO I think we have to add next hop parameter here!
-func (r *RouterModule) ConfigureInterface(ifaceName string, ip string, netmask string, mac string) (err error) {
+func (r *RouterModule) ConfigureInterface(ifaceName string, ip string,
+	netmask string, mac string) (err error) {
 	if !r.deployed {
 		errString := "Trying to configure an interface in undeployed router"
 		log.Errorf(errString)
@@ -278,7 +277,8 @@ func (r *RouterModule) ConfigureInterface(ifaceName string, ip string, netmask s
 // A local entry of the routing table indicates that the network interface is
 // directly attached, so there is no need of the next hop address.
 // This function force the routing table entry to be local, pushing 0 as nexthop
-func (r *RouterModule) AddRoutingTableEntryLocal(network string, netmask string, outputIface string) (err error) {
+func (r *RouterModule) AddRoutingTableEntryLocal(network string, netmask string,
+	outputIface string) (err error) {
 	return r.AddRoutingTableEntry(network, netmask, outputIface, "0.0.0.0")
 }
 
@@ -288,7 +288,8 @@ func (r *RouterModule) AddRoutingTableEntryLocal(network string, netmask string,
 // However current implementation, it is the very first one, only adds the routes
 // one after the other, without performing this sorting
 // next hop is a string indicating the ip address of the nexthop, 0 if local iface
-func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, outputIface string, nexthop string) (err error) {
+func (r *RouterModule) AddRoutingTableEntry(network string, netmask string,
+	outputIface string, nexthop string) (err error) {
 
 	// look for a free entry in the routing table
 	index := -1
@@ -428,7 +429,6 @@ func ipToHexadecimalString(ip string) string {
 	trial := net.ParseIP(ip)
 	if trial.To4() != nil {
 		ba := []byte(trial.To4())
-		// log.Debugf("0x%02x%02x%02x%02x\n", ba[0], ba[1], ba[2], ba[3])
 		ipv4HexStr := fmt.Sprintf("0x%02x%02x%02x%02x", ba[0], ba[1], ba[2], ba[3])
 		return ipv4HexStr
 	}
