@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sort"
 	"strconv"
 
 	"github.com/mvbpolito/gosexy/to"
@@ -31,7 +32,8 @@ var log = l.MustGetLogger("iomodules-router")
 type RouterModule struct {
 	ModuleId     string
 	PortsCount   int //number of allocated ports
-	RoutingTable [10]RoutingTableEntry
+	RoutingTable []RoutingTableEntry
+	routingTableCount int // number of elements in the routing table
 	Interfaces   map[string]*RouterModuleInterface
 
 	deployed  bool
@@ -50,7 +52,7 @@ type RouterModuleInterface struct {
 type RoutingTableEntry struct {
 	network string
 	netmask string
-	outputIface string
+	outputIface *RouterModuleInterface
 	nexthop string
 }
 
@@ -63,6 +65,7 @@ func Create(dp *hoverctl.Dataplane) *RouterModule {
 
 	r := new(RouterModule)
 	r.Interfaces = make(map[string]*RouterModuleInterface)
+	r.RoutingTable = make([]RoutingTableEntry, 10)
 	r.dataplane = dp
 	r.deployed = false
 	return r
@@ -282,27 +285,18 @@ func (r *RouterModule) AddRoutingTableEntryLocal(network string, netmask string,
 	return r.AddRoutingTableEntry(network, netmask, outputIface, "0.0.0.0")
 }
 
-// With the current implementation of the eBPF router this functions is a kind
-// of complicated.  This is because it has to add the routes in a sorte way in the
-// table, routes with the longest prefix should appear first.
-// However current implementation, it is the very first one, only adds the routes
-// one after the other, without performing this sorting
-// next hop is a string indicating the ip address of the nexthop, 0 if local iface
+// Routes in the routing table have to be ordered according to the netmask length.
+// This is because of a limitation in the eBPF datapath (no way to perform LPM there)
+// next hop is a string indicating the ip address of the nexthop, 0.0.0.0 indicates that
+// the network is directly attached to the router.
 func (r *RouterModule) AddRoutingTableEntry(network string, netmask string,
 	outputIface string, nexthop string) (err error) {
 
-	// look for a free entry in the routing table
-	index := -1
-	for i := 0; i < 10; i++ {
-		if r.RoutingTable[i].network == "" {
-			index = i
-			break
-		}
-	}
-
-	if index == -1 {
+	if r.routingTableCount == 10 {
 		return errors.New("Routing table is full")
 	}
+
+	index := r.routingTableCount
 
 	iface, ok := r.Interfaces[outputIface]
 
@@ -313,21 +307,69 @@ func (r *RouterModule) AddRoutingTableEntry(network string, netmask string,
 		return errors.New(errString)
 	}
 
-	stringIndex := strconv.Itoa(index)
-	toSend := "{" + ipToHexadecimalString(network) + " " +
-		ipToHexadecimalString(netmask) + " " +
-		strconv.Itoa(iface.IfaceIdRedirectHover) + " " +
-		ipToHexadecimalString(nexthop) + "}"
-
-	hoverctl.TableEntryPUT(r.dataplane, r.ModuleId, "routing_table",
-		stringIndex, toSend)
-
 	r.RoutingTable[index].network = network
 	r.RoutingTable[index].netmask = netmask
-	r.RoutingTable[index].outputIface = outputIface
+	r.RoutingTable[index].outputIface = iface
 	r.RoutingTable[index].nexthop = nexthop
 
+	r.routingTableCount++
+
+	r.sortRoutingTable()
+	r.sendRoutingTable()
+
 	return nil
+}
+
+// implement sort.Interface in order to use the sort function
+
+type ByMaskLen []RoutingTableEntry
+
+func (s ByMaskLen) Len() int {
+	return len(s)
+}
+
+func (s ByMaskLen) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s ByMaskLen) Less(i, j int) bool {
+	neti := ParseIPv4Mask(s[i].netmask)
+	netj := ParseIPv4Mask(s[j].netmask)
+
+	si, _ := neti.Size()
+	sj, _ := netj.Size()
+
+	return si > sj
+}
+
+// sort routing table entries according to the length of the netmas, the longest
+// ones are first
+func (r *RouterModule) sortRoutingTable() () {
+	sort.Sort(ByMaskLen(r.RoutingTable))
+}
+
+func (r *RouterModule) sendRoutingTable() (err error) {
+
+	index := 0
+	for _, i := range r.RoutingTable {
+		if i.network == "" {
+			break
+		}
+
+		stringIndex := strconv.Itoa(index)
+
+		toSend := "{" + ipToHexadecimalString(i.network) + " " +
+			ipToHexadecimalString(i.netmask) + " " +
+			strconv.Itoa(i.outputIface.IfaceIdRedirectHover) + " " +
+			ipToHexadecimalString(i.nexthop) + "}"
+
+		hoverctl.TableEntryPUT(r.dataplane, r.ModuleId, "routing_table",
+			stringIndex, toSend)
+
+		index++
+	}
+
+	return nil;
 }
 
 // TODO: Implement this function
