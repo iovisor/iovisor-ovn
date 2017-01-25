@@ -288,9 +288,6 @@ static int handle_rx(void *skb, struct metadata *md) {
         /* register the requesting mac and ips */
         arp_table.update(&remoteip, &remotemac);
 
-        /* register the requesting mac and ips */
-        arp_table.update(&remoteip, &remotemac);
-
         pkt_redirect(skb, md, md->in_ifc);
         return RX_REDIRECT;
       }
