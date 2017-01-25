@@ -136,7 +136,7 @@ static int handle_rx(void *skb, struct metadata *md) {
     case ETH_TYPE_ARP: goto ARP; //arp packet
   }
 
-  IP: //ipv4 packet
+  IP: ; //ipv4 packet
     struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
 
     #ifdef BPF_TRACE
@@ -252,7 +252,7 @@ static int handle_rx(void *skb, struct metadata *md) {
     pkt_redirect(skb,md,out_port);
     return RX_REDIRECT;
 
-  ARP: //arp packet
+  ARP: ; //arp packet
     struct arp_t *arp = cursor_advance(cursor, sizeof(*arp));
     if (arp->oper == 1) {	// arp request?
       //bpf_trace_printk("[arp]: packet is arp request\n");
