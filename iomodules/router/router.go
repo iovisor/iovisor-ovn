@@ -47,16 +47,16 @@ var RouterCode = `
 #define MAC_BROADCAST 0xffffffffffff
 #define MAC_MULTICAST_MASK 0x010000000000
 
-/*Routing Table Entry*/
-struct rt_entry{
+/* Routing Table Entry */
+struct rt_entry {
   u32 network;  //network: e.g. 192.168.1.0
   u32 netmask;  //netmask: e.g. 255.255.255.0
   u32 port;     //port of the router
   u32 nexthop;  //next hop: e.g. 192.168.1.254 (0 if local)
 };
 
-/*Router Port*/
-struct r_port{
+/* Router Port */
+struct r_port {
   u32 ip;       //ip addr : e.g. 192.168.1.254
   u32 netmask;  //netmask : e.g. 255.255.255.0
   u64 mac;      //mac addr: e.g. a1:b2:c3:ab:cd:ef
@@ -89,7 +89,7 @@ BPF_TABLE("hash", u32, u64, arp_table, ARP_TABLE_DIM);
   If the address is broadcast is also multicast, so test multicast condition
   is enough.
 */
-static inline bool is_multicast_or_broadcast(u64* mac){
+static inline bool is_multicast_or_broadcast(u64* mac) {
   u64 mask = 0;
   mask = *mac & MAC_MULTICAST_MASK;
   if (mask == 0)
@@ -119,10 +119,11 @@ static int handle_rx(void *skb, struct metadata *md) {
   if (!is_multicast_or_broadcast(&ethdst)){
     struct r_port *r_port_p = 0;
     r_port_p = router_port.lookup(&md->in_ifc);
-    if (r_port_p){
-      if (r_port_p->mac != ethernet->dst){
+    if (r_port_p) {
+      if (r_port_p->mac != ethernet->dst) {
         #ifdef BPF_LOG
-          bpf_trace_printk("[router-%d]: mac destination %lx MISMATCH %lx -> DROP packet.\n",md->module_id, ethernet->dst, r_port_p->mac);
+          bpf_trace_printk("[router-%d]: mac destination %lx MISMATCH %lx -> DROP packet.\n",
+            md->module_id, ethernet->dst, r_port_p->mac);
         #endif
         return RX_DROP;
       }
@@ -135,11 +136,12 @@ static int handle_rx(void *skb, struct metadata *md) {
     case ETH_TYPE_ARP: goto ARP; //arp packet
   }
 
-  IP: ; //ipv4 packet
+  IP: //ipv4 packet
     struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
 
     #ifdef BPF_TRACE
-      bpf_trace_printk("[router-%d]: ttl:%u ip_scr:%x ip_dst:%x \n", md->module_id, ip->ttl, ip->src, ip->dst);
+      bpf_trace_printk("[router-%d]: ttl:%u ip_scr:%x ip_dst:%x \n",
+        md->module_id, ip->ttl, ip->src, ip->dst);
       // bpf_trace_printk("[router-%d]: (before) ttl: %d checksum: %x\n", ip->ttl, ip->hchecksum);
     #endif
 
@@ -221,13 +223,14 @@ static int handle_rx(void *skb, struct metadata *md) {
     }
 
     u32 dst_ip = 0;
-    if (rt_entry_p->nexthop == 0){
+    if (rt_entry_p->nexthop == 0) {
       //Next Hop is local, directly lookup in arp table for the destination ip.
       dst_ip = ip->dst;
-    }else{
+    } else {
       //Next Hop not local, lookup in arp table for the next hop ip address.
       dst_ip = rt_entry_p->nexthop;
     }
+
     u64 new_dst_mac = 0xffffffffffff;
     u64 *mac_entry = arp_table.lookup(&dst_ip);
     if (mac_entry) {
@@ -249,7 +252,7 @@ static int handle_rx(void *skb, struct metadata *md) {
     pkt_redirect(skb,md,out_port);
     return RX_REDIRECT;
 
-  ARP: ; //arp packet
+  ARP: //arp packet
     struct arp_t *arp = cursor_advance(cursor, sizeof(*arp));
     if (arp->oper == 1) {	// arp request?
       //bpf_trace_printk("[arp]: packet is arp request\n");
