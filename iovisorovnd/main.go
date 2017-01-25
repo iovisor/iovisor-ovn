@@ -14,7 +14,9 @@
 package main
 
 import (
+	"bufio"
 	"flag"
+	"os"
 	"time"
 
 	"github.com/netgroup-polito/iovisor-ovn/cli"
@@ -23,11 +25,15 @@ import (
 
 	"github.com/netgroup-polito/iovisor-ovn/common"
 	"github.com/netgroup-polito/iovisor-ovn/mainlogic"
+	"github.com/netgroup-polito/iovisor-ovn/servicetopology"
 )
 
-var Log = l.MustGetLogger("iovisor-ovn-daemon")
+var log = l.MustGetLogger("iovisor-ovn-daemon")
 
 func init() {
+
+	flag.StringVar(&config.File, "file", "", "path to configuration file")
+
 	flag.StringVar(&config.Nb, "nb", config.Nb, "nb db address:port")
 	flag.StringVar(&config.Sb, "sb", config.Sb, "sb db address:port")
 	flag.StringVar(&config.Ovs, "ovs", config.Ovs, "ovs db address:port")
@@ -50,23 +56,30 @@ func main() {
 
 	//Parse Cmdline args
 	flag.Parse()
-	config.PrintConfig()
 
 	//Init Logger
 	common.LogInit()
 
-	//simple test environment (see testenv/env.go)
-	//if config.TestEnv {
-	//	go tests.TestEnv(dataplane)
-	//}
+	if config.File != "" {
+		// file has been passed, deploy this without connecting to OVN
+		err := servicetopology.DeployTopology(config.File)
+		if err != nil {
+			log.Errorf("Error deploying topology, please verify your topology file");
+		}
+		log.Infof("Press enter to close");
+		bufio.NewReader(os.Stdin).ReadBytes('\n')
+		// TODO: defer call to servicetopologyUndeploy
+	} else {
+		// topologyFile argument was not passed, then connect to OVN
+		config.PrintConfig()
+		//Monitors started here!
+		mainlogic.MainLogic()
 
-	//Monitors started here!
-	mainlogic.MainLogic()
+		// Cli start
+		time.Sleep(1 * time.Second)
+		go cli.Cli(mainlogic.Dataplane)
 
-	//Cli start
-	time.Sleep(1 * time.Second)
-	go cli.Cli(mainlogic.Dataplane)
-
-	quit := make(chan bool)
-	<-quit
+		quit := make(chan bool)
+		<-quit
+	}
 }

@@ -12,7 +12,7 @@ do
 	sudo ip link add veth${i}_ type veth peer name veth${i}
 	sudo ip link set veth${i}_ netns ns${i}
 	sudo ip netns exec ns${i} ip link set dev veth${i}_ up
-	sudo ip link set dev veth${i} up
+	sudo ip link set dev veth${i} address 82:73:8d:f3:62:${i} up
 	sudo ip netns exec ns${i} ifconfig veth${i}_ 10.0.${i}.100/24
 
 	sudo ip netns exec ns${i} route add default gw 10.0.${i}.1 veth${i}_

@@ -11,7 +11,7 @@ Connectivity is tested by pinging between the different namespaces
 In order to work, it is necessary to create two network namespaces and set two
 pairs of veth interfaces.
 
-Execute the 'setup.sh' script:
+Execute the [setup.sh](./setup.sh) script:
 
 ```bash
 sudo ./setup.sh
@@ -29,13 +29,14 @@ sudo $GOPATH/bin/hoverd -listen 127.0.0.1:5002
 
 ## Deploying the switch
 
-The 'test_switch.go' script deploys a switch module and connects the veth1 and veth2
-interfaces to it
+The [switch.yaml](./switch.yaml) contains the configuration for this example.
+
+In order to launch it please execute:
 
 ```bash
 export GOPATH=$HOME/go
-cd $GOPATH/src/github.com/netgroup-polito/iovisor-ovn/tutorials/switch
-go run test_switch.go -hover http://127.0.0.1:5002
+cd $GOPATH/src/github.com/netgroup-polito/iovisor-ovn/examples/switch
+$GOPATH/bin/iovisorovnd -file switch.yaml -hover http://127.0.0.1:5002
 ```
 
 ## Testing connectivity

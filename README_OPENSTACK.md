@@ -1,8 +1,9 @@
-# IOVisor-OVN Installation Guide
+# IOVisor-OVN Installation Guide with DevStack
 
-This guide refers to the installation of the IOVisor with DevStack, which is the only currently supported method.
+This guide presents the steps to install a testing deployment with OpenStack, OVN and IOVisor-OVN.
+If you want to test IOVisor-OVN without OpenStack please see  [README_STANDALONE](./README_STANDALONE.md).
 
-## DevStack
+## Installation
 In order to create a test environment with a single compute node you should perform the following steps.
 
 1. Install a test system. We recommend to use Ubuntu 16.04, which represents our main developed platform. Please consider that DevStack performs deep changes on the system, so the system should only be dedicated to this purpose.

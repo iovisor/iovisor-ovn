@@ -20,6 +20,8 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/mvbpolito/gosexy/to"
+
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	l "github.com/op/go-logging"
 )
@@ -45,7 +47,7 @@ type NatModuleInterface struct {
 func Create(dp *hoverctl.Dataplane) *NatModule {
 
 	if dp == nil {
-		log.Errorf("Daplane is not valid\n")
+		log.Errorf("Dataplane is not valid")
 		return nil
 	}
 
@@ -153,7 +155,7 @@ func (n *NatModule) AttachExternalInterface(ifaceName string) (err error) {
 func (n *NatModule) DetachExternalInterface(ifaceName string) (err error) {
 
 	if !n.deployed {
-		errString := "Trying to detach port in undeployed switch"
+		errString := "Trying to detach port in undeployed nat"
 		log.Errorf(errString)
 		return errors.New(errString)
 	}
@@ -232,6 +234,43 @@ func (n *NatModule) SetPublicPortAddresses(ip string, mac string) (err error) {
 
 func (n *NatModule) DetachFromIoModule(ifaceName string) (err error) {
 	return errors.New("Not implemented")
+}
+
+func (n *NatModule) Configure(conf interface{}) (err error) {
+	// conf is a map that contains:
+	//		public_ip: ip that is put as src address on the ongoing packets
+	//		public_port_ip:
+	//		public_port_mac:
+
+	log.Infof("Configuring NAT module")
+	confMap := to.Map(conf)
+
+	public_ip, ok1 := confMap["public_ip"]
+	if !ok1 {
+		return errors.New("Missing public_ip")
+	}
+
+	err = n.SetPublicIp(public_ip.(string))
+	if err != nil {
+		return
+	}
+
+	public_port_ip, ok2 := confMap["public_port_ip"]
+	if !ok2 {
+		return errors.New("Missing public_port_ip")
+	}
+
+	public_port_mac, ok3 := confMap["public_port_mac"]
+	if !ok3 {
+		return errors.New("Missing public_port_mac")
+	}
+
+	err = n.SetPublicPortAddresses(public_port_ip.(string), public_port_mac.(string))
+	if err != nil {
+		return
+	}
+
+	return nil;
 }
 
 func ipToHexadecimalString(ip string) string {

@@ -20,9 +20,13 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/mvbpolito/gosexy/to"
+
 	//"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	l "github.com/op/go-logging"
+
+
 )
 
 var log = l.MustGetLogger("iomodules-dhcp")
@@ -46,7 +50,7 @@ type DhcpModule struct {
 func Create(dp *hoverctl.Dataplane) *DhcpModule {
 
 	if dp == nil {
-		log.Errorf("Daplane is not valid\n")
+		log.Errorf("Dataplane is not valid")
 		return nil
 	}
 
@@ -69,7 +73,7 @@ func (m *DhcpModule) Deploy() (err error) {
 	dhcpError, dhcpHover := hoverctl.ModulePOST(m.dataplane, "bpf",
 		"DHCP", DhcpServer)
 	if dhcpError != nil {
-		log.Errorf("Error in POST Switch IOModule: %s\n", dhcpError)
+		log.Errorf("Error in POST dhcp IOModule: %s\n", dhcpError)
 		return dhcpError
 	}
 
@@ -197,7 +201,8 @@ func (m *DhcpModule) DetachFromIoModule(ifaceName string) (err error) {
 	return nil
 }
 
-func (m *DhcpModule) Configure(pool net.IPNet, dns net.IP, router net.IP,
+// TODO: this function should be split on smaller pieces.
+func (m *DhcpModule) ConfigureParameters(pool net.IPNet, dns net.IP, router net.IP,
 	leaseTime uint32, serverMac net.HardwareAddr, serverIp net.IP) (err error) {
 	if !m.deployed {
 		errString := "Trying to configure undeployed module"
@@ -242,6 +247,61 @@ func (m *DhcpModule) Configure(pool net.IPNet, dns net.IP, router net.IP,
 	m.leaseTime = leaseTime;
 
 	return nil
+}
+
+func (m *DhcpModule) Configure(conf interface{}) (err error) {
+	// conf is a map that contains:
+	//		pool: CIDR notation of the address pool
+	// 		dns: ip address of the DNS given to clients
+	//		gw: ip of the default routers given to clients
+	//		lease_time: default lease_time
+	//		server_ip: ip address of the dhcp server
+	//		server_mac: mac address of the dhcp server
+
+	log.Infof("Configuring DHCP server")
+	confMap := to.Map(conf)
+
+	pool_, ok1 := confMap["pool"]
+	dns_, ok2 := confMap["dns"]
+	gw_, ok3 := confMap["gw"]
+	lease_time_ , ok4 := confMap["lease_time"]
+	server_ip_ , ok5 := confMap["server_ip"]
+	server_mac_ , ok6 := confMap["server_mac"]
+
+	// TODO: some of these fields could be optional and have a default value
+	if !ok1 {
+		return errors.New("Missing pool")
+	}
+
+	if !ok2 {
+		return errors.New("Missing dns")
+	}
+
+	if !ok3 {
+		return errors.New("Missing gw")
+	}
+
+	if !ok4 {
+		return errors.New("Missing lease_time")
+	}
+
+	if !ok5 {
+		return errors.New("Missing server_ip")
+	}
+
+	if !ok6 {
+		return errors.New("Missing server_mac")
+	}
+
+	_, pool, _ := net.ParseCIDR(pool_.(string))
+	dns := net.ParseIP(dns_.(string))
+	gw := net.ParseIP(gw_.(string))
+	//temp , _ := strconv.ParseUint(lease_time_.(string), 10, 32)
+	var lease_time uint32 = uint32(lease_time_.(int))
+	mac_server, _ := net.ParseMAC(server_mac_.(string))
+	ip_server := net.ParseIP(server_ip_.(string))
+
+	return m.ConfigureParameters(*pool, dns, gw, lease_time, mac_server, ip_server)
 }
 
 // TODO: this function should be smarter

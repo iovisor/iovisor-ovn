@@ -1,0 +1,27 @@
+modules:
+  - name: myrouter
+    type: router
+    config:
+      interfaces:
+        - name: veth1
+          ip: 10.0.1.1
+          netmask: 255.255.255.0
+          mac: "82:73:8d:f3:62:01"
+
+        - name: veth2
+          ip: 10.0.2.1
+          netmask: 255.255.255.0
+          mac: "82:73:8d:f3:62:02"
+
+        - name: veth3
+          ip: 10.0.3.1
+          netmask: 255.255.255.0
+          mac: "82:73:8d:f3:62:03"
+
+external_interfaces:
+  - module: myrouter
+    iface: veth1
+  - module: myrouter
+    iface: veth2
+  - module: myrouter
+    iface: veth3

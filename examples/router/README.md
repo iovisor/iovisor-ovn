@@ -15,7 +15,7 @@ is very similar to the switch case.
 The main difference here is that the three network interfaces are in different
 subnets and a default route is configured on each namespace.
 
-Execute the 'setup.sh' script:
+Execute the [setup.sh](./setup.sh) script:
 
 ```bash
 sudo ./setup.sh
@@ -33,13 +33,15 @@ sudo $GOPATH/bin/hoverd -listen 127.0.0.1:5002
 
 ## Deploying the router
 
-The 'test_router.go' script deploys a router module and connects the veth1,
-veth2 and veth3 interfaces to it
+The [router.yaml](./router.yaml) file contains the configuration of the router
+and its connections to the external interfaces.
+
+To launch the example please execute:
 
 ```bash
 export GOPATH=$HOME/go
-cd $GOPATH/src/github.com/netgroup-polito/iovisor-ovn/tutorials/router
-go run test_router.go -hover http://127.0.0.1:5002
+cd $GOPATH/src/github.com/netgroup-polito/iovisor-ovn/examples/switch
+$GOPATH/bin/iovisorovnd -file router.yaml -hover http://127.0.0.1:5002
 ```
 
 ## Testing connectivity

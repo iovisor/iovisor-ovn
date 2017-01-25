@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/mvbpolito/gosexy/to"
+
 	"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	l "github.com/op/go-logging"
@@ -48,7 +50,7 @@ type L2SwitchModuleInterface struct {
 func Create(dp *hoverctl.Dataplane) *L2SwitchModule {
 
 	if dp == nil {
-		log.Errorf("Daplane is not valid\n")
+		log.Errorf("Dataplane is not valid")
 		return nil
 	}
 
@@ -320,6 +322,37 @@ func (sw *L2SwitchModule) AddPortSecurityMac(mac string, ifaceName string) (err 
 	macString := macToHexadecimalString(mac)
 
 	hoverctl.TableEntryPOST(sw.dataplane, sw.ModuleId, "securitymac", "{0x"+strconv.Itoa(swIface.IfaceIdRedirectHover)+"}", macString)
+	return nil
+}
+
+func (sw *L2SwitchModule) Configure(conf interface{}) (err error) {
+	// The interface is a map with the following elements:
+	// forwarding_table: a list of maps, each one has:
+	//		port: the port where mac can be reached
+	//		mac: the mac itself
+	// TODO: support for port security policies
+	log.Infof("Configuring Switch")
+	confMap := to.Map(conf)
+	if fwd_table, ok := confMap["forwarding_table"]; ok {
+		for _, entry := range to.List(fwd_table) {
+			entryMap := to.Map(entry)
+
+			port, ok1 := entryMap["port"]
+			mac, ok2 := entryMap["mac"]
+			if !ok1 || !ok2 {
+				log.Errorf("Skipping non valid forwarding table entry")
+				continue
+			}
+
+			log.Infof("Adding forwardig table entry '%s' -> '%s'",
+				mac.(string), port.(string))
+
+			err := sw.AddForwardingTableEntry(mac.(string), port.(string))
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 

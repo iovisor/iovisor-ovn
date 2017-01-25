@@ -100,7 +100,7 @@ func PrintRouter(name string) {
 				table = tablewriter.NewWriter(os.Stdout)
 				table.SetHeader([]string{"ROUTER", "NAME", "LINK", "FD", "REDIRECT", "IP", "NETMASK", "MAC"})
 				for _, iface := range r.rIoModule.Interfaces {
-					table.Append([]string{r.Name, iface.IfaceName, iface.LinkIdHover, strconv.Itoa(iface.IfaceFd), strconv.Itoa(iface.IfaceIdRedirectHover), iface.IP, iface.Netmask, iface.IP})
+					table.Append([]string{r.Name, iface.IfaceName, iface.LinkIdHover, strconv.Itoa(iface.IfaceIdRedirectHover), iface.IP, iface.Netmask, iface.IP})
 				}
 				table.Render()
 			}

@@ -18,19 +18,22 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sort"
 	"strconv"
 
-	//"github.com/netgroup-polito/iovisor-ovn/config"
+	"github.com/mvbpolito/gosexy/to"
+
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
 	l "github.com/op/go-logging"
 )
 
-var log = l.MustGetLogger("iomodules-switch")
+var log = l.MustGetLogger("iomodules-router")
 
 type RouterModule struct {
 	ModuleId     string
 	PortsCount   int //number of allocated ports
-	RoutingTable [10]RoutingTableEntry
+	RoutingTable []RoutingTableEntry
+	routingTableCount int // number of elements in the routing table
 	Interfaces   map[string]*RouterModuleInterface
 
 	deployed  bool
@@ -38,9 +41,8 @@ type RouterModule struct {
 }
 
 type RouterModuleInterface struct {
-	IfaceIdRedirectHover int    //Iface id inside hover (relative to the m:1234 the interface is attached to ...) and provided my the extended hover /links/ API
-	IfaceFd              int    //Interface Fd inside External_Ids (42, etc...)
-	LinkIdHover          string //iomodules Link Id
+	IfaceIdRedirectHover int    // Iface id inside hover
+	LinkIdHover          string // iomodules Link Id
 	IfaceName            string
 	IP                   string
 	Netmask              string
@@ -50,19 +52,20 @@ type RouterModuleInterface struct {
 type RoutingTableEntry struct {
 	network string
 	netmask string
-	port    int
+	outputIface *RouterModuleInterface
 	nexthop string
 }
 
 func Create(dp *hoverctl.Dataplane) *RouterModule {
 
 	if dp == nil {
-		log.Errorf("Daplane is not valid\n")
+		log.Errorf("Dataplane is not valid")
 		return nil
 	}
 
 	r := new(RouterModule)
 	r.Interfaces = make(map[string]*RouterModuleInterface)
+	r.RoutingTable = make([]RoutingTableEntry, 10)
 	r.dataplane = dp
 	r.deployed = false
 	return r
@@ -134,8 +137,6 @@ func (r *RouterModule) AttachExternalInterface(ifaceName string) (err error) {
 		return linkError
 	}
 
-	_, external_interfaces := hoverctl.ExternalInterfacesListGET(r.dataplane)
-
 	r.PortsCount++
 
 	// Saving IfaceIdRedirectHover for this port. The number will be used by security policies
@@ -152,7 +153,6 @@ func (r *RouterModule) AttachExternalInterface(ifaceName string) (err error) {
 
 	iface := new(RouterModuleInterface)
 
-	iface.IfaceFd, _ = strconv.Atoi(external_interfaces[ifaceName].Id)
 	iface.IfaceIdRedirectHover = ifacenumber
 	iface.LinkIdHover = linkHover.Id
 	iface.IfaceName = ifaceName
@@ -165,7 +165,7 @@ func (r *RouterModule) AttachExternalInterface(ifaceName string) (err error) {
 func (r *RouterModule) DetachExternalInterface(ifaceName string) (err error) {
 
 	if !r.deployed {
-		errString := "Trying to detach port in undeployed switch"
+		errString := "Trying to detach port in undeployed router"
 		log.Errorf(errString)
 		return errors.New(errString)
 	}
@@ -182,7 +182,6 @@ func (r *RouterModule) DetachExternalInterface(ifaceName string) (err error) {
 	linkDeleteError, _ := hoverctl.LinkDELETE(r.dataplane, iface.LinkIdHover)
 
 	if linkDeleteError != nil {
-		//log.Debug("REMOVE Interface %s %s (1/1) LINK REMOVED\n", currentInterface.Name, currentInterface.IfaceIdExternalIds)
 		log.Warningf("Problem removing iface '%s' from router '%s'\n",
 			ifaceName, r.ModuleId)
 		return linkDeleteError
@@ -213,7 +212,6 @@ func (r *RouterModule) AttachToIoModule(ifaceId int, ifaceName string) (err erro
 
 	iface := new(RouterModuleInterface)
 
-	iface.IfaceFd = -1
 	iface.IfaceIdRedirectHover = ifaceId
 	iface.LinkIdHover = ""
 	iface.IfaceName = ifaceName
@@ -230,7 +228,8 @@ func (r *RouterModule) DetachFromIoModule(ifaceName string) (err error) {
 // After a interface has been added, it is necessary to configure it before
 // it can be used to route packets
 //TODO I think we have to add next hop parameter here!
-func (r *RouterModule) ConfigureInterface(ifaceName string, ip string, netmask string, mac string) (err error) {
+func (r *RouterModule) ConfigureInterface(ifaceName string, ip string,
+	netmask string, mac string) (err error) {
 	if !r.deployed {
 		errString := "Trying to configure an interface in undeployed router"
 		log.Errorf(errString)
@@ -268,7 +267,7 @@ func (r *RouterModule) ConfigureInterface(ifaceName string, ip string, netmask s
 	network_ := ip_.Mask(netmask_)
 
 	// add route for that port
-	if !r.AddRoutingTableEntryLocal(network_.String(), netmask, iface.IfaceIdRedirectHover) {
+	if r.AddRoutingTableEntryLocal(network_.String(), netmask, ifaceName) != nil {
 		errString := fmt.Sprintf("Error adding static route for port '%s' in router '%s'\n",
 			ifaceName, r.ModuleId)
 		log.Warningf(errString)
@@ -281,50 +280,176 @@ func (r *RouterModule) ConfigureInterface(ifaceName string, ip string, netmask s
 // A local entry of the routing table indicates that the network interface is
 // directly attached, so there is no need of the next hop address.
 // This function force the routing table entry to be local, pushing 0 as nexthop
-func (r *RouterModule) AddRoutingTableEntryLocal(network string, netmask string, port int) (error bool) {
-	return r.AddRoutingTableEntry(network, netmask, port, "0")
+func (r *RouterModule) AddRoutingTableEntryLocal(network string, netmask string,
+	outputIface string) (err error) {
+	return r.AddRoutingTableEntry(network, netmask, outputIface, "0.0.0.0")
 }
 
-// With the current implementation of the eBPF router this functions is a kind
-// of complicated.  This is because it has to add the routes in a sorte way in the
-// table, routes with the longest prefix should appear first.
-// However current implementation, it is the very first one, only adds the routes
-// one after the other, without performing this sorting
-// next hop is a string indicating the ip address of the nexthop, 0 if local iface
-func (r *RouterModule) AddRoutingTableEntry(network string, netmask string, port int, nexthop string) (error bool) {
+// Routes in the routing table have to be ordered according to the netmask length.
+// This is because of a limitation in the eBPF datapath (no way to perform LPM there)
+// next hop is a string indicating the ip address of the nexthop, 0.0.0.0 indicates that
+// the network is directly attached to the router.
+func (r *RouterModule) AddRoutingTableEntry(network string, netmask string,
+	outputIface string, nexthop string) (err error) {
 
-	// look for a free entry in the routing table
-	index := -1
-	for i := 0; i < 10; i++ {
-		if r.RoutingTable[i].network == "" {
-			index = i
-			break
-		}
+	if r.routingTableCount == 10 {
+		return errors.New("Routing table is full")
 	}
 
-	if index == -1 {
-		log.Errorf("Routing table is full\n")
-		return false
+	index := r.routingTableCount
+
+	iface, ok := r.Interfaces[outputIface]
+
+	if !ok {
+		errString := fmt.Sprintf("Iface '%s' is not present in router '%s'\n",
+			outputIface, r.ModuleId)
+		log.Warningf(errString)
+		return errors.New(errString)
 	}
-
-	stringIndex := strconv.Itoa(index)
-	toSend := "{" + ipToHexadecimalString(network) + " " + ipToHexadecimalString(netmask) + " " + strconv.Itoa(port) + " " + nexthop + "}"
-
-	hoverctl.TableEntryPUT(r.dataplane, r.ModuleId, "routing_table",
-		stringIndex, toSend)
 
 	r.RoutingTable[index].network = network
 	r.RoutingTable[index].netmask = netmask
-	r.RoutingTable[index].port = port
+	r.RoutingTable[index].outputIface = iface
 	r.RoutingTable[index].nexthop = nexthop
 
-	return true
+	r.routingTableCount++
+
+	r.sortRoutingTable()
+	r.sendRoutingTable()
+
+	return nil
+}
+
+// implement sort.Interface in order to use the sort function
+
+type ByMaskLen []RoutingTableEntry
+
+func (s ByMaskLen) Len() int {
+	return len(s)
+}
+
+func (s ByMaskLen) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s ByMaskLen) Less(i, j int) bool {
+	neti := ParseIPv4Mask(s[i].netmask)
+	netj := ParseIPv4Mask(s[j].netmask)
+
+	si, _ := neti.Size()
+	sj, _ := netj.Size()
+
+	return si > sj
+}
+
+// sort routing table entries according to the length of the netmas, the longest
+// ones are first
+func (r *RouterModule) sortRoutingTable() () {
+	sort.Sort(ByMaskLen(r.RoutingTable))
+}
+
+func (r *RouterModule) sendRoutingTable() (err error) {
+
+	index := 0
+	for _, i := range r.RoutingTable {
+		if i.network == "" {
+			break
+		}
+
+		stringIndex := strconv.Itoa(index)
+
+		toSend := "{" + ipToHexadecimalString(i.network) + " " +
+			ipToHexadecimalString(i.netmask) + " " +
+			strconv.Itoa(i.outputIface.IfaceIdRedirectHover) + " " +
+			ipToHexadecimalString(i.nexthop) + "}"
+
+		hoverctl.TableEntryPUT(r.dataplane, r.ModuleId, "routing_table",
+			stringIndex, toSend)
+
+		index++
+	}
+
+	return nil;
 }
 
 // TODO: Implement this function
 //func (r *RouterModule) RemoveRoutingTableEntry(network string) {
 //
 //}
+
+func (r *RouterModule) Configure(conf interface{}) (err error) {
+	// The interface is a map that contains:
+	// interfaces: A list of maps for the interfaces present on the router, each
+	// of this has to have:
+	//		name, ip, netmask, mac
+	// static_routes: A list of map containing the static routes to be configured
+	// 		network: network address
+	//		netmask: netmask for network
+	//		interface: output interface where destination can be reached
+	//		next_hop: [optional] ip address of next hop
+
+	log.Infof("Configuring Router")
+	confMap := to.Map(conf)
+
+	// configure interfaces
+	if interfaces, ok := confMap["interfaces"]; ok {
+		for _, entry := range to.List(interfaces) {
+			entryMap := to.Map(entry)
+
+			name, ok1 := entryMap["name"]
+			ip, ok2 := entryMap["ip"]
+			netmask, ok3 := entryMap["netmask"]
+			mac, ok4 := entryMap["mac"]
+
+			if !ok1 || !ok2 || !ok3 || !ok4 {
+				log.Errorf("Skipping non valid interface")
+				continue
+			}
+
+			log.Infof("Configuring Interface '%s', '%s', '%s', '%s'",
+				name.(string), ip.(string), netmask.(string), mac.(string))
+
+			err := r.ConfigureInterface(name.(string), ip.(string),
+				netmask.(string), mac.(string))
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// configure static routes
+	if static_routes, ok := confMap["static_routes"]; ok {
+		for _, entry := range to.List(static_routes) {
+			entryMap := to.Map(entry)
+
+			network, ok1 := entryMap["network"]
+			netmask, ok2 := entryMap["netmask"]
+			interface_, ok3 := entryMap["interface"]
+			next_hop, ok4 := entryMap["next_hop"]
+
+			if !ok1 || !ok2|| !ok3 {
+				log.Errorf("Skipping non valid static route")
+				continue
+			}
+
+			if !ok4 {
+				next_hop = "0"
+			}
+
+			log.Infof("Adding Static Route: '%s', '%s', '%s', '%s'",
+				network.(string), netmask.(string), interface_.(string), next_hop.(string))
+
+			err := r.AddRoutingTableEntry(network.(string), netmask.(string),
+				interface_.(string), next_hop.(string))
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 
 // TODO: this function should be smarter
 func macToHexadecimalString(s string) string {
@@ -346,7 +471,6 @@ func ipToHexadecimalString(ip string) string {
 	trial := net.ParseIP(ip)
 	if trial.To4() != nil {
 		ba := []byte(trial.To4())
-		// log.Debugf("0x%02x%02x%02x%02x\n", ba[0], ba[1], ba[2], ba[3])
 		ipv4HexStr := fmt.Sprintf("0x%02x%02x%02x%02x", ba[0], ba[1], ba[2], ba[3])
 		return ipv4HexStr
 	}
