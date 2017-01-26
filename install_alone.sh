@@ -1,6 +1,6 @@
 #! /bin/bash
 
-local _pwd=$(pwd)
+_pwd=$(pwd)
 
 # install bcc and dependencies
 echo "installing bcc dependencies"
