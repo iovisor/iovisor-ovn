@@ -44,7 +44,7 @@ git reset --hard drzaeus77/master
 echo "installing hover"
 go get github.com/iovisor/iomodules/hover
 # use custom version of hover
-cd $GOPATH/src/iovisor/iomodules
+cd $GOPATH/src/github.com/iovisor/iomodules
 git remote add mvbpolito https://github.com/mvbpolito/iomodules
 git fetch mvbpolito
 git reset --hard mvbpolito/master
