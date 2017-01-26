@@ -14,7 +14,7 @@ git clone https://github.com/iovisor/bcc.git
 cd bcc
 mkdir build; cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr
-make
+make -j
 sudo make install
 
 echo "installing go"
