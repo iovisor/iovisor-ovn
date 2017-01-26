@@ -377,6 +377,19 @@ func (r *RouterModule) sendRoutingTable() (err error) {
 //
 //}
 
+func (r *RouterModule) AddArpEntry(ip string, mac string) (err error) {
+	if !r.deployed {
+		errString := "Trying to add arp entry in undeployed router"
+		log.Errorf(errString)
+		return errors.New(errString)
+	}
+
+	hoverctl.TableEntryPUT(r.dataplane, r.ModuleId, "arp_table",
+			ipToHexadecimalString(ip), macToHexadecimalString(mac))
+
+	return nil
+}
+
 func (r *RouterModule) Configure(conf interface{}) (err error) {
 	// The interface is a map that contains:
 	// interfaces: A list of maps for the interfaces present on the router, each
@@ -387,7 +400,9 @@ func (r *RouterModule) Configure(conf interface{}) (err error) {
 	//		netmask: netmask for network
 	//		interface: output interface where destination can be reached
 	//		next_hop: [optional] ip address of next hop
-
+	// arp_entries: A list of static arp entries to be configured
+	//		ip:
+	//		mac:
 	log.Infof("Configuring Router")
 	confMap := to.Map(conf)
 
@@ -441,6 +456,29 @@ func (r *RouterModule) Configure(conf interface{}) (err error) {
 
 			err := r.AddRoutingTableEntry(network.(string), netmask.(string),
 				interface_.(string), next_hop.(string))
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// configure arp entries
+	if arp_entries, ok := confMap["arp_entries"]; ok {
+		for _, entry := range to.List(arp_entries) {
+			entryMap := to.Map(entry)
+
+			ip, ok1 := entryMap["ip"]
+			mac, ok2 := entryMap["mac"]
+
+			if !ok1 || !ok2{
+				log.Errorf("Skipping non valid arp entry")
+				continue
+			}
+
+			log.Infof("Adding arp entry Route: '%s' -> '%s'",
+				ip.(string), mac.(string))
+
+			err := r.AddArpEntry(ip.(string), mac.(string))
 			if err != nil {
 				return err
 			}
