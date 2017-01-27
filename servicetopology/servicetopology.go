@@ -243,8 +243,6 @@ func DeployTopology(path string) error {
 				log.Errorf("Error configuring Module '%s': %s", name, err)
 				return err
 			}
-		} else {
-			log.Warningf("sikipping module '%s' without configuration", name);
 		}
 	}
 
