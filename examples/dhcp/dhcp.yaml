@@ -1,0 +1,34 @@
+# This example describes a network topology with a DHCP server and a
+# switch.
+# The DHCP server and three network interfaces are connected to the switch.
+# Please note that currently it is not possible to add a router to
+# this topology because the switch is not able to broadcast a packet to
+# more than an IOModule
+
+modules:
+  - name: myswitch
+    type: switch
+
+  - name: mydhcp
+    type: dhcp
+    config:
+      netmask: 255.255.255.0
+      addr_low: 192.168.1.100 # first address assigned by the dhcp
+      addr_high: 192.168.1.150 # last address assigned by the dhcp
+      dns: 8.8.8.8
+      router: 192.168.1.1
+      lease_time: 3600
+      server_ip: 192.168.1.250
+      server_mac: "b6:87:f8:5a:40:23"
+
+links:
+  - from: myswitch
+    to: mydhcp
+
+external_interfaces:
+  - module: myswitch
+    iface: veth1
+  - module: myswitch
+    iface: veth2
+  - module: myswitch
+    iface: veth3
