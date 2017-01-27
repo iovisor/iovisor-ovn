@@ -38,9 +38,13 @@ type DhcpModule struct {
 	ifaceName   string
 
 	mac         net.HardwareAddr
-	ip         	net.IP
-	dns         net.IP
+	ip          net.IP
+
+	addr_low     net.IP
+	addr_high    net.IP
+	netmask     net.IPMask
 	router      net.IP
+	dns         net.IP
 	leaseTime   uint32
 
 	deployed  bool
@@ -202,8 +206,14 @@ func (m *DhcpModule) DetachFromIoModule(ifaceName string) (err error) {
 }
 
 // TODO: this function should be split on smaller pieces.
-func (m *DhcpModule) ConfigureParameters(pool net.IPNet, dns net.IP, router net.IP,
-	leaseTime uint32, serverMac net.HardwareAddr, serverIp net.IP) (err error) {
+func (m *DhcpModule) ConfigureParameters(netmask net.IPMask,
+										addr_low net.IP,
+										addr_high net.IP,
+										dns net.IP,
+										router net.IP,
+										leaseTime uint32,
+										serverMac net.HardwareAddr,
+										serverIp net.IP) (err error) {
 	if !m.deployed {
 		errString := "Trying to configure undeployed module"
 		log.Errorf(errString)
@@ -211,7 +221,7 @@ func (m *DhcpModule) ConfigureParameters(pool net.IPNet, dns net.IP, router net.
 	}
 
 	// set module configuration
-	subnetMask := "0x" + pool.Mask.String()
+	subnetMask := "0x" + netmask.String()
 	dnsHex := ipToHex(dns)
 	leaseTimeStr := strconv.FormatUint(uint64(leaseTime), 10)
 	routerHex := ipToHex(router)
@@ -226,7 +236,7 @@ func (m *DhcpModule) ConfigureParameters(pool net.IPNet, dns net.IP, router net.
 		"0", toSend)
 
 	// Unfortunately until now only 10 IP addresses are allowed by server
-	hosts, _ := getHosts(pool)
+	hosts, _ := getHosts(addr_low, addr_high)
 	for i := 0; i < 10; i++ {
 
 		// set address pool
@@ -240,11 +250,15 @@ func (m *DhcpModule) ConfigureParameters(pool net.IPNet, dns net.IP, router net.
 			ipHex, index)
 	}
 
-	m.mac = serverMac;
-	m.ip = serverIp;
-	m.dns = dns;
-	m.router = router;
-	m.leaseTime = leaseTime;
+	m.mac = serverMac
+	m.ip = serverIp
+
+	m.addr_low = addr_low
+	m.addr_high = addr_high
+	m.netmask = netmask
+	m.dns = dns
+	m.router = router
+	m.leaseTime = leaseTime
 
 	return nil
 }
@@ -261,47 +275,60 @@ func (m *DhcpModule) Configure(conf interface{}) (err error) {
 	log.Infof("Configuring DHCP server")
 	confMap := to.Map(conf)
 
-	pool_, ok1 := confMap["pool"]
-	dns_, ok2 := confMap["dns"]
-	gw_, ok3 := confMap["gw"]
-	lease_time_ , ok4 := confMap["lease_time"]
-	server_ip_ , ok5 := confMap["server_ip"]
-	server_mac_ , ok6 := confMap["server_mac"]
+	netmask_, netmask_ok := confMap["netmask"]
+	addr_low_, addr_low_ok := confMap["addr_low"]
+	addr_high_, addr_high_ok := confMap["addr_high"]
+	dns_, dns_ok := confMap["dns"]
+	router_, router_ok := confMap["router"]
+	lease_time_, lease_time_ok := confMap["lease_time"]
+	server_ip_, server_ip_ok := confMap["server_ip"]
+	server_mac_, server_mac_ok := confMap["server_mac"]
 
 	// TODO: some of these fields could be optional and have a default value
-	if !ok1 {
-		return errors.New("Missing pool")
+	if !netmask_ok {
+		return errors.New("Missing netmask")
 	}
 
-	if !ok2 {
+	if !addr_low_ok {
+		return errors.New("Missing addr_low")
+	}
+
+	if !addr_high_ok {
+		return errors.New("Missing addr_high")
+	}
+
+	if !dns_ok {
 		return errors.New("Missing dns")
 	}
 
-	if !ok3 {
-		return errors.New("Missing gw")
+	if !router_ok {
+		return errors.New("Missing router")
 	}
 
-	if !ok4 {
+	if !lease_time_ok {
 		return errors.New("Missing lease_time")
 	}
 
-	if !ok5 {
+	if !server_ip_ok {
 		return errors.New("Missing server_ip")
 	}
 
-	if !ok6 {
+	if !server_mac_ok {
 		return errors.New("Missing server_mac")
 	}
 
-	_, pool, _ := net.ParseCIDR(pool_.(string))
+	netmask := ParseIPv4Mask(netmask_.(string))
+	addr_low := net.ParseIP(addr_low_.(string))
+	addr_high := net.ParseIP(addr_high_.(string))
 	dns := net.ParseIP(dns_.(string))
-	gw := net.ParseIP(gw_.(string))
+	router := net.ParseIP(router_.(string))
 	//temp , _ := strconv.ParseUint(lease_time_.(string), 10, 32)
 	var lease_time uint32 = uint32(lease_time_.(int))
 	mac_server, _ := net.ParseMAC(server_mac_.(string))
 	ip_server := net.ParseIP(server_ip_.(string))
 
-	return m.ConfigureParameters(*pool, dns, gw, lease_time, mac_server, ip_server)
+	return m.ConfigureParameters(netmask, addr_low, addr_high, dns,
+		router, lease_time, mac_server, ip_server)
 }
 
 // TODO: this function should be smarter
@@ -330,15 +357,15 @@ func ipToHex(ip net.IP) string {
 }
 
 // taken from https://gist.github.com/kotakanbe/d3059af990252ba89a82
- func getHosts(ipnet net.IPNet) ([]net.IP, error) {
+func getHosts(addr_low net.IP, addr_high net.IP) ([]net.IP, error) {
 	var ips []net.IP
-	for ip := ipnet.IP.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
+	for ip := addr_low; !ip.Equal(addr_high); inc(ip) {
 		temp := make(net.IP, len(ip))
 		copy(temp, ip)
 		ips = append(ips, temp)
 	}
-	// remove network address and broadcast address
-	return ips[1 : len(ips)-1], nil
+
+	return append(ips, addr_high), nil
 }
 
 func inc(ip net.IP) {
@@ -348,4 +375,12 @@ func inc(ip net.IP) {
 			break
 		}
 	}
+}
+
+func ParseIPv4Mask(s string) net.IPMask {
+	mask := net.ParseIP(s)
+	if mask == nil {
+		return nil
+	}
+	return net.IPv4Mask(mask[12], mask[13], mask[14], mask[15])
 }
