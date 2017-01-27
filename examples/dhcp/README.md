@@ -4,7 +4,7 @@ In this example a dhcp and a switch modules are deployed, three virtual network 
 
 The three virtual network interfaces are in different network namespaces and they do not have an IP address, this is provided then by the dhcp server.
  
-<center><a href="../../images/dhcp_tutorial.png"><img src="../../images/router_tutorial.png" width=500></a></center>
+<center><a href="../../images/dhcp_tutorial.png"><img src="../../images/dhcp_tutorial.png" width=500></a></center>
 
 ## Preparing the network namespaces
 
