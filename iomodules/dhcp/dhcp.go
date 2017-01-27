@@ -159,6 +159,14 @@ struct dhcp_options {
   u8 subnet_mask_length;
   u32 subnet_mask;
 
+  u8 router_id;
+  u8 router_length;
+  u32 router;
+
+  u8 dns_id;
+  u8 dns_length;
+  u32 dns;
+
   u8 end;
   u8 padding[2];
 
@@ -176,6 +184,12 @@ static inline void fill_dhcp_options(struct dhcp_options *r) {
 
   r->subnet_mask_id = DHCP_SUBNET;
   r->subnet_mask_length = 4;
+
+  r->router_id = DHCP_ROUTER;
+  r->router_length = 4;
+
+  r->dns_id = DHCP_DNS_SERVER;
+  r->dns_length = 4;
 
   r->end = DHCP_END;
 }
@@ -366,6 +380,8 @@ REPLY:
   options.server_id = bpf_htonl(cfg->server_ip);
   options.lease_time = bpf_htonl(cfg->lease_time);
   options.subnet_mask = bpf_htonl(cfg->subnet_mask);
+  options.router = bpf_htonl(cfg->router);
+  options.dns = bpf_htonl(cfg->dns);
 
   /* TODO: trim or extend packet before copying options in */
 
