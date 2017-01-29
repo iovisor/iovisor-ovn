@@ -26,6 +26,17 @@ The following is an example of the configuration of a router:
         netmask: 0.0.0.0
         mac: "7e:ee:c2:03:03:03"
 
+    static_routes:
+      - network: 130.192.0.0
+        netmask: 255.255.0.0
+        interface: Switch3
+        next_hop: 10.2.2.254
+
+      - network: 10.1.1.0
+        netmask: 255.255.255.0
+        interface: Switch4
+        #If no next_hop set, route of type local
+
 [...]
 ```
 
