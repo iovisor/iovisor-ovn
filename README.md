@@ -25,10 +25,10 @@ For more details about the architecture please see [architecture details](./ARCH
 
 IOVisor-OVN can be used in two different ways:
 
-- **Default**: provides a network backend, based on **IOVisor** and **IOModules**, for OVN + OpenStack.
+- **Default**: provides a network backend, based on IOVisor and IOModules, for OVN + OpenStack.
 Please read [README_OPENSTACK](./README_OPENSTACK.md).
-- **Standalone**: allows to test **IOModules**, without using the OVN integration.
-Please read [README_STANDALONE](./README_STANDALONE.md) 
+- **Standalone**: allows to test IOModules, without using the OVN integration.
+Please read [README_STANDALONE](./README_STANDALONE.md)
 
 ## Tutorials
 
