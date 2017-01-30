@@ -208,18 +208,6 @@ func (n *NatModule) AttachToIoModule(ifaceId int, ifaceName string) (err error) 
 	return nil
 }
 
-// func (n *NatModule) SetPublicIp(ip string) (err error) {
-// 	if !n.deployed {
-// 		errString := "undeployed nat"
-// 		log.Errorf(errString)
-// 		return errors.New(errString)
-// 	}
-//
-// 	hoverctl.TableEntryPUT(n.dataplane, n.ModuleId, "public_ip", "0", ipToHexadecimalString(ip))
-//
-// 	return nil
-// }
-
 func (n *NatModule) SetAddressAssociation(internal_ip string, external_ip string) (err error) {
 	if !n.deployed {
 		errString := "undeployed nat"
