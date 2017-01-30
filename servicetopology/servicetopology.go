@@ -17,8 +17,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/mvbpolito/gosexy/yaml"
 	"github.com/mvbpolito/gosexy/to"
+	"github.com/mvbpolito/gosexy/yaml"
 
 	"github.com/netgroup-polito/iovisor-ovn/config"
 	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
@@ -26,8 +26,9 @@ import (
 	"github.com/netgroup-polito/iovisor-ovn/iomodules"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/dhcp"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/l2switch"
-	"github.com/netgroup-polito/iovisor-ovn/iomodules/router"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/nat"
+	"github.com/netgroup-polito/iovisor-ovn/iomodules/onetoonenat"
+	"github.com/netgroup-polito/iovisor-ovn/iomodules/router"
 
 	l "github.com/op/go-logging"
 )
@@ -38,6 +39,7 @@ var dataplane *hoverctl.Dataplane
 
 // List of deployed modules (Indexed by module name)
 var modules map[string]iomodules.IoModule
+
 // List of configuration for modules (Indexed by module name)
 var modulesConfig map[string]interface{}
 
@@ -65,7 +67,7 @@ func deployModules(modulesRequested []interface{}) error {
 
 		var m iomodules.IoModule
 
-		switch (mtype) {
+		switch mtype {
 		case "dhcp":
 			m = dhcp.Create(dataplane)
 		case "router":
@@ -74,6 +76,8 @@ func deployModules(modulesRequested []interface{}) error {
 			m = l2switch.Create(dataplane)
 		case "nat":
 			m = nat.Create(dataplane)
+		case "onetoonenat":
+			m = onetoonenat.Create(dataplane)
 		default:
 			errString := fmt.Sprintf("Invalid module type '%s' for module '%s'",
 				mtype, name)
@@ -244,7 +248,7 @@ func DeployTopology(path string) error {
 				return err
 			}
 		} else {
-			log.Warningf("sikipping module '%s' without configuration", name);
+			log.Warningf("sikipping module '%s' without configuration", name)
 		}
 	}
 
@@ -254,4 +258,3 @@ func DeployTopology(path string) error {
 func UndeployTopology() {
 	log.Errorf("Not Implemented")
 }
-
