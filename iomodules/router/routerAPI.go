@@ -30,11 +30,11 @@ import (
 var log = l.MustGetLogger("iomodules-router")
 
 type RouterModule struct {
-	ModuleId     string
-	PortsCount   int //number of allocated ports
-	RoutingTable []RoutingTableEntry
+	ModuleId          string
+	PortsCount        int //number of allocated ports
+	RoutingTable      []RoutingTableEntry
 	routingTableCount int // number of elements in the routing table
-	Interfaces   map[string]*RouterModuleInterface
+	Interfaces        map[string]*RouterModuleInterface
 
 	deployed  bool
 	dataplane *hoverctl.Dataplane // used to send commands to hover
@@ -50,10 +50,10 @@ type RouterModuleInterface struct {
 }
 
 type RoutingTableEntry struct {
-	network string
-	netmask string
+	network     string
+	netmask     string
 	outputIface *RouterModuleInterface
-	nexthop string
+	nexthop     string
 }
 
 func Create(dp *hoverctl.Dataplane) *RouterModule {
@@ -344,7 +344,7 @@ func (s ByMaskLen) Less(i, j int) bool {
 
 // sort routing table entries according to the length of the netmas, the longest
 // ones are first
-func (r *RouterModule) sortRoutingTable() () {
+func (r *RouterModule) sortRoutingTable() {
 	sort.Sort(ByMaskLen(r.RoutingTable))
 }
 
@@ -369,7 +369,7 @@ func (r *RouterModule) sendRoutingTable() (err error) {
 		index++
 	}
 
-	return nil;
+	return nil
 }
 
 // TODO: Implement this function
@@ -385,7 +385,7 @@ func (r *RouterModule) AddArpEntry(ip string, mac string) (err error) {
 	}
 
 	hoverctl.TableEntryPUT(r.dataplane, r.ModuleId, "arp_table",
-			ipToHexadecimalString(ip), macToHexadecimalString(mac))
+		ipToHexadecimalString(ip), macToHexadecimalString(mac))
 
 	return nil
 }
@@ -442,13 +442,13 @@ func (r *RouterModule) Configure(conf interface{}) (err error) {
 			interface_, ok3 := entryMap["interface"]
 			next_hop, ok4 := entryMap["next_hop"]
 
-			if !ok1 || !ok2|| !ok3 {
+			if !ok1 || !ok2 || !ok3 {
 				log.Errorf("Skipping non valid static route")
 				continue
 			}
 
 			if !ok4 {
-				next_hop = "0"
+				next_hop = "0.0.0.0"
 			}
 
 			log.Infof("Adding Static Route: '%s', '%s', '%s', '%s'",
@@ -470,7 +470,7 @@ func (r *RouterModule) Configure(conf interface{}) (err error) {
 			ip, ok1 := entryMap["ip"]
 			mac, ok2 := entryMap["mac"]
 
-			if !ok1 || !ok2{
+			if !ok1 || !ok2 {
 				log.Errorf("Skipping non valid arp entry")
 				continue
 			}
@@ -487,7 +487,6 @@ func (r *RouterModule) Configure(conf interface{}) (err error) {
 
 	return nil
 }
-
 
 // TODO: this function should be smarter
 func macToHexadecimalString(s string) string {
