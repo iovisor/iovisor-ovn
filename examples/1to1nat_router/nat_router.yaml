@@ -1,0 +1,52 @@
+modules:
+  - name: Switch1
+    type: switch
+    config:
+
+  # - name: Switch2
+  #   type: switch
+  #   config:
+
+  - name: Nat
+    type: onetoonenat
+    config:
+      nat_entries:
+      - internal_ip: 10.0.1.1
+        external_ip: 130.192.1.1
+
+      - internal_ip: 10.0.1.2
+        external_ip: 130.192.1.2
+
+  - name: Router
+    type: router
+    config:
+      interfaces:
+        - name: Switch1
+          ip: 10.0.1.254
+          netmask: 255.255.255.0
+          mac: "7e:ee:c2:01:01:01"
+
+        - name: Nat
+          ip: 10.10.1.254
+          netmask: 255.255.255.0
+          mac: "7e:ee:c2:03:03:03"
+
+      static_routes:
+        - network: 0.0.0.0
+          netmask: 0.0.0.0
+          interface: Nat
+          #next_hop: "0"
+
+links:
+  - from: Switch1
+    to: Router
+  - from: Router
+    to: Nat
+
+external_interfaces:
+  - module: Switch1
+    iface: veth1
+  - module: Switch1
+    iface: veth2
+  - module: Nat
+    iface: veth3
