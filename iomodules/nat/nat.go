@@ -31,19 +31,8 @@ var NatCode = `
 #undef BPF_TRACE_REVERSE_TCP
 #undef BPF_TRACE_DROP
 
-#undef BPF_TRACE_ARP_REQUEST
-#undef BPF_TRACE_ARP_REPLY
-
-#define ARP_REQUEST
-#define ARP_REPLY
-
-#define MAC_DST_LOOKUP
-#define MAC_SRC_LOOKUP
-#undef BCAST_MAC_BACK
-
 #define EGRESS_NAT_TABLE_DIM  1024
 #define REVERSE_NAT_TABLE_DIM 1024
-#define ARP_TABLE_DIM 100
 
 #define IN_IFC  1
 #define OUT_IFC 2
@@ -109,11 +98,6 @@ BPF_TABLE("hash", struct egress_nat_key, struct egress_nat_value, egress_nat_tab
 BPF_TABLE("hash", struct reverse_nat_key, struct reverse_nat_value, reverse_nat_table, REVERSE_NAT_TABLE_DIM);
 
 /*
-  Arp Table implements a mapping between ip and mac addresses.
-*/
-BPF_TABLE("hash", u32, u64, arp_table, ARP_TABLE_DIM);
-
-/*
   First implementation of a pool of ports. (incremental counter).
 */
 BPF_TABLE("array", u32, u16, first_free_port, 1);
@@ -122,11 +106,6 @@ BPF_TABLE("array", u32, u16, first_free_port, 1);
   Public IP.
 */
 BPF_TABLE("array", u32, u32, public_ip, 1);
-
-/*
-  Nat Public Port
-*/
-BPF_TABLE("array", u32, struct port, public_port, 1);
 
 /*
   returns the PUBLIC IP address set by control plane
@@ -230,71 +209,16 @@ static int handle_rx(void *skb, struct metadata *md) {
     for this reason packet should be forwarded to BCAST_MAC
   */
   arp: {
-  //reply only to arp from OUT_IFC
-  if (md->in_ifc == OUT_IFC){
-    struct arp_t *arp = cursor_advance(cursor, sizeof(*arp));
-    #ifdef ARP_REQUEST
-    if (arp->oper == 1) {
-    #ifdef BPF_TRACE_ARP_REQUEST
-      bpf_trace_printk("[nat-0]: ARP request from mac: %lx who has %x tell %x \n",arp->sha,  arp->tpa, arp->spa);
-    #endif
-
-      u32 index = 0;
-      struct port *port_p = public_port.lookup(&index);
-      if (!port_p)
-        goto DROP;
-      if (arp->tpa == port_p->ip) {
-        /* due to a bcc issue: https://github.com/iovisor/bcc/issues/537 it
-         * is necessary to copy the data field into a temporal variable
-         */
-        u64 mymac = port_p->mac;
-        u64 remotemac = arp->sha;
-        u32 myip = port_p->ip;
-        u32 remoteip = arp->spa;
-
-        ethernet->dst = remotemac;
-        ethernet->src = mymac;
-
-        /* please note that the mac has to be copied before that the ips.  This
-         * is because the temporal variable used to save the mac has 8 byes, 2
-         * more than the mac itself.  Then when copying the mac into the packet
-         * the two first bytes of the ip are also modified.
-         */
-        arp->oper = 2;
-        arp->tha = remotemac;
-        arp->sha = mymac;
-        arp->tpa = remoteip;
-        arp->spa = myip;
-
-        /* register the requesting mac and ips */
-        arp_table.update(&remoteip, &remotemac);
-
-        pkt_redirect(skb, md, md->in_ifc);
-        return RX_REDIRECT;
-      }
+    if (md->in_ifc == OUT_IFC){
+      pkt_redirect(skb, md, IN_IFC);
+          return RX_REDIRECT;
+      } else if (md->in_ifc == IN_IFC) {
+      pkt_redirect(skb, md, OUT_IFC);
+          return RX_REDIRECT;
     }
-    #endif
-    #ifdef ARP_REPLY
-    if (arp->oper == 2) {
-    #ifdef BPF_TRACE_ARP_REPLY
-      bpf_trace_printk("[nat-0]: ARP reply.\n");
-    #endif
 
-      u32 index = 0;
-      struct port *port_p = public_port.lookup(&index);
-      if (!port_p)
-        return RX_DROP;
-      if (arp->sha == port_p->mac && arp->spa == port_p->ip) {
-        u64 mac_ = port_p->mac;
-        u32 ip_ = port_p->ip;
-        arp_table.update(&ip_, &mac_);
-        return RX_DROP;
-      }
-    }
-    #endif
+    return RX_DROP;
   }
-  goto DROP;
-}
 
   udp: {
       struct udp_t *udp = cursor_advance(cursor, sizeof(*udp));
@@ -331,28 +255,6 @@ static int handle_rx(void *skb, struct metadata *md) {
         goto DROP;
       }
 
-    #ifdef MAC_DST_LOOKUP
-      //Lookup for destination mac address in the arp table.
-      //If no match send to broadcast.
-      u32 ip_ = 0;
-      ip_ = ip->dst;
-      u64 *mac_dst = arp_table.lookup(&ip_);
-      if (mac_dst){
-        ethernet->dst = *mac_dst;
-      }else{
-        ethernet->dst = 0xffffffffffff;
-      }
-    #endif
-
-    #ifdef MAC_SRC_LOOKUP
-      //Set public iface mac address as source.
-      u32 idx = 0;
-      struct port * port = public_port.lookup(&idx);
-      if(port){
-        ethernet->src = port->mac;
-      }
-    #endif
-
       //redirect packet
       pkt_redirect(skb,md,OUT_IFC);
       return RX_REDIRECT;
@@ -383,13 +285,6 @@ static int handle_rx(void *skb, struct metadata *md) {
 
         bpf_l3_csum_replace(skb, IP_CSUM_OFFSET , bpf_htonl(ip->dst), bpf_htonl(reverse_value_p->ip_dst_new), 4);
         ip->dst = reverse_value_p->ip_dst_new;
-
-      #ifdef BCAST_MAC_BACK
-        //Since the first interface of a NAT should always be attached to a router,
-        //force destination mac address to bcast to make the router port process
-        //the packet. If router don't receive a packet directed to the iface should drop it.
-        ethernet->dst = 0xffffffffffff;
-      #endif
 
         pkt_redirect(skb,md,IN_IFC);
         return RX_REDIRECT;
@@ -437,28 +332,6 @@ static int handle_rx(void *skb, struct metadata *md) {
         goto DROP;
       }
 
-    #ifdef MAC_DST_LOOKUP
-      //Lookup for destination mac address in the arp table.
-      //If no match send to broadcast.
-      u32 ip_ = 0;
-      ip_ = ip->dst;
-      u64 *mac_dst = arp_table.lookup(&ip_);
-      if (mac_dst){
-        ethernet->dst = *mac_dst;
-      }else{
-        ethernet->dst = 0xffffffffffff;
-      }
-    #endif
-
-    #ifdef MAC_SRC_LOOKUP
-      //Set public iface mac address as source.
-      u32 idx = 0;
-      struct port * port = public_port.lookup(&idx);
-      if(port){
-        ethernet->src = port->mac;
-      }
-    #endif
-
       //redirect packet
       pkt_redirect(skb,md,OUT_IFC);
       return RX_REDIRECT;
@@ -489,13 +362,6 @@ static int handle_rx(void *skb, struct metadata *md) {
 
         bpf_l3_csum_replace(skb, IP_CSUM_OFFSET , bpf_htonl(ip->dst), bpf_htonl(reverse_value_p->ip_dst_new), 4);
         ip->dst = reverse_value_p->ip_dst_new;
-
-      #ifdef BCAST_MAC_BACK
-        //Since the first interface of a NAT should always be attached to a router,
-        //force destination mac address to bcast to make the router port process
-        //the packet. If router don't receive a packet directed to the iface should drop it.
-        ethernet->dst = 0xffffffffffff;
-      #endif
 
         //redirect packet
         pkt_redirect(skb,md,IN_IFC);
