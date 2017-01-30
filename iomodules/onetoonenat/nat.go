@@ -27,7 +27,7 @@ var NatCode = `
 #define BPF_TRACE_INGRESS
 #undef BPF_TRACE_EGRESS_UDP
 #undef BPF_TRACE_REVERSE_UDP
-#define BPF_TRACE_EGRESS_TCP
+#undef BPF_TRACE_EGRESS_TCP
 #undef BPF_TRACE_REVERSE_TCP
 #undef BPF_TRACE_DROP
 #undef BPF_TRACE_LOOKUP_FAILED
@@ -149,7 +149,7 @@ static int handle_rx(void *skb, struct metadata *md) {
       EGRESS_UDP: ;
       //Packet exiting the nat, apply nat translation
     #ifdef BPF_TRACE_EGRESS_UDP
-      bpf_trace_printk("[nat-0]: EGRESS NAT UDP nextp: 0x%x\n",ip->nextp);
+      bpf_trace_printk("[nat-0]: EGRESS NAT UDP nextp: 0x%x ip_src: %x ip_dst: %x\n",ip->nextp, ip->src, ip->dst);
     #endif
 
       struct egress_nat_value *egress_value_p = 0;
@@ -168,12 +168,9 @@ static int handle_rx(void *skb, struct metadata *md) {
           bpf_trace_printk("[nat-0]: EGRESS NAT UDP LOOKUP FAILED.\n");
         #endif
 
-        #ifdef FORWARD_NO_NAT_TRAFFIC
-          pkt_redirect(skb, md, OUT_IFC);
-          return RX_REDIRECT;
+        #ifndef FORWARD_NO_NAT_TRAFFIC
+          goto DROP;
         #endif
-
-        goto DROP;
       }
 
       //redirect packet
@@ -186,7 +183,7 @@ static int handle_rx(void *skb, struct metadata *md) {
       reverse_key.ip_dst = ip->dst;
 
     #ifdef BPF_TRACE_REVERSE_UDP
-      bpf_trace_printk("[nat-0]: REVERSE NAT UDP nextp: 0x%x\n",ip->nextp);
+      bpf_trace_printk("[nat-0]: REVERSE NAT UDP nextp: 0x%x ip_src: %x ip_dst: %x\n",ip->nextp, ip->src, ip->dst);
     #endif
 
       struct reverse_nat_value *reverse_value_p = 0;
@@ -199,22 +196,19 @@ static int handle_rx(void *skb, struct metadata *md) {
         bpf_l4_csum_replace(skb, UDP_CSUM_OFFSET, bpf_htonl(ip->dst), bpf_htonl(reverse_value_p->ip_dst_new), IS_PSEUDO | 4);
         bpf_l3_csum_replace(skb, IP_CSUM_OFFSET , bpf_htonl(ip->dst), bpf_htonl(reverse_value_p->ip_dst_new), 4);
         ip->dst = reverse_value_p->ip_dst_new;
-
-        pkt_redirect(skb,md,IN_IFC);
-        return RX_REDIRECT;
-
       }else{
         #ifdef BPF_TRACE_LOOKUP_FAILED
           bpf_trace_printk("[nat-0]: REVERSE NAT UDP NO MATCH.\n");
         #endif
 
-        #ifdef FORWARD_NO_NAT_TRAFFIC
-          pkt_redirect(skb, md, IN_IFC);
-          return RX_REDIRECT;
+        #ifndef FORWARD_NO_NAT_TRAFFIC
+          goto DROP;
         #endif
-
-        goto DROP;
       }
+
+      pkt_redirect(skb,md,IN_IFC);
+      return RX_REDIRECT;
+
       /*END UDP*/
       goto EOP;
   }
@@ -231,7 +225,7 @@ static int handle_rx(void *skb, struct metadata *md) {
       EGRESS_TCP: ;
       //Packet exiting the nat, apply nat translation
     #ifdef BPF_TRACE_EGRESS_TCP
-      bpf_trace_printk("[nat-0]: EGRESS NAT TCP nextp: 0x%x ip_src: %x\n",ip->nextp, ip->src);
+      bpf_trace_printk("[nat-0]: EGRESS NAT TCP nextp: 0x%x ip_src: %x ip_dst: %x\n",ip->nextp, ip->src, ip->dst);
     #endif
 
       struct egress_nat_value *egress_value_p = 0;
@@ -239,19 +233,20 @@ static int handle_rx(void *skb, struct metadata *md) {
       if(egress_value_p){
       #ifdef BPF_TRACE_EGRESS_TCP
         bpf_trace_printk("[nat-0]: EGRESS NAT TCP   ip->src: %x->%x\n", ip->src ,egress_value_p->ip_src_new);
-        // bpf_trace_printk("[nat-0]: EGRESS NAT TCP ip->src: %d->%d\n", ip->src , egress_value_p->port_src_new);
       #endif
 
         bpf_l4_csum_replace(skb, TCP_CSUM_OFFSET, bpf_htonl(ip->src), bpf_htonl(egress_value_p->ip_src_new), IS_PSEUDO | 4);
-        // bpf_l4_csum_replace(skb, TCP_CSUM_OFFSET, bpf_htons(tcp->src_port), bpf_htons(egress_value_p->port_src_new), 2);
-        // tcp->src_port = egress_value_p->port_src_new;
-
         //change ip
         bpf_l3_csum_replace(skb, IP_CSUM_OFFSET , bpf_htonl(ip->src), bpf_htonl(egress_value_p->ip_src_new), 4);
         ip->src = egress_value_p->ip_src_new;
       }else{
-        bpf_trace_printk("[nat-0]: EGRESS NAT TCP LOOKUP FAILED -> DROP packet.\n");
-        goto DROP;
+        #ifdef BPF_TRACE_LOOKUP_FAILED
+          bpf_trace_printk("[nat-0]: EGRESS NAT TCP NO MATCH.\n");
+        #endif
+
+        #ifndef FORWARD_NO_NAT_TRAFFIC
+          goto DROP;
+        #endif
       }
 
       //redirect packet
@@ -264,7 +259,7 @@ static int handle_rx(void *skb, struct metadata *md) {
       reverse_key.ip_dst = ip->dst;
 
     #ifdef BPF_TRACE_REVERSE_TCP
-      bpf_trace_printk("[nat-0]: REVERSE NAT TCP nextp: 0x%x ports: %d->%d\n",ip->nextp, tcp->src_port,tcp->dst_port);
+      bpf_trace_printk("[nat-0]: REVERSE NAT TCP nextp: 0x%x ports: ip_src: %x ip_dst: %x\n",ip->nextp, ip->src, ip->dst);
     #endif
 
       struct reverse_nat_value *reverse_value_p = 0;
@@ -276,27 +271,22 @@ static int handle_rx(void *skb, struct metadata *md) {
       #endif
 
         bpf_l4_csum_replace(skb, TCP_CSUM_OFFSET, bpf_htonl(ip->dst), bpf_htonl(reverse_value_p->ip_dst_new), IS_PSEUDO | 4);
-        // bpf_l4_csum_replace(skb, TCP_CSUM_OFFSET, bpf_htons(tcp->dst_port), bpf_htons(reverse_value_p->port_dst_new), 2);
-        // tcp->dst_port = reverse_value_p->port_dst_new;
-
         bpf_l3_csum_replace(skb, IP_CSUM_OFFSET , bpf_htonl(ip->dst), bpf_htonl(reverse_value_p->ip_dst_new), 4);
         ip->dst = reverse_value_p->ip_dst_new;
-
-        //redirect packet
-        pkt_redirect(skb,md,IN_IFC);
-        return RX_REDIRECT;
       }else{
         #ifdef BPF_TRACE_LOOKUP_FAILED
           bpf_trace_printk("[nat-0]: REVERSE NAT TCP NO MATCH.\n");
         #endif
 
-        #ifdef FORWARD_NO_NAT_TRAFFIC
-          pkt_redirect(skb, md, IN_IFC);
-          return RX_REDIRECT;
+        #ifndef FORWARD_NO_NAT_TRAFFIC
+          goto DROP;
         #endif
-
-        goto DROP;
       }
+
+      //redirect packet
+      pkt_redirect(skb,md,IN_IFC);
+      return RX_REDIRECT;
+
       /*END TCP*/
       goto EOP;
     }
