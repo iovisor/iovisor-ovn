@@ -1,6 +1,6 @@
 # IOVisor-OVN Standalone Installation
 
-This alternative way of using IOVisor-OVN is intended to provide a fast and easy way to test the different IOModules.
+This alternative way of using IOVisor-OVN is intended to provide a fast and easy approach to test the different IOModules.
 
 ## Installation
 This guide includes the instructions to install *bcc, go, hover* and *iovisor-ovn*.
@@ -31,7 +31,7 @@ Please follow the [Go Installation Guide](https://golang.org/doc/install), Go 1.
 #### hover
 In order to install hover please follow the steps in [Installing Hover](https://github.com/iovisor/iomodules/#installing-hover)
 
-Please bet sure that the this [patch](https://github.com/mvbpolito/iomodules/commit/7409078fcb158263dcc2b6b58b508e7033865d5f) is applied before the installation.
+Please be sure that this [patch](https://github.com/mvbpolito/iomodules/commit/7409078fcb158263dcc2b6b58b508e7033865d5f) is applied before the installation.
 
 #### iovisor-ovn
 
