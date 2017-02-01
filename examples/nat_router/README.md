@@ -11,6 +11,7 @@ In particular we have:
   * ns3 (ip 10.10.1.1/24 dg 10.10.1.100)
 
 *topology*
+```bash
 ns1 <--> Switch1
             |
             |
@@ -22,6 +23,7 @@ ns1 <--> Switch1
             |
             |
 ns2 <--> Switch2
+```
 
 ## Preparing the network namespaces
 
