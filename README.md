@@ -11,7 +11,7 @@ In a nutshell, IOVisor-ION defines a new data plane that is semantically equival
 
 ### How?
 
- - In this project we replace the current backend of OVN with a new implementation based on IOVisor. This proposal maintains the current OVN architecture that handles orchestration across a datacenter-wise environment, and keeps compatibility with current Cloud Management Systems as OpenStack, Apache Mesos, and other.
+ - We replace the current backend of OVN with a new implementation based on IOVisor. This proposal maintains the current OVN architecture that handles orchestration across a datacenter-wise environment, and keeps compatibility with current Cloud Management Systems as OpenStack, Apache Mesos, and other.
 
 ## Architecture
 
@@ -19,15 +19,15 @@ In a nutshell, IOVisor-ION defines a new data plane that is semantically equival
 
 IOVisor-OVN sits on side of the traditional OVN architecture, it intercepts the contents of the different databases and it deploys the required network services using the IOVisor technology.
 
-For more details about the architecture please see [architecture details](./ARCHITECTURE.md).
+For more details about the architecture please see [ARCHITECTURE](./ARCHITECTURE.md).
 
 ## Getting Started
 
 IOVisor-OVN can be used in two different ways:
 
-- **Default**: provides a network backend, based on IOVisor and IOModules, for OVN + OpenStack.
+- **Default**: provides a network backend, based on IOVisor and IOModules, for OVN + OpenStack.  
 Please read [README_OPENSTACK](./README_OPENSTACK.md).
-- **Standalone**: allows to test IOModules, without using the OVN integration, staring from a yaml configuration file.
+- **Standalone**: allows to test IOModules, without using the OVN integration, staring from a yaml configuration file.  
 Please read [README_STANDALONE](./README_STANDALONE.md)
 
 ## Tutorials
@@ -45,7 +45,7 @@ Some tutorials intendend to provide a step-by-step guide to play with the existi
 * **hoverctl**: hover restful api wrapper and utilities.
 * **mainlogic**: tool that performs the mapping between the network configuration of OVN and IOModules.
 * **ovnmonitor**:  monitors for OVN northbound database, southbound database and local ovs database. Implemented using libovsdb.
-* **tutorials**: simple tutorials to try IOModules contained in the repository
+* **examples**: examples using IOModules in the repository.
 
 ## Presentations
 
