@@ -29,9 +29,15 @@ modules:
           mac: "7e:ee:c2:02:02:02"
 
         - name: Nat
-          ip: 0.0.0.0
-          netmask: 0.0.0.0
+          ip: 10.10.1.100
+          netmask: 255.255.255.0
           mac: "7e:ee:c2:03:03:03"
+
+      static_routes:
+        - network: 0.0.0.0
+          netmask: 0.0.0.0
+          interface: Nat
+          #next_hop: "0"
 
 links:
   - from: Switch1
