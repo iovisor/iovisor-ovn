@@ -30,9 +30,9 @@ Please read [README_OPENSTACK](./README_OPENSTACK.md).
 - **Standalone**: allows to test IOModules, without using the OVN integration, starting from a yaml configuration file.  
 Please read [README_STANDALONE](./README_STANDALONE.md)
 
-## Tutorials
+## Examples
 
-Some tutorials intended to provide a step-by-step guide to playing with the existing IOModules are available in the [tutorial folder](/tutorials).
+Some examples intended to provide a step-by-step guide to playing with the existing IOModules are available in the [examples folder](/examples).
 
 
 ## Repository Organization:
