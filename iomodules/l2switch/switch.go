@@ -1,4 +1,4 @@
-// Copyright 2016 Politecnico di Torino
+// Copyright 2017 Politecnico di Torino
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,7 +38,6 @@ struct ip_leaf{
   u32 ip;
 };
 
-
 /*
   The Forwarding Table (fwdtable) contains the association between mac Addresses
   and	ports learned by the switch in the learning phase.
@@ -47,7 +46,7 @@ struct ip_leaf{
   The interface number uses the convention of hover, so is an incremental number
   given by hover daemon each time a port is attached to the IOModule (1, 2,..).
 */
-BPF_TABLE("hash", struct mac_t, struct interface, fwdtable, 10240);
+BPF_TABLE("hash", struct mac_t, struct interface, fwdtable, 1024);
 
 /*
   The Ports Table (ports) is a fixed length array that identifies the fd (file
