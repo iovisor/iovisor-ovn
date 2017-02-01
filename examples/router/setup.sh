@@ -1,5 +1,7 @@
 #! /bin/bash
 
+set -x
+
 for i in `seq 1 3`;
 do
 	# remove ns and veth pairs if already created

@@ -1,5 +1,7 @@
 #! /bin/bash
 
+set -x
+
 for i in `seq 1 2`;
 do
 	sudo ip netns del ns${i}	# remove ns if already existed
