@@ -6,6 +6,19 @@ This alternative way of using IOVisor-OVN is intended to provide a fast and easy
 This guide includes the instructions to install *bcc, go, hover* and *iovisor-ovn*.
 A Linux kernel with a version 4.9 or newer is required, we recommend to use Ubuntu as all the examples have been tested on that platform.
 
+The simplest set of instructions for the upgrade to kernel version 4.9 is listed below.
+
+```bash
+mkdir /tmp/kernel-4.9/
+cd /tmp/kernel-4.9/
+wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v4.9/linux-headers-4.9.0-040900_4.9.0-040900.201612111631_all.deb
+wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v4.9/linux-headers-4.9.0-040900-generic_4.9.0-040900.201612111631_amd64.deb
+wget http://kernel.ubuntu.com/~kernel-ppa/mainline/v4.9/linux-image-4.9.0-040900-generic_4.9.0-040900.201612111631_amd64.deb
+sudo dpkg -i *.deb
+#Now reboot your system
+sudo reboot
+```
+
 ### Automatic Installation
 
 In order to automatically install all the required components please execute the following commands, please consider that they only work on Debian based distros.
