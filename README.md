@@ -27,12 +27,12 @@ IOVisor-OVN can be used in two different ways:
 
 - **Default**: provides a network backend, based on IOVisor and IOModules, for OVN + OpenStack.  
 Please read [README_OPENSTACK](./README_OPENSTACK.md).
-- **Standalone**: allows to test IOModules, without using the OVN integration, starting from a yaml configuration file.  
-Please read [README_STANDALONE](./README_STANDALONE.md)
+- **Standalone**: allows to test a single or a chain of IOModules, without the OVN integration. The entire chain can be setup with a simple  yaml configuration file.  
+Please read [README_STANDALONE](./README_STANDALONE.md).
 
 ## Examples
 
-Some examples intended to provide a step-by-step guide to playing with the existing IOModules are available in the [examples folder](/examples).
+Some examples intended to provide a step-by-step guide to playing with the existing IOModules are available in the [examples folder](/examples) and can be used in *standalone* mode.
 
 
 ## Repository Organization:
