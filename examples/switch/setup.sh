@@ -4,8 +4,8 @@ set -x
 
 for i in `seq 1 2`;
 do
-	sudo ip netns del ns${i}	# remove ns if already existed
-	sudo ip link del veth${i}
+	sudo ip netns del ns${i} > /dev/null 2>&1	# remove ns if already existed
+	sudo ip link del veth${i} > /dev/null 2>&1
 
 	sudo ip netns add ns${i}
 	sudo ip link add veth${i}_ type veth peer name veth${i}
