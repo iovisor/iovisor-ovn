@@ -14,7 +14,7 @@ Returns the ID assgined to the module by Hover.
 Loads the IOModule into the system.
 
 - **Destroy()**
-Unloads the IOModule. 
+Unloads the IOModule.
 Before calling this function all the links to external interfaces and other modules should be removed.
 
 - **AttachExternalInterface(name string)**
@@ -30,7 +30,7 @@ This function is used by a upper layer to create a link between two IOModules. T
 Removes the connection to another IOModule.
 
 - **Configure(conf interface{})**
-Performs the configuration of the parameters of the IOModule. 
+Performs the configuration of the parameters of the IOModule.
 The data structure to be passed is defined by each IOModule.
 
 Additional to those functions, the `iomodules` package defines:
@@ -40,3 +40,12 @@ Creates a link between the two modules and then calls the `AttachToIoModule()` f
 
 - **DetachIoModules()**
 TBD
+
+#How to use
+
+IOModules can be deployed in two different ways:
+
+  * Using **IOModules APIs**, and importing the correspondent package it's possible to write your own program that exploit the APIs to Deploy, Destroy, Attach, Configure an IOModule.
+
+  * Using **iovisorovndn in standalone mode** it's possible to deploy a single or a chain of IOModules using a YAML configuration file.  
+  Please read [README_STANDALONE (How to Use)](./../README_STANDALONE.md#how-to-use).
