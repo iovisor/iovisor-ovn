@@ -24,7 +24,7 @@ The entire setup can be deployed starting from a YAML configuration file.
 $GOPATH/bin/iovisorovnd -file <configuration.yaml>
 ```
 
-Some examples are available in [/examples](./../../examples/) folder.
+Some examples are available in [/examples](./../../examples/) folder:
  * [Nat and Router](./../../examples/nat_router/)
 
 Please note that NAT IOModule Must be deployed attached to a Router.
@@ -45,10 +45,8 @@ Please note that NAT IOModule Must be deployed attached to a Router.
    * **public_ip**: defines public ip address.
 
 ## Limitations
-    * The first port of the nat is always attached to the internal network.
 
-    * The second port of the nat is always attached to the public network.
-
-    * No cleanup is performed on the nat tables entries
-
-    * The mechanism to choose the source port is incremental starting from port 1025.
+  * The first port of the nat is always attached to the internal network.
+  * The second port of the nat is always attached to the public network.
+  * No cleanup is performed on the nat tables entries
+  * The mechanism to choose the source port is incremental starting from port 1025.
