@@ -2,7 +2,25 @@
 
 This module implements a basic version of a DHCP server.
 
-## YAML Configuration Format
+## API
+
+- **ConfigureParameters(...)**
+Configures the parameters required to the operation of the DHCP server.
+The received arguments are the same used in the YAML configuration file.
+
+## How to use
+
+Using iovisor-ovn daemon in standalone mode, the user can deploy and configure a single or a chain of IOModules.
+The entire setup can be deployed starting from a YAML configuration file.
+
+```bash
+$GOPATH/bin/iovisorovnd -file <configuration.yaml>
+```
+
+Some examples are available in [/examples](./../../examples/) folder:
+ * [DHCP](./../../examples/dhcp/)
+
+### YAML Configuration Format
 
 The following is an example of the configuration of a dhcp server:
 ```
@@ -29,12 +47,6 @@ The following is an example of the configuration of a dhcp server:
  - **lease_time**: default time that an address is leased to a client.
  - **server_ip**: IP address of the DHCP server.
  - **mac_ip**: MAC address of the DHCP server.
-
-## API
-
-- **ConfigureParameters(...)**
-Configures the parameters required to the operation of the DHCP server.
-The received arguments are the same used in the YAML configuration file.
 
 ## Limitations
 

@@ -1,8 +1,27 @@
 # Switch IOModule
 
-This module is an Ethernet Switch that implements the MAC learning algorithm. 
+This module is an Ethernet Switch that implements the MAC learning algorithm.
 
-## YAML Configuration Format
+## API
+
+- **AddForwardingTableEntry(mac string, ifaceName string)**
+Adds a static entry in the forwarding table of the switch
+-- mac: MAC address. It must be in the "xx:yy:zz:xx:xx:xx" format
+-- ifaceName: name of the port where MAC can be reached
+
+## How to use
+
+Using iovisor-ovn daemon in standalone mode, the user can deploy and configure a single or a chain of IOModules.
+The entire setup can be deployed starting from a YAML configuration file.
+
+```bash
+$GOPATH/bin/iovisorovnd -file <configuration.yaml>
+```
+
+Some examples are available in [/examples](./../../examples/) folder:
+ * [Switch](./../../examples/switch/)
+
+### YAML Configuration Format
 
 The following is an example of the configuration of a switch:
 ```
@@ -18,20 +37,13 @@ The following is an example of the configuration of a switch:
 [...]
 ```
 
- - **forwarding _table**: defines static entries for the forwarding table of the switch
- 
-## API
-
-- **AddForwardingTableEntry(mac string, ifaceName string)**
-Adds a static entry in the forwarding table of the switch
--- mac: MAC address. It must be in the "xx:yy:zz:xx:xx:xx" format
--- ifaceName: name of the port where MAC can be reached
+ - **forwarding _table**: defines static entries for the forwarding table of the switch. Please note that this configuration parameter is optional. It's useful when the programmer wants to force entries in the forwarding table.
 
 ## Limitations
 
 - Packets can only be broadcasted to a single IOModule, it means that if a switch is connected to more than one IOModule only one of them will receive that packet.
 This is a hover limitation and should be solved by a new framework for managing IOModules.
- 
+
 - The maximum number number of ports on a switch is to 32, it cannot be changed at runtime.
 This is a design choice that will be improved in the future.
 
