@@ -2,6 +2,8 @@
 
 set -x
 
+#This script (install) and launches Hocer daemon, the framework used to deploy IOModules
+
 #Install Hover daemon
 #go install github.com/iovisor/iomodules/hover/hoverd
 
