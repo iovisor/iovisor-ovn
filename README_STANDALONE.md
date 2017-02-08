@@ -1,6 +1,6 @@
-# IOVisor-OVN Standalone Installation
+# IOVisor-OVN Standalone
 
-This alternative way of using IOVisor-OVN is intended to provide a fast and easy approach to test the different IOModules.
+The **Standalone Mode**, allows to test a **single or a chain of IOModules**, without the OVN integration. The entire chain can be setup with a simple **YAML configuration file**.  
 
 ## Installation
 This guide includes the instructions to install *bcc, go, hover* and *iovisor-ovn*.
@@ -58,6 +58,16 @@ go get github.com/netgroup-polito/iovisor-ovn/iovisorovnd
 
 In this case the configuration and topology of the service topology to be deployed is passed through a .yaml file.
 
+### Launching IOVisor-OVN in Standalone Mode
+
+In order to deploy a service topology from a file, the -file parameter should be passed to the IOVisor-OVN daemon.
+
+```
+export GOPATH=$HOME/go
+cd $GOPATH/src/github.com/netgroup-polito/iovisor-ovn/examples/switch
+$GOPATH/bin/iovisorovnd -file <file.yaml> -hover <hover_url>
+```
+
 ### Configuration File
 
 ```
@@ -88,17 +98,6 @@ Please see the documentation of each single IOModule to get information about th
 
 3. **external_interfaces**:  The connection to the network interfaces are defined in this section. Module should be a module defined in the "modules" section and iface should be the name of the interface on the system.
 
-### Launching IOVisor-OVN
-
-In order to deploy a service topology from a file, the -file parameter should be passed to the IOVisor-OVN daemon.
-
-```
-export GOPATH=$HOME/go
-cd $GOPATH/src/github.com/netgroup-polito/iovisor-ovn/examples/switch
-$GOPATH/bin/iovisorovnd -file <file.yaml> -hover <hover_url>
-```
-
 ### Examples
 
 Some examples with a complete explanation are provided in [examples](./examples)
-

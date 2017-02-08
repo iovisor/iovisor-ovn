@@ -47,5 +47,5 @@ IOModules can be deployed in two different ways:
 
   * Using **IOModules APIs**, and importing the correspondent package it's possible to write your own program that exploit the APIs to Deploy, Destroy, Attach, Configure an IOModule.
 
-  * Using **iovisorovndn in standalone mode** it's possible to deploy a single or a chain of IOModules using a YAML configuration file.  
-  Please read [README_STANDALONE (How to Use)](./../README_STANDALONE.md#how-to-use).
+  * Using **iovisorovnd in standalone mode** it's possible to deploy a single or a chain of IOModules using a YAML configuration file.  
+  Please read [README_STANDALONE](./../README_STANDALONE.md#how-to-use).
