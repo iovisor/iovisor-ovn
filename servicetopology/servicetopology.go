@@ -187,10 +187,10 @@ func undeployModules() {
 
 func DeployTopology(path string) error {
 
-	hc := hover.NewClient()
+	dataplane = hover.NewClient()
 
 	// Connect to hover and initialize HoverDataplane
-	if err := hc.Init(config.Hover); err != nil {
+	if err := dataplane.Init(config.Hover); err != nil {
 		log.Errorf("unable to conect to Hover in '%s': %s", config.Hover, err)
 		return err
 	}
