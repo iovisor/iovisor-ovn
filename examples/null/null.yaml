@@ -1,0 +1,13 @@
+modules:
+  - name: mynull1
+    type: null_node
+  - name: mynull2
+    type: null_node
+
+links:
+
+external_interfaces:
+  - module: mynull1
+    iface: veth1
+  - module: mynull2
+    iface: veth2

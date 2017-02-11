@@ -27,6 +27,7 @@ import (
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/dhcp"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/l2switch"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/nat"
+	"github.com/netgroup-polito/iovisor-ovn/iomodules/null"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/onetoonenat"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/router"
 
@@ -78,6 +79,8 @@ func deployModules(modulesRequested []interface{}) error {
 			m = nat.Create(dataplane)
 		case "onetoonenat":
 			m = onetoonenat.Create(dataplane)
+		case "null_node": // "null" can not be used because it causes an issue
+			m = null.Create(dataplane)
 		default:
 			errString := fmt.Sprintf("Invalid module type '%s' for module '%s'",
 				mtype, name)
