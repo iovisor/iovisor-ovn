@@ -23,15 +23,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+	"github.com/netgroup-polito/iovisor-ovn/hover"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/l2switch"
 	"github.com/netgroup-polito/iovisor-ovn/mainlogic"
 	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
 )
 
-func Cli(dataplaneref *hoverctl.Dataplane) {
+func Cli(c *hover.Client) {
 	db := &mainlogic.Mon.DB
-	dataplane := dataplaneref
+	hc := c
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("cli@iov-ovn$ ")
@@ -103,8 +103,8 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 
 			case "interfaces", "i":
 				fmt.Printf("\nInterfaces\n\n")
-				_, external_interfaces := hoverctl.ExternalInterfacesListGET(dataplane)
-				hoverctl.ExternalInterfacesListPrint(external_interfaces)
+				_, external_interfaces := hc.ExternalInterfacesListGET()
+				hover.ExternalInterfacesListPrint(external_interfaces)
 			case "modules", "m":
 				if len(args) >= 2 {
 					switch args[1] {
@@ -112,12 +112,12 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 						switch len(args) {
 						case 2:
 							fmt.Printf("\nModules GET\n\n")
-							_, modules := hoverctl.ModuleListGET(dataplane)
-							hoverctl.ModuleListPrint(modules)
+							_, modules := hc.ModuleListGET()
+							hover.ModuleListPrint(modules)
 						case 3:
 							fmt.Printf("\nModules GET\n\n")
-							_, module := hoverctl.ModuleGET(dataplane, args[2])
-							hoverctl.ModulePrint(module)
+							_, module := hc.ModuleGET(args[2])
+							hover.ModulePrint(module)
 						default:
 							PrintModulesUsage()
 						}
@@ -126,8 +126,8 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 						case 3:
 							fmt.Printf("\nModules POST\n\n")
 							if args[2] == "switch" {
-								_, module := hoverctl.ModulePOST(dataplane, "bpf", "Switch", l2switch.SwitchSecurityPolicy)
-								hoverctl.ModulePrint(module)
+								_, module := hc.ModulePOST("bpf", "Switch", l2switch.SwitchSecurityPolicy)
+								hover.ModulePrint(module)
 							} else {
 								//TODO Print modules list
 							}
@@ -138,7 +138,7 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 						switch len(args) {
 						case 3:
 							fmt.Printf("\nModules DELETE\n\n")
-							hoverctl.ModuleDELETE(dataplane, args[2])
+							hc.ModuleDELETE(args[2])
 						default:
 							PrintModulesUsage()
 						}
@@ -155,12 +155,12 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 						switch len(args) {
 						case 2:
 							fmt.Printf("\nLinks GET\n\n")
-							_, links := hoverctl.LinkListGet(dataplane)
-							hoverctl.LinkListPrint(links)
+							_, links := hc.LinkListGet()
+							hover.LinkListPrint(links)
 						case 3:
 							fmt.Printf("\nLinks GET\n\n")
-							_, link := hoverctl.LinkGET(dataplane, args[2])
-							hoverctl.LinkPrint(link)
+							_, link := hc.LinkGET(args[2])
+							hover.LinkPrint(link)
 						default:
 							PrintLinksUsage()
 						}
@@ -168,8 +168,8 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 						switch len(args) {
 						case 4:
 							fmt.Printf("\nLinks POST\n\n")
-							_, link := hoverctl.LinkPOST(dataplane, args[2], args[3])
-							hoverctl.LinkPrint(link)
+							_, link := hc.LinkPOST(args[2], args[3])
+							hover.LinkPrint(link)
 						default:
 							PrintLinksUsage()
 						}
@@ -177,7 +177,7 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 						switch len(args) {
 						case 3:
 							fmt.Printf("\nLinks DELETE\n\n")
-							hoverctl.LinkDELETE(dataplane, args[2])
+							hc.LinkDELETE(args[2])
 						default:
 							PrintLinksUsage()
 						}
@@ -194,55 +194,55 @@ func Cli(dataplaneref *hoverctl.Dataplane) {
 						switch len(args) {
 						case 2:
 							fmt.Printf("\nTable GET\n\n")
-							_, modules := hoverctl.ModuleListGET(dataplane)
+							_, modules := hc.ModuleListGET()
 							for moduleName, _ := range modules {
 								fmt.Printf("**MODULE** -> %s\n", moduleName)
-								_, tables := hoverctl.TableListGET(dataplane, moduleName)
+								_, tables := hc.TableListGET(moduleName)
 								for _, tablename := range tables {
 									fmt.Printf("Table *%s*\n", tablename)
-									_, table := hoverctl.TableGET(dataplane, moduleName, tablename)
-									hoverctl.TablePrint(table)
+									_, table := hc.TableGET(moduleName, tablename)
+									hover.TablePrint(table)
 								}
 							}
 						case 3:
 							fmt.Printf("\nTable GET\n\n")
-							_, tables := hoverctl.TableListGET(dataplane, args[2])
+							_, tables := hc.TableListGET(args[2])
 							for _, tablename := range tables {
 								fmt.Printf("Table *%s*\n", tablename)
-								_, table := hoverctl.TableGET(dataplane, args[2], tablename)
-								hoverctl.TablePrint(table)
+								_, table := hc.TableGET(args[2], tablename)
+								hover.TablePrint(table)
 							}
 						case 4:
 							fmt.Printf("\nTable GET\n\n")
-							_, table := hoverctl.TableGET(dataplane, args[2], args[3])
-							hoverctl.TablePrint(table)
+							_, table := hc.TableGET(args[2], args[3])
+							hover.TablePrint(table)
 						case 5:
 							fmt.Printf("\nTable GET\n\n")
-							_, tableEntry := hoverctl.TableEntryGET(dataplane, args[2], args[3], args[4])
-							hoverctl.TableEntryPrint(tableEntry)
+							_, tableEntry := hc.TableEntryGET(args[2], args[3], args[4])
+							hover.TableEntryPrint(tableEntry)
 						default:
 							PrintTableUsage()
 						}
 					case "put":
 						if len(args) == 6 {
 							fmt.Printf("\nTable PUT\n\n")
-							_, tableEntry := hoverctl.TableEntryPUT(dataplane, args[2], args[3], args[4], args[5])
-							hoverctl.TableEntryPrint(tableEntry)
+							_, tableEntry := hc.TableEntryPUT(args[2], args[3], args[4], args[5])
+							hover.TableEntryPrint(tableEntry)
 						} else {
 							PrintTableUsage()
 						}
 					case "post":
 						if len(args) == 6 {
 							fmt.Printf("\nTable POST\n\n")
-							_, tableEntry := hoverctl.TableEntryPOST(dataplane, args[2], args[3], args[4], args[5])
-							hoverctl.TableEntryPrint(tableEntry)
+							_, tableEntry := hc.TableEntryPOST(args[2], args[3], args[4], args[5])
+							hover.TableEntryPrint(tableEntry)
 						} else {
 							PrintTableUsage()
 						}
 					case "delete":
 						if len(args) == 5 {
 							fmt.Printf("\nTable DELETE\n\n")
-							hoverctl.TableEntryDELETE(dataplane, args[2], args[3], args[4])
+							hc.TableEntryDELETE(args[2], args[3], args[4])
 						} else {
 							PrintTableUsage()
 						}

@@ -22,7 +22,7 @@ import (
 
 	"github.com/mvbpolito/gosexy/to"
 
-	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+	"github.com/netgroup-polito/iovisor-ovn/hover"
 	l "github.com/op/go-logging"
 )
 
@@ -34,7 +34,7 @@ type NatModule struct {
 	Interfaces map[string]*NatModuleInterface
 
 	deployed  bool
-	dataplane *hoverctl.Dataplane // used to send commands to hover
+	hc *hover.Client // used to send commands to hover
 }
 
 type NatModuleInterface struct {
@@ -44,16 +44,16 @@ type NatModuleInterface struct {
 	IfaceName            string
 }
 
-func Create(dp *hoverctl.Dataplane) *NatModule {
+func Create(hc *hover.Client) *NatModule {
 
-	if dp == nil {
-		log.Errorf("Dataplane is not valid")
+	if hc == nil {
+		log.Errorf("HoverClient is not valid")
 		return nil
 	}
 
 	n := new(NatModule)
 	n.Interfaces = make(map[string]*NatModuleInterface)
-	n.dataplane = dp
+	n.hc = hc
 	n.deployed = false
 	return n
 }
@@ -68,8 +68,7 @@ func (n *NatModule) Deploy() (err error) {
 		return nil
 	}
 
-	natError, natHover := hoverctl.ModulePOST(n.dataplane, "bpf",
-		"Nat", NatCode)
+	natError, natHover := n.hc.ModulePOST("bpf", "Nat", NatCode)
 	if natError != nil {
 		log.Errorf("Error in POST Nat IOModule: %s\n", natError)
 		return natError
@@ -92,7 +91,7 @@ func (n *NatModule) Destroy() (err error) {
 	// All interfaces must be detached before destroying the module.
 	// Should it be done automatically here, or should be the application responsible for that?
 
-	moduleDeleteError, _ := hoverctl.ModuleDELETE(n.dataplane, n.ModuleId)
+	moduleDeleteError, _ := n.hc.ModuleDELETE(n.ModuleId)
 	if moduleDeleteError != nil {
 		log.Errorf("Error in destrying Nat IOModule: %s\n", moduleDeleteError)
 		return moduleDeleteError
@@ -118,13 +117,13 @@ func (n *NatModule) AttachExternalInterface(ifaceName string) (err error) {
 		return errors.New(errString)
 	}
 
-	linkError, linkHover := hoverctl.LinkPOST(n.dataplane, "i:"+ifaceName, n.ModuleId)
+	linkError, linkHover := n.hc.LinkPOST("i:"+ifaceName, n.ModuleId)
 	if linkError != nil {
 		log.Errorf("Error in POSTing the Link: %s\n", linkError)
 		return linkError
 	}
 
-	_, external_interfaces := hoverctl.ExternalInterfacesListGET(n.dataplane)
+	_, external_interfaces := n.hc.ExternalInterfacesListGET()
 
 	n.PortsCount++
 
@@ -169,7 +168,7 @@ func (n *NatModule) DetachExternalInterface(ifaceName string) (err error) {
 		return errors.New(errString)
 	}
 
-	linkDeleteError, _ := hoverctl.LinkDELETE(n.dataplane, iface.LinkIdHover)
+	linkDeleteError, _ := n.hc.LinkDELETE(iface.LinkIdHover)
 
 	if linkDeleteError != nil {
 		//log.Debug("REMOVE Interface %s %s (1/1) LINK REMOVED\n", currentInterface.Name, currentInterface.IfaceIdExternalIds)
@@ -215,7 +214,7 @@ func (n *NatModule) SetPublicIp(ip string) (err error) {
 		return errors.New(errString)
 	}
 
-	hoverctl.TableEntryPUT(n.dataplane, n.ModuleId, "public_ip", "0", ipToHexadecimalString(ip))
+	n.hc.TableEntryPUT(n.ModuleId, "public_ip", "0", ipToHexadecimalString(ip))
 
 	return nil
 }

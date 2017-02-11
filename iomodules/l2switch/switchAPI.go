@@ -22,7 +22,7 @@ import (
 	"github.com/mvbpolito/gosexy/to"
 
 	"github.com/netgroup-polito/iovisor-ovn/config"
-	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+	"github.com/netgroup-polito/iovisor-ovn/hover"
 	l "github.com/op/go-logging"
 )
 
@@ -36,7 +36,7 @@ type L2SwitchModule struct {
 	Interfaces map[string]*L2SwitchModuleInterface
 
 	deployed  bool
-	dataplane *hoverctl.Dataplane // used to send commands to hover
+	hc *hover.Client // used to send commands to hover
 }
 
 type L2SwitchModuleInterface struct {
@@ -47,16 +47,16 @@ type L2SwitchModuleInterface struct {
 	IfaceName             string
 }
 
-func Create(dp *hoverctl.Dataplane) *L2SwitchModule {
+func Create(hc *hover.Client) *L2SwitchModule {
 
-	if dp == nil {
-		log.Errorf("Dataplane is not valid")
+	if hc == nil {
+		log.Errorf("HoverClient is not valid")
 		return nil
 	}
 
 	x := new(L2SwitchModule)
 	x.Interfaces = make(map[string]*L2SwitchModuleInterface)
-	x.dataplane = dp
+	x.hc = hc
 	x.deployed = false
 	return x
 }
@@ -71,7 +71,7 @@ func (sw *L2SwitchModule) Deploy() (err error) {
 		return nil
 	}
 
-	switchError, switchHover := hoverctl.ModulePOST(sw.dataplane, "bpf",
+	switchError, switchHover := sw.hc.ModulePOST("bpf",
 		"Switch", SwitchSecurityPolicy)
 	if switchError != nil {
 		log.Errorf("Error in POST Switch IOModule: %s\n", switchError)
@@ -95,7 +95,7 @@ func (sw *L2SwitchModule) Destroy() (err error) {
 	// All interfaces must be detached before destroying the module.
 	// Should it be done automatically here, or should be the application responsible for that?
 
-	moduleDeleteError, _ := hoverctl.ModuleDELETE(sw.dataplane, sw.ModuleId)
+	moduleDeleteError, _ := sw.hc.ModuleDELETE(sw.ModuleId)
 	if moduleDeleteError != nil {
 		log.Errorf("Error in destrying Switch IOModule: %s\n", moduleDeleteError)
 		return moduleDeleteError
@@ -115,7 +115,7 @@ func (sw *L2SwitchModule) AttachExternalInterface(ifaceName string) (err error) 
 		return errors.New(errString)
 	}
 
-	linkError, linkHover := hoverctl.LinkPOST(sw.dataplane, "i:"+ifaceName, sw.ModuleId)
+	linkError, linkHover := sw.hc.LinkPOST("i:"+ifaceName, sw.ModuleId)
 	if linkError != nil {
 		log.Errorf("Error in POSTing the Link: %s\n", linkError)
 		return linkError
@@ -127,7 +127,7 @@ func (sw *L2SwitchModule) AttachExternalInterface(ifaceName string) (err error) 
 		return err
 	}
 
-	_, external_interfaces := hoverctl.ExternalInterfacesListGET(sw.dataplane)
+	_, external_interfaces := sw.hc.ExternalInterfacesListGET()
 
 	// We are assuming that this process is made only once... If fails it could be a problem.
 
@@ -137,7 +137,7 @@ func (sw *L2SwitchModule) AttachExternalInterface(ifaceName string) (err error) 
 	iface.IfaceIdArrayBroadcast = portNumber
 	iface.IfaceFd, _ = strconv.Atoi(external_interfaces[ifaceName].Id)
 
-	tablePutError, _ := hoverctl.TableEntryPUT(sw.dataplane, sw.ModuleId, "ports",
+	tablePutError, _ := sw.hc.TableEntryPUT(sw.ModuleId, "ports",
 		strconv.Itoa(portNumber), external_interfaces[ifaceName].Id)
 	if tablePutError != nil {
 		log.Warningf("Error in PUT entry into ports table... ",
@@ -189,7 +189,7 @@ func (sw *L2SwitchModule) DetachExternalInterface(ifaceName string) (err error) 
 		return errors.New(errString)
 	}
 
-	linkDeleteError, _ := hoverctl.LinkDELETE(sw.dataplane, iface.LinkIdHover)
+	linkDeleteError, _ := sw.hc.LinkDELETE(iface.LinkIdHover)
 
 	if linkDeleteError != nil {
 		//log.Debug("REMOVE Interface %s %s (1/1) LINK REMOVED\n", currentInterface.Name, currentInterface.IfaceIdExternalIds)
@@ -203,7 +203,7 @@ func (sw *L2SwitchModule) DetachExternalInterface(ifaceName string) (err error) 
 
 	// cleanup broadcast tables
 	if sw.PortsArray[iface.IfaceIdArrayBroadcast] != 0 {
-		hoverctl.TableEntryPUT(sw.dataplane, sw.ModuleId, "ports", strconv.Itoa(iface.IfaceIdArrayBroadcast), "0")
+		sw.hc.TableEntryPUT(sw.ModuleId, "ports", strconv.Itoa(iface.IfaceIdArrayBroadcast), "0")
 		// TODO: if not successful retry
 
 		sw.PortsArray[iface.IfaceIdArrayBroadcast] = 0
@@ -242,7 +242,7 @@ func (sw *L2SwitchModule) AttachToIoModule(ifaceId int, ifaceName string) (err e
 
 	// TODO: security policies
 
-	tablePutError, _ := hoverctl.TableEntryPUT(sw.dataplane, sw.ModuleId, "ports",
+	tablePutError, _ := sw.hc.TableEntryPUT(sw.ModuleId, "ports",
 		strconv.Itoa(portNumber), strconv.Itoa(ifaceId))
 	if tablePutError != nil {
 		log.Warningf("Error in PUT entry into ports table... ",
@@ -303,7 +303,7 @@ func (sw *L2SwitchModule) AddForwardingTableEntry(mac string, ifaceName string) 
 
 	macString := "{" + macToHexadecimalString(mac) + "}"
 
-	hoverctl.TableEntryPOST(sw.dataplane, sw.ModuleId, "fwdtable", macString,
+	sw.hc.TableEntryPOST(sw.ModuleId, "fwdtable", macString,
 		strconv.Itoa(swIface.IfaceIdRedirectHover))
 
 	return nil
@@ -321,7 +321,8 @@ func (sw *L2SwitchModule) AddPortSecurityMac(mac string, ifaceName string) (err 
 
 	macString := macToHexadecimalString(mac)
 
-	hoverctl.TableEntryPOST(sw.dataplane, sw.ModuleId, "securitymac", "{0x"+strconv.Itoa(swIface.IfaceIdRedirectHover)+"}", macString)
+	sw.hc.TableEntryPOST(sw.ModuleId, "securitymac",
+		"{0x"+strconv.Itoa(swIface.IfaceIdRedirectHover)+"}", macString)
 	return nil
 }
 

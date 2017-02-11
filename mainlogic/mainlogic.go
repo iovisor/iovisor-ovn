@@ -20,7 +20,7 @@ import (
 	"os"
 
 	"github.com/netgroup-polito/iovisor-ovn/config"
-	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+	"github.com/netgroup-polito/iovisor-ovn/hover"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/l2switch"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/router"
@@ -65,8 +65,12 @@ var switches map[string]*L2Switch
 // Contains the routers that haven been created.  Indexed by named
 var routers map[string]*Router
 
-var Dataplane *hoverctl.Dataplane
+var hc *hover.Client
 var Mon *ovnmonitor.OVNMonitor
+
+func GetHoverClient() *hover.Client {
+	return hc
+}
 
 func MainLogic() {
 
@@ -81,8 +85,8 @@ func MainLogic() {
 	switches = make(map[string]*L2Switch)
 	routers = make(map[string]*Router)
 
-	Dataplane = hoverctl.NewDataplane()
-	if err := Dataplane.Init(config.Hover); err != nil {
+	hc = hover.NewClient()
+	if err := hc.Init(config.Hover); err != nil {
 		log.Errorf("unable to conect to Hover %s\n%s\n", config.Hover, err)
 		os.Exit(1)
 	}
@@ -153,7 +157,7 @@ func addRouter(lr *ovnmonitor.LogicalRouter) {
 	r := new(Router)
 	r.Name = lr.Name
 	r.ports = make(map[string]*RouterPort)
-	r.rIoModule = router.Create(Dataplane)
+	r.rIoModule = router.Create(hc)
 	routers[r.Name] = r
 
 	r.rIoModule.Deploy()
@@ -219,7 +223,7 @@ func addSwitch(lsw *ovnmonitor.LogicalSwitch) {
 	sw := new(L2Switch)
 	sw.Name = lsw.Name
 	sw.ports = make(map[string]*L2SwitchPort)
-	sw.swIomodule = l2switch.Create(Dataplane)
+	sw.swIomodule = l2switch.Create(hc)
 	switches[sw.Name] = sw
 }
 
@@ -299,7 +303,7 @@ func updatePort(sw *L2Switch, lport *ovnmonitor.LogicalSwitchPort) {
 			}
 
 			// attach both iomodules
-			if err := iomodules.AttachIoModules(Dataplane,
+			if err := iomodules.AttachIoModules(hc,
 				sw.swIomodule, port.Name, r.rIoModule, lrp.Name); err != nil {
 
 				log.Errorf("Unable attach router to switch")

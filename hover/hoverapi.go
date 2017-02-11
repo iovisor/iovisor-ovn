@@ -11,29 +11,29 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package hoverctl
+package hover
 
 import (
 	_ "net"
 	"net/http"
 )
 
-type Dataplane struct {
+type Client struct {
 	client  *http.Client
 	baseUrl string
 	id      string
 }
 
-func NewDataplane() *Dataplane {
+func NewClient() *Client {
 	client := &http.Client{}
-	d := &Dataplane{
+	d := &Client{
 		client: client,
 	}
 
 	return d
 }
 
-func (d *Dataplane) Init(baseUrl string) error {
+func (d *Client) Init(baseUrl string) error {
 	d.baseUrl = baseUrl
 	return nil
 }

@@ -23,7 +23,7 @@ import (
 
 	"github.com/mvbpolito/gosexy/to"
 
-	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+	"github.com/netgroup-polito/iovisor-ovn/hover"
 	l "github.com/op/go-logging"
 )
 
@@ -37,7 +37,7 @@ type RouterModule struct {
 	Interfaces        map[string]*RouterModuleInterface
 
 	deployed  bool
-	dataplane *hoverctl.Dataplane // used to send commands to hover
+	hc *hover.Client // used to send commands to hover
 }
 
 type RouterModuleInterface struct {
@@ -56,17 +56,17 @@ type RoutingTableEntry struct {
 	nexthop     string
 }
 
-func Create(dp *hoverctl.Dataplane) *RouterModule {
+func Create(hc *hover.Client) *RouterModule {
 
-	if dp == nil {
-		log.Errorf("Dataplane is not valid")
+	if hc == nil {
+		log.Errorf("HoverClient is not valid")
 		return nil
 	}
 
 	r := new(RouterModule)
 	r.Interfaces = make(map[string]*RouterModuleInterface)
 	r.RoutingTable = make([]RoutingTableEntry, 10)
-	r.dataplane = dp
+	r.hc = hc
 	r.deployed = false
 	return r
 }
@@ -81,8 +81,7 @@ func (r *RouterModule) Deploy() (err error) {
 		return nil
 	}
 
-	routerError, routerHover := hoverctl.ModulePOST(r.dataplane, "bpf",
-		"Router", RouterCode)
+	routerError, routerHover := r.hc.ModulePOST("bpf", "Router", RouterCode)
 	if routerError != nil {
 		log.Errorf("Error in POST Router IOModule: %s\n", routerError)
 		return routerError
@@ -105,7 +104,7 @@ func (r *RouterModule) Destroy() (err error) {
 	// All interfaces must be detached before destroying the module.
 	// Should it be done automatically here, or should be the application responsible for that?
 
-	moduleDeleteError, _ := hoverctl.ModuleDELETE(r.dataplane, r.ModuleId)
+	moduleDeleteError, _ := r.hc.ModuleDELETE(r.ModuleId)
 	if moduleDeleteError != nil {
 		log.Errorf("Error in destrying Router IOModule: %s\n", moduleDeleteError)
 		return moduleDeleteError
@@ -131,7 +130,7 @@ func (r *RouterModule) AttachExternalInterface(ifaceName string) (err error) {
 		return errors.New(errString)
 	}
 
-	linkError, linkHover := hoverctl.LinkPOST(r.dataplane, "i:"+ifaceName, r.ModuleId)
+	linkError, linkHover := r.hc.LinkPOST("i:"+ifaceName, r.ModuleId)
 	if linkError != nil {
 		log.Errorf("Error in POSTing the Link: %s\n", linkError)
 		return linkError
@@ -179,7 +178,7 @@ func (r *RouterModule) DetachExternalInterface(ifaceName string) (err error) {
 		return errors.New(errString)
 	}
 
-	linkDeleteError, _ := hoverctl.LinkDELETE(r.dataplane, iface.LinkIdHover)
+	linkDeleteError, _ := r.hc.LinkDELETE(iface.LinkIdHover)
 
 	if linkDeleteError != nil {
 		log.Warningf("Problem removing iface '%s' from router '%s'\n",
@@ -189,7 +188,7 @@ func (r *RouterModule) DetachExternalInterface(ifaceName string) (err error) {
 
 	// remove port from list of ports
 	ifaceIdString := strconv.Itoa(iface.IfaceIdRedirectHover)
-	hoverctl.TableEntryDELETE(r.dataplane, r.ModuleId, "router_port", ifaceIdString)
+	r.hc.TableEntryDELETE(r.ModuleId, "router_port", ifaceIdString)
 
 	// TODO: remove static route entry
 	delete(r.Interfaces, ifaceName)
@@ -259,7 +258,7 @@ func (r *RouterModule) ConfigureInterface(ifaceName string, ip string,
 
 	toSend := ipString + " " + netmaskString + " " + macString
 
-	hoverctl.TableEntryPOST(r.dataplane, r.ModuleId, "router_port",
+	r.hc.TableEntryPOST(r.ModuleId, "router_port",
 		ifaceIdString, toSend)
 
 	ip_ := net.ParseIP(ip)
@@ -363,7 +362,7 @@ func (r *RouterModule) sendRoutingTable() (err error) {
 			strconv.Itoa(i.outputIface.IfaceIdRedirectHover) + " " +
 			ipToHexadecimalString(i.nexthop) + "}"
 
-		hoverctl.TableEntryPUT(r.dataplane, r.ModuleId, "routing_table",
+		r.hc.TableEntryPUT(r.ModuleId, "routing_table",
 			stringIndex, toSend)
 
 		index++
@@ -384,7 +383,7 @@ func (r *RouterModule) AddArpEntry(ip string, mac string) (err error) {
 		return errors.New(errString)
 	}
 
-	hoverctl.TableEntryPUT(r.dataplane, r.ModuleId, "arp_table",
+	r.hc.TableEntryPUT(r.ModuleId, "arp_table",
 		ipToHexadecimalString(ip), macToHexadecimalString(mac))
 
 	return nil

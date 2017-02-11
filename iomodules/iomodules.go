@@ -14,7 +14,7 @@
 package iomodules
 
 import (
-	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+	"github.com/netgroup-polito/iovisor-ovn/hover"
 	l "github.com/op/go-logging"
 )
 
@@ -33,10 +33,10 @@ type IoModule interface {
 
 // this function attaches to modules together.  It performs the reques to hover
 // and then it calls the AttachToIoModule of each module to register the interface
-func AttachIoModules(dataplane *hoverctl.Dataplane,
+func AttachIoModules(c *hover.Client,
 	m1 IoModule, ifaceName1 string, m2 IoModule, ifaceName2 string) (err error) {
 
-	link_err, link := hoverctl.LinkPOST(dataplane, m1.GetModuleId(), m2.GetModuleId())
+	link_err, link := c.LinkPOST(m1.GetModuleId(), m2.GetModuleId())
 	if link_err != nil {
 		log.Errorf("%s", link_err)
 		return

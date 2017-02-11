@@ -21,7 +21,7 @@ import (
 	"github.com/mvbpolito/gosexy/yaml"
 
 	"github.com/netgroup-polito/iovisor-ovn/config"
-	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+	"github.com/netgroup-polito/iovisor-ovn/hover"
 
 	"github.com/netgroup-polito/iovisor-ovn/iomodules"
 	"github.com/netgroup-polito/iovisor-ovn/iomodules/dhcp"
@@ -35,7 +35,7 @@ import (
 
 var log = l.MustGetLogger("service-topology")
 
-var dataplane *hoverctl.Dataplane
+var dataplane *hover.Client
 
 // List of deployed modules (Indexed by module name)
 var modules map[string]iomodules.IoModule
@@ -187,10 +187,10 @@ func undeployModules() {
 
 func DeployTopology(path string) error {
 
-	dataplane = hoverctl.NewDataplane()
+	hc := hover.NewClient()
 
 	// Connect to hover and initialize HoverDataplane
-	if err := dataplane.Init(config.Hover); err != nil {
+	if err := hc.Init(config.Hover); err != nil {
 		log.Errorf("unable to conect to Hover in '%s': %s", config.Hover, err)
 		return err
 	}

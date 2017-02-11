@@ -77,7 +77,7 @@ func main() {
 
 		// Cli start
 		time.Sleep(1 * time.Second)
-		go cli.Cli(mainlogic.Dataplane)
+		go cli.Cli(mainlogic.GetHoverClient())
 
 		quit := make(chan bool)
 		<-quit

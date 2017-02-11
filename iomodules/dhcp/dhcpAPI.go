@@ -23,7 +23,7 @@ import (
 	"github.com/mvbpolito/gosexy/to"
 
 	//"github.com/netgroup-polito/iovisor-ovn/config"
-	"github.com/netgroup-polito/iovisor-ovn/hoverctl"
+	"github.com/netgroup-polito/iovisor-ovn/hover"
 	l "github.com/op/go-logging"
 
 
@@ -48,18 +48,18 @@ type DhcpModule struct {
 	leaseTime   uint32
 
 	deployed  bool
-	dataplane *hoverctl.Dataplane // used to send commands to hover
+	hc *hover.Client // used to send commands to hover
 }
 
-func Create(dp *hoverctl.Dataplane) *DhcpModule {
+func Create(hc *hover.Client) *DhcpModule {
 
-	if dp == nil {
-		log.Errorf("Dataplane is not valid")
+	if hc == nil {
+		log.Errorf("HoverClient is not valid")
 		return nil
 	}
 
 	x := new(DhcpModule)
-	x.dataplane = dp
+	x.hc = hc
 	x.deployed = false
 	return x
 }
@@ -74,8 +74,7 @@ func (m *DhcpModule) Deploy() (err error) {
 		return nil
 	}
 
-	dhcpError, dhcpHover := hoverctl.ModulePOST(m.dataplane, "bpf",
-		"DHCP", DhcpServer)
+	dhcpError, dhcpHover := m.hc.ModulePOST("bpf", "DHCP", DhcpServer)
 	if dhcpError != nil {
 		log.Errorf("Error in POST dhcp IOModule: %s\n", dhcpError)
 		return dhcpError
@@ -98,7 +97,7 @@ func (m *DhcpModule) Destroy() (err error) {
 	// All interfaces must be detached before destroying the module.
 	// Should it be done automatically here, or should be the application responsible for that?
 
-	moduleDeleteError, _ := hoverctl.ModuleDELETE(m.dataplane, m.ModuleId)
+	moduleDeleteError, _ := m.hc.ModuleDELETE(m.ModuleId)
 	if moduleDeleteError != nil {
 		log.Errorf("Error in destrying DHCP IOModule: %s\n", moduleDeleteError)
 		return moduleDeleteError
@@ -125,7 +124,7 @@ func (m *DhcpModule) AttachExternalInterface(ifaceName string) (err error) {
 		return errors.New(errString)
 	}
 
-	linkError, linkHover := hoverctl.LinkPOST(m.dataplane, "i:"+ifaceName, m.ModuleId)
+	linkError, linkHover := m.hc.LinkPOST("i:"+ifaceName, m.ModuleId)
 	if linkError != nil {
 		log.Errorf("Error in POSTing the Link: %s\n", linkError)
 		return linkError
@@ -152,7 +151,7 @@ func (m *DhcpModule) DetachExternalInterface(ifaceName string) (err error) {
 		return errors.New(errString)
 	}
 
-	linkDeleteError, _ := hoverctl.LinkDELETE(m.dataplane, m.linkIdHover)
+	linkDeleteError, _ := m.hc.LinkDELETE(m.linkIdHover)
 
 	if linkDeleteError != nil {
 		log.Warningf("Problem removing iface '%s' from module '%s'\n",
@@ -232,8 +231,7 @@ func (m *DhcpModule) ConfigureParameters(netmask net.IPMask,
 	toSend = "{" + subnetMask + " " + dnsHex + " " + leaseTimeStr + " " +
 		routerHex + " " + serverIpHex + " " + serverMacHex + "}"
 
-	hoverctl.TableEntryPUT(m.dataplane, m.ModuleId, "config",
-		"0", toSend)
+	m.hc.TableEntryPUT(m.ModuleId, "config", "0", toSend)
 
 	// Unfortunately until now only 10 IP addresses are allowed by server
 	hosts, _ := getHosts(addr_low, addr_high)
@@ -243,11 +241,9 @@ func (m *DhcpModule) ConfigureParameters(netmask net.IPMask,
 		ipHex := ipToHex(hosts[i])
 		index := strconv.Itoa(i)
 		toSend := "{" + ipHex + " 0 0 0}" // Status, time, mac
-		hoverctl.TableEntryPUT(m.dataplane, m.ModuleId, "pool",
-			index, toSend)
+		m.hc.TableEntryPUT(m.ModuleId, "pool", index, toSend)
 
-		hoverctl.TableEntryPUT(m.dataplane, m.ModuleId, "ip_to_index",
-			ipHex, index)
+		m.hc.TableEntryPUT(m.ModuleId, "ip_to_index", ipHex, index)
 	}
 
 	m.mac = serverMac
