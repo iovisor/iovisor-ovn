@@ -22,12 +22,15 @@ type Client struct {
 	client  *http.Client
 	baseUrl string
 	id      string
+	controller *Controller
 }
 
 func NewClient() *Client {
 	client := &http.Client{}
+	controller := &Controller{}
 	d := &Client{
 		client: client,
+		controller: controller,
 	}
 
 	return d
@@ -35,6 +38,21 @@ func NewClient() *Client {
 
 func (d *Client) Init(baseUrl string) error {
 	d.baseUrl = baseUrl
+
+	err := d.controller.Init("0.0.0.0:7777")
+	if err != nil {
+		log.Error("Error initializing controller: ", err)
+		return err
+	}
+
+	go d.controller.Run()
+
+	err = d.ControllerPOST("127.0.0.1:7777")
+	if err != nil {
+		log.Error("Error in ControllerPOST", err)
+		return err
+	}
+
 	return nil
 }
 
