@@ -78,6 +78,9 @@ func (n *NatModule) Deploy() (err error) {
 	n.ModuleId = natHover.Id
 	n.deployed = true
 
+	id, _ := strconv.Atoi(n.ModuleId[2:])
+	n.hc.GetController().RegisterCallBack(uint16(id), n.ProcessPacket)
+
 	return nil
 }
 
@@ -255,6 +258,13 @@ func (n *NatModule) Configure(conf interface{}) (err error) {
 		}
 	}
 
+	return nil
+}
+
+func (n *NatModule) ProcessPacket(p *hover.Packet) (err error) {
+	_ = p
+
+	log.Infof("OneToOneNat: '%s': Packet arrived from dataplane", n.ModuleId)
 	return nil
 }
 

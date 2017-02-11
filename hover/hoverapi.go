@@ -56,6 +56,10 @@ func (d *Client) Init(baseUrl string) error {
 	return nil
 }
 
+func (d *Client) GetController() *Controller {
+	return d.controller
+}
+
 type Module struct {
 	Id          string                 `json:"id"`
 	ModuleType  string                 `json:"module_type"`

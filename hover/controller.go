@@ -17,6 +17,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"net"
+	"io"
 )
 
 type SlowPathCallBack func(*Packet) (error)
@@ -63,14 +64,22 @@ func (c *Controller) Run() (err error) {
 
 	dec := gob.NewDecoder(conn)
 
-	log.Infof("New client connected")
+	log.Infof("Controller: New client connected")
 
 	for {
 		p := &Packet{}
-		dec.Decode(p)
+		err1 := dec.Decode(p)
+		if err1 == io.EOF {
+			log.Info("Controller: Client Disconnected")
+			return nil
+		} else if err1 != nil {
+			continue
+		}
+		//log.Info("Packet arrived: ", p.ToString())
 		cb, ok := c.callbacks[p.Module_id]
 		if !ok {
 			log.Infof("Controller: Callback not found")
+			continue
 		}
 		cb(p)
 	}

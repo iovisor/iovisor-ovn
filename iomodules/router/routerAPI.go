@@ -91,6 +91,9 @@ func (r *RouterModule) Deploy() (err error) {
 	r.ModuleId = routerHover.Id
 	r.deployed = true
 
+	id, _ := strconv.Atoi(r.ModuleId[2:])
+	r.hc.GetController().RegisterCallBack(uint16(id), r.ProcessPacket)
+
 	return nil
 }
 
@@ -484,6 +487,13 @@ func (r *RouterModule) Configure(conf interface{}) (err error) {
 		}
 	}
 
+	return nil
+}
+
+func (r *RouterModule) ProcessPacket(p *hover.Packet) (err error) {
+	_ = p
+
+	log.Infof("Router: '%s': Packet arrived from dataplane", r.ModuleId)
 	return nil
 }
 

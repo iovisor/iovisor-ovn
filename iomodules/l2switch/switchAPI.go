@@ -82,6 +82,9 @@ func (sw *L2SwitchModule) Deploy() (err error) {
 	sw.ModuleId = switchHover.Id
 	sw.deployed = true
 
+	id, _ := strconv.Atoi(sw.ModuleId[2:])
+	sw.hc.GetController().RegisterCallBack(uint16(id), sw.ProcessPacket)
+
 	return nil
 }
 
@@ -354,6 +357,13 @@ func (sw *L2SwitchModule) Configure(conf interface{}) (err error) {
 			}
 		}
 	}
+	return nil
+}
+
+func (sw *L2SwitchModule) ProcessPacket(p *hover.Packet) (err error) {
+	_ = p
+
+	log.Infof("Switch: '%s': Packet arrived from dataplane", sw.ModuleId)
 	return nil
 }
 

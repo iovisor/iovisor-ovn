@@ -29,6 +29,7 @@ type IoModule interface {
 	AttachToIoModule(IfaceId int, name string) (err error)
 	DetachFromIoModule(name string) (err error)
 	Configure(conf interface{}) (err error)
+	ProcessPacket(p *hover.Packet) (err error)
 }
 
 // this function attaches to modules together.  It performs the reques to hover
