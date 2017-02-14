@@ -30,14 +30,27 @@ type Packet struct {
 	Data       []byte
 }
 
+const (
+	INGRESS = 0
+	EGRESS = 1
+)
+
+type PacketOut struct {
+	Module_id  uint16
+	Port_id    uint16
+	Sense      uint16 /* ingress = 0, egress = 1 */
+	Data       []byte
+}
+
 func (p *Packet) ToString() string {
 	return fmt.Sprintf("Module_id: %d\nPort_id: %d\nPacket_len: %d\nReason: %d\n",
 		p.Module_id, p.Port_id, p.Packet_len, p.Reason)
 }
 
 type Controller struct {
-	callbacks map[uint16]SlowPathCallBack
+	callbacks  map[uint16]SlowPathCallBack
 	listenaddr string
+	conn       net.Conn
 }
 
 func (c *Controller) Init(listenaddr string) (err error) {
@@ -57,12 +70,12 @@ func (c *Controller) Run() (err error) {
 		return err1
 	}
 
-	conn, err1 := ln.Accept()
-	if err1 != nil {
-		return err1
+	c.conn, err = ln.Accept()
+	if err != nil {
+		return
 	}
 
-	dec := gob.NewDecoder(conn)
+	dec := gob.NewDecoder(c.conn)
 
 	log.Infof("Controller: New client connected")
 
@@ -83,4 +96,10 @@ func (c *Controller) Run() (err error) {
 		}
 		cb(p)
 	}
+}
+
+func (c *Controller) SendPacketOut(p *PacketOut) (err error) {
+	encoder := gob.NewEncoder(c.conn)
+	encoder.Encode(p)
+	return
 }
