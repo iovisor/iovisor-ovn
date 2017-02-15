@@ -14,7 +14,7 @@
 package iomodules
 
 import (
-	"github.com/netgroup-polito/iovisor-ovn/hover"
+	"github.com/iovisor/iovisor-ovn/hover"
 	l "github.com/op/go-logging"
 )
 

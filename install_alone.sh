@@ -51,6 +51,6 @@ git reset --hard mvbpolito/master
 go install github.com/iovisor/iomodules/hover/hoverd
 
 echo "installing iovisor ovn"
-go get github.com/netgroup-polito/iovisor-ovn/iovisorovnd
+go get github.com/iovisor/iovisor-ovn/iovisorovnd
 
 cd $_pwd

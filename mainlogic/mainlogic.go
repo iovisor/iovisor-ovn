@@ -19,12 +19,12 @@ import (
 	"net"
 	"os"
 
-	"github.com/netgroup-polito/iovisor-ovn/config"
-	"github.com/netgroup-polito/iovisor-ovn/hover"
-	"github.com/netgroup-polito/iovisor-ovn/iomodules"
-	"github.com/netgroup-polito/iovisor-ovn/iomodules/l2switch"
-	"github.com/netgroup-polito/iovisor-ovn/iomodules/router"
-	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
+	"github.com/iovisor/iovisor-ovn/config"
+	"github.com/iovisor/iovisor-ovn/hover"
+	"github.com/iovisor/iovisor-ovn/iomodules"
+	"github.com/iovisor/iovisor-ovn/iomodules/l2switch"
+	"github.com/iovisor/iovisor-ovn/iomodules/router"
+	"github.com/iovisor/iovisor-ovn/ovnmonitor"
 	l "github.com/op/go-logging"
 )
 
