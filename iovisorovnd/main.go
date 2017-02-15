@@ -19,13 +19,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/netgroup-polito/iovisor-ovn/cli"
-	"github.com/netgroup-polito/iovisor-ovn/config"
+	"github.com/iovisor/iovisor-ovn/cli"
+	"github.com/iovisor/iovisor-ovn/config"
 	l "github.com/op/go-logging"
 
-	"github.com/netgroup-polito/iovisor-ovn/common"
-	"github.com/netgroup-polito/iovisor-ovn/mainlogic"
-	"github.com/netgroup-polito/iovisor-ovn/servicetopology"
+	"github.com/iovisor/iovisor-ovn/common"
+	"github.com/iovisor/iovisor-ovn/mainlogic"
+	"github.com/iovisor/iovisor-ovn/servicetopology"
 )
 
 var log = l.MustGetLogger("iovisor-ovn-daemon")

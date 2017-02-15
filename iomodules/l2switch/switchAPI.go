@@ -21,8 +21,8 @@ import (
 
 	"github.com/mvbpolito/gosexy/to"
 
-	"github.com/netgroup-polito/iovisor-ovn/config"
-	"github.com/netgroup-polito/iovisor-ovn/hover"
+	"github.com/iovisor/iovisor-ovn/config"
+	"github.com/iovisor/iovisor-ovn/hover"
 	l "github.com/op/go-logging"
 )
 

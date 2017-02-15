@@ -20,16 +20,16 @@ import (
 	"github.com/mvbpolito/gosexy/to"
 	"github.com/mvbpolito/gosexy/yaml"
 
-	"github.com/netgroup-polito/iovisor-ovn/config"
-	"github.com/netgroup-polito/iovisor-ovn/hover"
+	"github.com/iovisor/iovisor-ovn/config"
+	"github.com/iovisor/iovisor-ovn/hover"
 
-	"github.com/netgroup-polito/iovisor-ovn/iomodules"
-	"github.com/netgroup-polito/iovisor-ovn/iomodules/dhcp"
-	"github.com/netgroup-polito/iovisor-ovn/iomodules/l2switch"
-	"github.com/netgroup-polito/iovisor-ovn/iomodules/nat"
-	"github.com/netgroup-polito/iovisor-ovn/iomodules/null"
-	"github.com/netgroup-polito/iovisor-ovn/iomodules/onetoonenat"
-	"github.com/netgroup-polito/iovisor-ovn/iomodules/router"
+	"github.com/iovisor/iovisor-ovn/iomodules"
+	"github.com/iovisor/iovisor-ovn/iomodules/dhcp"
+	"github.com/iovisor/iovisor-ovn/iomodules/l2switch"
+	"github.com/iovisor/iovisor-ovn/iomodules/nat"
+	"github.com/iovisor/iovisor-ovn/iomodules/null"
+	"github.com/iovisor/iovisor-ovn/iomodules/onetoonenat"
+	"github.com/iovisor/iovisor-ovn/iomodules/router"
 
 	l "github.com/op/go-logging"
 )

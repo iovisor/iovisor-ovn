@@ -17,7 +17,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/netgroup-polito/iovisor-ovn/config"
+	"github.com/iovisor/iovisor-ovn/config"
 	"github.com/socketplane/libovsdb"
 
 	l "github.com/op/go-logging"

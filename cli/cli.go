@@ -23,10 +23,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/netgroup-polito/iovisor-ovn/hover"
-	"github.com/netgroup-polito/iovisor-ovn/iomodules/l2switch"
-	"github.com/netgroup-polito/iovisor-ovn/mainlogic"
-	"github.com/netgroup-polito/iovisor-ovn/ovnmonitor"
+	"github.com/iovisor/iovisor-ovn/hover"
+	"github.com/iovisor/iovisor-ovn/iomodules/l2switch"
+	"github.com/iovisor/iovisor-ovn/mainlogic"
+	"github.com/iovisor/iovisor-ovn/ovnmonitor"
 )
 
 func Cli(c *hover.Client) {

@@ -24,7 +24,7 @@ sudo reboot
 In order to automatically install all the required components please execute the following commands, please consider that they only work on Debian based distros.
 
 ```bash
-git clone https://github.com/netgroup-polito/iovisor-ovn.git
+git clone https://github.com/iovisor/iovisor-ovn.git
 cd iovisor-ovn/
 ./install_alone.sh
 ```
@@ -51,7 +51,7 @@ Please be sure that this [patch](https://github.com/mvbpolito/iomodules/commit/7
 Installing iovisor-ovn is very easy, just use the go get command:
 
 ```bash
-go get github.com/netgroup-polito/iovisor-ovn/iovisorovnd
+go get github.com/iovisor/iovisor-ovn/iovisorovnd
 ```
 
 ## How to use?
@@ -64,7 +64,7 @@ In order to deploy a service topology from a file, the -file parameter should be
 
 ```
 export GOPATH=$HOME/go
-cd $GOPATH/src/github.com/netgroup-polito/iovisor-ovn/examples/switch
+cd $GOPATH/src/github.com/iovisor/iovisor-ovn/examples/switch
 $GOPATH/bin/iovisorovnd -file <file.yaml> -hover <hover_url>
 ```
 
