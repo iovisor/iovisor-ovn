@@ -45,9 +45,9 @@ func PrintL2Switch(name string) {
 
 		if sw.swIomodule != nil {
 			table = tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"SWITCH", "NAME", "LINK", "FD", "BCASTID", "REDIRECT"})
+			table.SetHeader([]string{"SWITCH", "NAME", "LINK", "REDIRECT"})
 			for _, iface := range sw.swIomodule.Interfaces {
-				table.Append([]string{sw.Name, iface.IfaceName, iface.LinkIdHover, strconv.Itoa(iface.IfaceFd), strconv.Itoa(iface.IfaceIdArrayBroadcast), strconv.Itoa(iface.IfaceIdRedirectHover)})
+				table.Append([]string{sw.Name, iface.IfaceName, iface.LinkIdHover, strconv.Itoa(iface.IfaceId)})
 			}
 			table.Render()
 		}
