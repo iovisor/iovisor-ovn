@@ -49,16 +49,6 @@ struct ip_leaf{
 BPF_TABLE("hash", struct mac_t, struct interface, fwdtable, 1024);
 
 /*
-  The Ports Table (ports) is a fixed length array that identifies the fd (file
-  descriptors) of the network interfaces attached to the switch.
-  This is a workaround for broadcast implementation, in order to be able to call
-  bpf_clone_redirect that accepts as parameter the fd of the network interface.
-  This array is not ordered. The index of the array does NOT represent the
-  interface number.
-*/
-BPF_TABLE("array", u32, u32, ports, MAX_PORTS);
-
-/*
   The Security Mac Table (securitymac) associate to each port the allowed mac
   address. If no entry is associated with the port, the port security is not
   applied to the port.
@@ -175,44 +165,11 @@ static int handle_rx(void *skb, struct metadata *md) {
     return RX_REDIRECT;
 
   } else {
-    //MISS in forwarding table
     #ifdef BPF_TRACE
-      bpf_trace_printk("[switch-%d]: in: %d  BROADCAST\n", md->in_ifc);
+      bpf_trace_printk("[switch-%d]: Broadcast\n", md->module_id);
     #endif
-
-    /* this loop broadcasts the packet to the standard network interfaces, the
-     * code that is after the loop broadcast the packet to a single iomodule
-     */
-    u32 i = 0;
-    u32 t;
-    #pragma unroll
-    for (i = 0; i < MAX_PORTS - 1; i++) {
-      u32 *iface_p;
-      // For some reason the compiler does not unroll the loop if the 'i'
-      // variable is used in the lookup function
-      t = i;
-      iface_p = ports.lookup(&t);
-
-      if (iface_p)
-        if (*iface_p != 0 && *iface_p != md->in_ifc)
-          bpf_clone_redirect(skb, *iface_p, 0);
-    }
-
-    /* the last slot in the ports array is reserved for connections to other
-     * iomodules.  Due to the hover architecture in order to send a packet to
-     * other iomodule the pkt_redirect() function has to be used, this function
-     * internally produces a tail call for the iomodule.
-     */
-    u32 last = MAX_PORTS - 1;
-    u32 *iface_p = ports.lookup(&last);
-    if (iface_p)
-      if (*iface_p != 0 && *iface_p != md->in_ifc) {
-        bpf_trace_printk("[switch-%d]: broadcast to IOModule\n", md->module_id);
-        pkt_redirect(skb, md, *iface_p);
-        return RX_REDIRECT;
-      }
-
-    return RX_DROP;
+    pkt_controller(skb, md, PKT_BROADCAST);
+    return RX_CONTROLLER;
   }
 }
 `
