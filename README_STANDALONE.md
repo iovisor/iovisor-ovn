@@ -4,7 +4,7 @@ The **Standalone Mode**, allows to test a **single or a chain of IOModules**, wi
 
 ## Installation
 This guide includes the instructions to install *bcc, go, hover* and *iovisor-ovn*.
-A Linux kernel with a version 4.9 or newer is required, we recommend to use Ubuntu as all the examples have been tested on that platform.
+A Linux kernel with a version **4.9 or newer** is required, we recommend to use Ubuntu as all the examples have been tested on that platform.
 
 The simplest set of instructions for the upgrade to kernel version 4.9 is listed below.
 
