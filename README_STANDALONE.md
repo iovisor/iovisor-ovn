@@ -48,7 +48,7 @@ Please be sure that this [patch](https://github.com/mvbpolito/iomodules/commit/7
 
 #### iovisor-ovn
 
-Installing iovisor-ovn is very easy, just use the go get command:
+Installing iovisor-ovn is very easy, just use the *go get* command:
 
 ```bash
 go get github.com/iovisor/iovisor-ovn/iovisorovnd
