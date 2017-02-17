@@ -17,8 +17,9 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
-	"github.com/netgroup-polito/iovisor-ovn/hover"
+	"github.com/iovisor/iovisor-ovn/hover"
 	l "github.com/op/go-logging"
 )
 
@@ -69,6 +70,8 @@ func (m *NullModule) Deploy() (err error) {
 
 	id, _ := strconv.Atoi(m.ModuleId[2:])
 	m.hc.GetController().RegisterCallBack(uint16(id), m.ProcessPacket)
+
+	//go m.sendPacketOut()
 
 	return nil
 }
@@ -178,6 +181,24 @@ func (m *NullModule) ProcessPacket(p *hover.Packet) (err error) {
 	_ = p
 
 	log.Infof("Null: '%s': Packet arrived from dataplane", m.ModuleId)
+	log.Infof("Reason was: %d", p.Reason)
 	return nil
 }
 
+func (m *NullModule) sendPacketOut() {
+
+	time.Sleep(time.Millisecond * 500)
+	ticker := time.NewTicker(time.Millisecond * 1000)
+	go func() {
+		for _ = range ticker.C {
+			p := &hover.PacketOut{}
+			id, _ := strconv.Atoi(m.ModuleId[2:])
+			p.Module_id = uint16(id)
+			p.Port_id = 0
+			p.Sense = hover.INGRESS
+			p.Data = []byte("Here is a string....")
+
+			m.hc.GetController().SendPacketOut(p)
+		}
+	}()
+}

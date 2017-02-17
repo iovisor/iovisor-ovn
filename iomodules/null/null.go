@@ -29,11 +29,12 @@ static int handle_rx(void *skb, struct metadata *md) {
 
   bpf_trace_printk("[null-%d]: in_fc: %d\n", md->module_id, md->in_ifc);
 
+  //return RX_DROP;
 
   //pkt_redirect(skb, md, md->in_ifc);
   //return RX_REDIRECT;
-  //return RX_DROP;
 
+  //pkt_controller(skb, md, 700);
   return RX_CONTROLLER;
 }
 `
