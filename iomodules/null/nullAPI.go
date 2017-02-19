@@ -18,6 +18,10 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+	"net"
+
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 
 	"github.com/iovisor/iovisor-ovn/hover"
 	l "github.com/op/go-logging"
@@ -33,6 +37,9 @@ type NullModule struct {
 
 	deployed    bool
 	hc          *hover.Client // used to send commands to hover
+
+	mac         net.HardwareAddr
+	ip          net.IP
 }
 
 func Create(hc *hover.Client) *NullModule {
@@ -45,6 +52,9 @@ func Create(hc *hover.Client) *NullModule {
 	x := new(NullModule)
 	x.hc = hc
 	x.deployed = false
+
+	x.mac, _ = net.ParseMAC("6e:59:d3:54:75:2d")
+	x.ip = net.ParseIP("8.8.8.7")
 	return x
 }
 
@@ -178,10 +188,40 @@ func (m *NullModule) Configure(conf interface{}) (err error) {
 }
 
 func (m *NullModule) ProcessPacket(p *hover.Packet) (err error) {
-	_ = p
 
-	log.Infof("Null: '%s': Packet arrived from dataplane", m.ModuleId)
-	log.Infof("Reason was: %d", p.Reason)
+	packet := gopacket.NewPacket(p.Data, layers.LayerTypeEthernet, gopacket.Lazy)
+
+	ethLayer := packet.Layer(layers.LayerTypeEthernet)
+	if ethLayer == nil {
+		log.Errorf("Error parsing packet: Ethernet")
+		return errors.New("Error parsing packet: Ethernet")
+	}
+
+	ipLayer := packet.Layer(layers.LayerTypeIPv4)
+	if ipLayer == nil {
+		log.Errorf("Error parsing packet: ipv4")
+		return errors.New("Error parsing packet: ipv4")
+	}
+
+	udpLayer := packet.Layer(layers.LayerTypeUDP)
+	if udpLayer == nil {
+		log.Errorf("Error parsing packet: udp")
+		return errors.New("Error parsing packet: udp")
+	}
+
+	eth, _ := ethLayer.(*layers.Ethernet)
+	ip, _ := ipLayer.(*layers.IPv4)
+	udp, _ := udpLayer.(*layers.UDP)
+
+	_ = eth
+
+	var addr net.UDPAddr
+
+	addr.IP = ip.SrcIP
+	addr.Port = int(udp.SrcPort)
+
+	fmt.Println(len(udp.LayerPayload()))
+
 	return nil
 }
 
@@ -191,14 +231,72 @@ func (m *NullModule) sendPacketOut() {
 	ticker := time.NewTicker(time.Millisecond * 1000)
 	go func() {
 		for _ = range ticker.C {
-			p := &hover.PacketOut{}
-			id, _ := strconv.Atoi(m.ModuleId[2:])
-			p.Module_id = uint16(id)
-			p.Port_id = 0
-			p.Sense = hover.INGRESS
-			p.Data = []byte("Here is a string....")
+			addr := &net.UDPAddr{IP: net.IPv4bcast, Port: 67}
+			m.WriteTo([]byte("Hola mama"), addr)
+			//p := &hover.PacketOut{}
+			//id, _ := strconv.Atoi(m.ModuleId[2:])
+			//p.Module_id = uint16(id)
+			//p.Port_id = 0
+			//p.Sense = hover.INGRESS
+			//p.Data = []byte("Here is a string....")
+			//m.hc.GetController().SendPacketOut(p)
 
-			m.hc.GetController().SendPacketOut(p)
 		}
 	}()
+}
+
+func (m *NullModule) WriteTo(b []byte, addr net.Addr) (n int, err error) {
+
+	// Create packet
+
+	eth := &layers.Ethernet {
+		SrcMAC: m.mac,
+		DstMAC: net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, // to FIX
+		EthernetType: layers.EthernetTypeIPv4,
+	}
+
+	ipStr, portStr, err1 := net.SplitHostPort(addr.String())
+	if err1 != nil {
+		return
+	}
+
+	port, _ := strconv.Atoi(portStr)
+
+	ip := &layers.IPv4{
+		SrcIP: m.ip,
+		DstIP: net.ParseIP(ipStr),
+		Protocol: layers.IPProtocolUDP,
+		Version: 4,
+		TTL: 64,
+	}
+
+	udp := &layers.UDP{
+		SrcPort: 68,
+		DstPort: layers.UDPPort(port),
+	}
+
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{
+		FixLengths: true,
+		ComputeChecksums: true,
+	}
+
+	udp.SetNetworkLayerForChecksum(ip)
+
+	err = gopacket.SerializeLayers(buf, opts, eth, ip, udp, gopacket.Payload(b))
+	if err != nil {
+		log.Infof("Error in SerializeLayers: %s", err)
+		return
+	}
+
+	p := &hover.PacketOut{}
+	id, _ := strconv.Atoi(m.ModuleId[2:])
+	p.Module_id = uint16(id)
+	p.Port_id = 1
+	p.Sense = hover.EGRESS
+	p.Data = buf.Bytes()
+
+	m.hc.GetController().SendPacketOut(p)
+
+	return len(b), nil
 }
