@@ -16,30 +16,31 @@ package hover
 import (
 	"encoding/gob"
 	"fmt"
-	"net"
 	"io"
+	"net"
 )
 
-type SlowPathCallBack func(*Packet) (error)
+type SlowPathCallBack func(*Packet) error
 
 type Packet struct {
 	Module_id  uint16
 	Port_id    uint16
 	Packet_len uint16
 	Reason     uint16
+	Metadata   [3]uint32
 	Data       []byte
 }
 
 const (
 	INGRESS = 0
-	EGRESS = 1
+	EGRESS  = 1
 )
 
 type PacketOut struct {
-	Module_id  uint16
-	Port_id    uint16
-	Sense      uint16 /* ingress = 0, egress = 1 */
-	Data       []byte
+	Module_id uint16
+	Port_id   uint16
+	Sense     uint16 /* ingress = 0, egress = 1 */
+	Data      []byte
 }
 
 func (p *Packet) ToString() string {
