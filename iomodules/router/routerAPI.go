@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/foize/go.fifo"
 	"github.com/mvbpolito/gosexy/to"
 
 	"github.com/iovisor/iovisor-ovn/hover"
@@ -35,9 +36,10 @@ type RouterModule struct {
 	RoutingTable      []RoutingTableEntry
 	routingTableCount int // number of elements in the routing table
 	Interfaces        map[string]*RouterModuleInterface
+	OutputBuffer      map[uint32]*fifo.Queue
 
-	deployed  bool
-	hc *hover.Client // used to send commands to hover
+	deployed bool
+	hc       *hover.Client // used to send commands to hover
 }
 
 type RouterModuleInterface struct {
@@ -65,6 +67,7 @@ func Create(hc *hover.Client) *RouterModule {
 
 	r := new(RouterModule)
 	r.Interfaces = make(map[string]*RouterModuleInterface)
+	r.OutputBuffer = make(map[uint32]*fifo.Queue)
 	r.RoutingTable = make([]RoutingTableEntry, 10)
 	r.hc = hc
 	r.deployed = false
@@ -490,12 +493,12 @@ func (r *RouterModule) Configure(conf interface{}) (err error) {
 	return nil
 }
 
-func (r *RouterModule) ProcessPacket(p *hover.Packet) (err error) {
-	_ = p
-
-	log.Infof("Router: '%s': Packet arrived from dataplane", r.ModuleId)
-	return nil
-}
+// func (r *RouterModule) ProcessPacket(p *hover.Packet) (err error) {
+// 	_ = p
+//
+// 	log.Infof("Router: '%s': Packet arrived from dataplane", r.ModuleId)
+// 	return nil
+// }
 
 // TODO: this function should be smarter
 func macToHexadecimalString(s string) string {
