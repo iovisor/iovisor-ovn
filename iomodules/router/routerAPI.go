@@ -21,7 +21,6 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/foize/go.fifo"
 	"github.com/mvbpolito/gosexy/to"
 
 	"github.com/iovisor/iovisor-ovn/hover"
@@ -36,7 +35,8 @@ type RouterModule struct {
 	RoutingTable      []RoutingTableEntry
 	routingTableCount int // number of elements in the routing table
 	Interfaces        map[string]*RouterModuleInterface
-	OutputBuffer      map[uint32]*fifo.Queue
+	OutputBuffer      map[uint32]*BufferQueue
+	PktCounter        int
 
 	deployed bool
 	hc       *hover.Client // used to send commands to hover
@@ -67,7 +67,8 @@ func Create(hc *hover.Client) *RouterModule {
 
 	r := new(RouterModule)
 	r.Interfaces = make(map[string]*RouterModuleInterface)
-	r.OutputBuffer = make(map[uint32]*fifo.Queue)
+	r.OutputBuffer = make(map[uint32]*BufferQueue)
+	r.PktCounter = 0
 	r.RoutingTable = make([]RoutingTableEntry, 10)
 	r.hc = hc
 	r.deployed = false

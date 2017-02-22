@@ -17,6 +17,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"net"
+	"time"
 
 	"github.com/foize/go.fifo"
 	"github.com/google/gopacket"
@@ -26,6 +27,16 @@ import (
 
 const SLOWPATH_ARP_REPLY = 1
 const SLOWPATH_ARP_LOOKUP_MISS = 2
+
+const CLEANUP_EVERY_N_PACKETS = 5
+
+const MAX_ENTRY_AGE = 15 * time.Second
+const MAX_QUEUE_LEN = 10
+
+type BufferQueue struct {
+	queue       *fifo.Queue
+	last_access time.Time
+}
 
 func (m *RouterModule) ProcessPacket(p *hover.Packet) (err error) {
 
@@ -79,14 +90,19 @@ func (m *RouterModule) ProcessPacket(p *hover.Packet) (err error) {
 		//init queue if not initialized
 		if _, ok := m.OutputBuffer[p.Metadata[0]]; !ok {
 			//miss
+			bufQueue := BufferQueue{}
+
 			newqueue := fifo.NewQueue()
-			m.OutputBuffer[p.Metadata[0]] = newqueue
+			bufQueue.queue = newqueue
+			bufQueue.last_access = time.Now()
+			m.OutputBuffer[p.Metadata[0]] = &bufQueue
 		}
 
 		//lookup for queue of packets, indexed for next_hop_ip
-		if queue, ok := m.OutputBuffer[p.Metadata[0]]; ok {
+		if bufQueue, ok := m.OutputBuffer[p.Metadata[0]]; ok {
 			//hit
-			queue.Add(&pkt_to_queue)
+			bufQueue.queue.Add(&pkt_to_queue)
+			bufQueue.last_access = time.Now()
 		}
 
 		// Generating ARP Request (after pkt queueing)
@@ -126,20 +142,20 @@ func (m *RouterModule) ProcessPacket(p *hover.Packet) (err error) {
 
 			next_hop_ip_int := ip2int(net.IP(arp.SourceProtAddress))
 
-			if queue, ok := m.OutputBuffer[next_hop_ip_int]; ok {
+			if BufQueue, ok := m.OutputBuffer[next_hop_ip_int]; ok {
 				// log.Infof("Output Buffer Lookup HIT (%x)\n", next_hop_ip_int)
-				if queue != nil {
-					if queue.Len() == 0 {
+				if BufQueue != nil {
+					if BufQueue.queue.Len() == 0 {
 						// log.Infof("Delete empty queue\n")
 						delete(m.OutputBuffer, next_hop_ip_int)
 					}
 				}
-				if queue != nil {
-					if queue.Len() > 0 {
+				if BufQueue != nil {
+					if BufQueue.queue.Len() > 0 {
 						// log.Infof("Output queue not empty. Send Packets out ...\n")
 						//send out packets enqueued
-						for queue.Len() > 0 {
-							item := queue.Next()
+						for BufQueue.queue.Len() > 0 {
+							item := BufQueue.queue.Next()
 							pkt := item.(*hover.PacketOut)
 							packet := gopacket.NewPacket(pkt.Data, layers.LayerTypeEthernet, gopacket.Default)
 
@@ -151,7 +167,7 @@ func (m *RouterModule) ProcessPacket(p *hover.Packet) (err error) {
 								opts := gopacket.SerializeOptions{}
 								gopacket.SerializeLayers(buf, opts, eth, gopacket.Payload(pkt.Data[14:]))
 
-								log.Infof("[router-%d]: send out packet from buffer. (current buffer size = %d)\n", p.Module_id, queue.Len())
+								log.Infof("[router-%d]: send out packet from buffer. (current buffer size = %d)\n", p.Module_id, BufQueue.queue.Len())
 								pkt.Data = buf.Bytes()
 
 								// log.Infof("Sending PacketOUT\n")
@@ -161,6 +177,39 @@ func (m *RouterModule) ProcessPacket(p *hover.Packet) (err error) {
 						}
 					}
 				}
+			}
+		}
+	}
+	/* CLEANUP */
+	m.PktCounter++
+	//Perform OutputBuffer Cleanup every CLEANUP_EVERY_N_PACKETS received by slowpath
+	if m.PktCounter%CLEANUP_EVERY_N_PACKETS == 0 {
+		log.Infof("[router-%d]: Perform cleanup.\n", p.Module_id)
+		for next_hop_ip, outbuffer := range m.OutputBuffer {
+			age := time.Now().Sub(outbuffer.last_access)
+			// Delete all queue with last_access older than MAX_ENTRY_AGE
+			if age > MAX_ENTRY_AGE {
+				// Free queue
+				log.Infof("[router-%d]: queue [%x] (size=%d) age %s > %s (MAX_AGE)\n", p.Module_id, next_hop_ip, outbuffer.queue.Len(), age, MAX_ENTRY_AGE)
+				for outbuffer.queue.Len() > 0 {
+					outbuffer.queue.Next()
+				}
+				// Delete map entry
+				delete(m.OutputBuffer, next_hop_ip)
+			} else {
+				// Delete old entries, maintain max queue size to MAX_QUEUE_LEN
+				if outbuffer.queue.Len() > MAX_QUEUE_LEN {
+					log.Infof("[router-%d]: queue [%x] size %d > %d (MAX_SIZE)\n", p.Module_id, next_hop_ip, outbuffer.queue.Len(), MAX_QUEUE_LEN)
+					for outbuffer.queue.Len() > MAX_QUEUE_LEN {
+						outbuffer.queue.Next()
+					}
+					log.Infof("[router-%d]: queue [%x] size %d == %d (MAX_SIZE) CLEANUP ENDED...\n", p.Module_id, next_hop_ip, outbuffer.queue.Len(), MAX_QUEUE_LEN)
+				}
+			}
+			// Delete Map entries with empty queue
+			if outbuffer.queue.Len() == 0 {
+				log.Infof("[router-%d]: queue [%x] size %d DELETING...\n", p.Module_id, next_hop_ip, outbuffer.queue.Len())
+				delete(m.OutputBuffer, next_hop_ip)
 			}
 		}
 	}
