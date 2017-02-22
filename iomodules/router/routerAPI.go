@@ -490,7 +490,7 @@ func (r *RouterModule) Configure(conf interface{}) (err error) {
 	return nil
 }
 
-func (r *RouterModule) ProcessPacket(p *hover.Packet) (err error) {
+func (r *RouterModule) ProcessPacket(p *hover.PacketIn) (err error) {
 	_ = p
 
 	log.Infof("Router: '%s': Packet arrived from dataplane", r.ModuleId)

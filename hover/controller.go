@@ -20,13 +20,18 @@ import (
 	"io"
 )
 
-type SlowPathCallBack func(*Packet) (error)
+type SlowPathCallBack func(*PacketIn) (error)
 
-type Packet struct {
+type PacketInMd struct {
 	Module_id  uint16
 	Port_id    uint16
-	Packet_len uint16
+	Packet_len uint32
 	Reason     uint16
+	Metadata   [3]uint32
+}
+
+type PacketIn struct {
+	Md         PacketInMd
 	Data       []byte
 }
 
@@ -42,9 +47,9 @@ type PacketOut struct {
 	Data       []byte
 }
 
-func (p *Packet) ToString() string {
+func (p *PacketIn) ToString() string {
 	return fmt.Sprintf("Module_id: %d\nPort_id: %d\nPacket_len: %d\nReason: %d\n",
-		p.Module_id, p.Port_id, p.Packet_len, p.Reason)
+		p.Md.Module_id, p.Md.Port_id, p.Md.Packet_len, p.Md.Reason)
 }
 
 type Controller struct {
@@ -80,7 +85,7 @@ func (c *Controller) Run() (err error) {
 	log.Infof("Controller: New client connected")
 
 	for {
-		p := &Packet{}
+		p := &PacketIn{}
 		err1 := dec.Decode(p)
 		if err1 == io.EOF {
 			log.Info("Controller: Client Disconnected")
@@ -89,7 +94,7 @@ func (c *Controller) Run() (err error) {
 			continue
 		}
 		//log.Info("Packet arrived: ", p.ToString())
-		cb, ok := c.callbacks[p.Module_id]
+		cb, ok := c.callbacks[p.Md.Module_id]
 		if !ok {
 			log.Infof("Controller: Callback not found")
 			continue

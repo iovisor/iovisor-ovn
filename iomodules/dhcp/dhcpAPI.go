@@ -84,9 +84,6 @@ func (m *DhcpModule) Deploy() (err error) {
 	m.ModuleId = dhcpHover.Id
 	m.deployed = true
 
-	id, _ := strconv.Atoi(m.ModuleId[2:])
-	m.hc.GetController().RegisterCallBack(uint16(id), m.ProcessPacket)
-
 	return nil
 }
 
@@ -328,13 +325,6 @@ func (m *DhcpModule) Configure(conf interface{}) (err error) {
 
 	return m.ConfigureParameters(netmask, addr_low, addr_high, dns,
 		router, lease_time, mac_server, ip_server)
-}
-
-func (m *DhcpModule) ProcessPacket(p *hover.Packet) (err error) {
-	_ = p
-
-	log.Infof("DHCP: '%s': Packet arrived from dataplane", m.ModuleId)
-	return nil
 }
 
 // TODO: this function should be smarter

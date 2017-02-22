@@ -46,7 +46,7 @@ type DhcpModule struct {
 	ip          net.IP
 
 	handler     dhcp.Handler
-	c           chan *hover.Packet
+	c           chan *hover.PacketIn
 
 	deployed  bool
 	hc *hover.Client // used to send commands to hover
@@ -62,7 +62,7 @@ func Create(hc *hover.Client) *DhcpModule {
 	x := new(DhcpModule)
 	x.hc = hc
 	x.deployed = false
-	x.c = make(chan *hover.Packet, 10)
+	x.c = make(chan *hover.PacketIn, 10)
 	return x
 }
 
@@ -322,7 +322,7 @@ func (m *DhcpModule) Configure(conf interface{}) (err error) {
 		router, lease_time, mac_server, ip_server)
 }
 
-func (m *DhcpModule) ProcessPacket(p *hover.Packet) (err error) {
+func (m *DhcpModule) ProcessPacket(p *hover.PacketIn) (err error) {
 	m.c <- p
 	return nil
 }
