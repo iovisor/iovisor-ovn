@@ -12,6 +12,9 @@ cd $DATA_DIR
 rm -rf bcc  # be sure that there is not al already git clone of bcc
 git clone https://github.com/iovisor/bcc.git
 cd bcc
+# bcc master compatibility with gobpf is broken, use an old version while
+# the issue is solved
+git checkout b79b589a2dc663431e3a9489178c1ada6f12e8b7
 mkdir build; cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr
 make -j
@@ -41,8 +44,11 @@ git remote add drzaeus77 https://github.com/drzaeus77/netlink
 git fetch drzaeus77
 git reset --hard drzaeus77/master
 
+go get github.com/iovisor/gobpf
+go get github.com/songgao/water
+
 echo "installing hover"
-go get github.com/iovisor/iomodules/hover
+go get -d github.com/iovisor/iomodules/hover
 # use custom version of hover
 cd $GOPATH/src/github.com/iovisor/iomodules
 git remote add mvbpolito https://github.com/mvbpolito/iomodules
