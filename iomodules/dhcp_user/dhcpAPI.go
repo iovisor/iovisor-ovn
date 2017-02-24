@@ -46,6 +46,7 @@ type DhcpModule struct {
 	ip          net.IP
 
 	handler     dhcp.Handler
+	// channel to synchronize ProcessPacket and ReadFrom functions
 	c           chan *hover.PacketIn
 
 	deployed  bool
@@ -327,6 +328,12 @@ func (m *DhcpModule) ProcessPacket(p *hover.PacketIn) (err error) {
 	return nil
 }
 
+// the dhcp library needs an object that implements the dhcp.ServeConn to
+// be able to receive and send packets.  In this case this interface is
+// directly implemented in the dhcp module.
+
+// This function is called from the dhcp library, it waits on a channel
+// until the ProcessPacket function injects new arrived packets there.
 func (m *DhcpModule) ReadFrom(b []byte) (n int, addr net.Addr, err error) {
 
 	for p := range m.c {
@@ -370,6 +377,8 @@ func (m *DhcpModule) ReadFrom(b []byte) (n int, addr net.Addr, err error) {
 	return
 }
 
+// WriteTo in this case means send the packet to the dataplane, it requires
+// assemble the whole packet layers
 func (m *DhcpModule) WriteTo(b []byte, addr net.Addr) (n int, err error) {
 
 	// TODO: For now all the packets are sent to the broadcast mac address,
