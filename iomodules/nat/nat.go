@@ -30,6 +30,9 @@ var NatCode = `
 #undef BPF_TRACE_EGRESS_TCP
 #undef BPF_TRACE_REVERSE_TCP
 #undef BPF_TRACE_DROP
+#undef BPF_TRACE_ICMP
+#undef BPF_TRACE_EGRESS_ICMP
+#undef BPF_TRACE_REVERSE_ICMP
 
 #define EGRESS_NAT_TABLE_DIM  1024
 #define REVERSE_NAT_TABLE_DIM 1024
@@ -46,9 +49,22 @@ var NatCode = `
 
 #define UDP_CSUM_OFFSET (sizeof(struct ethernet_t) + sizeof(struct ip_t) + offsetof(struct udp_t, crc))
 #define TCP_CSUM_OFFSET (sizeof(struct ethernet_t) + sizeof(struct ip_t) + offsetof(struct tcp_t, cksum))
+#define ICMP_CSUM_OFFSET (sizeof(struct ethernet_t) + sizeof(struct ip_t) + offsetof(struct icmp_hdr, checksum))
 #define IP_CSUM_OFFSET (sizeof(struct ethernet_t) + offsetof(struct ip_t, hchecksum))
 
+#define ICMP_ECHO_REQUEST 8
+#define ICMP_ECHO_REPLY 0
+
 #define IS_PSEUDO 0x10
+
+/*Only for ICMP echo req, reply*/
+struct icmp_hdr {
+  unsigned char type;
+  unsigned char code;
+  unsigned short checksum;
+  unsigned short id;
+  unsigned short seq;
+} __attribute__((packed));
 
 /*Egress Nat key*/
 struct egress_nat_key{
@@ -183,8 +199,8 @@ static int handle_rx(void *skb, struct metadata *md) {
   struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
 
 #ifdef BPF_TRACE_INGRESS
-  bpf_trace_printk("[nat-0]: eth_type:%x mac_src:%lx mac_dst:%lx\n",
-  ethernet->type, ethernet->src, ethernet->dst);
+  bpf_trace_printk("[nat-%d]: in_ifc:%d eth_type:%x\n",md->module_id, md->in_ifc, ethernet->type);
+  bpf_trace_printk("[nat-%d]: mac_src:%lx mac_dst:%lx\n", md->module_id, ethernet->src, ethernet->dst);
 #endif
 
   switch (ethernet->type){
@@ -199,6 +215,7 @@ static int handle_rx(void *skb, struct metadata *md) {
   switch (ip->nextp){
     case IP_UDP: goto udp;
     case IP_TCP: goto tcp;
+    case IP_ICMP: goto icmp;
     default: goto EOP;
   }
 
@@ -219,6 +236,95 @@ static int handle_rx(void *skb, struct metadata *md) {
 
     return RX_DROP;
   }
+
+  icmp: {
+    /*BEGIN ICMP*/
+    struct __sk_buff * skb2 = (struct __sk_buff *)skb;
+    void *data = (void *)(long)skb2->data;
+    void *data_end = (void *)(long)skb2->data_end;
+    struct icmp_hdr *icmp = data + sizeof(struct ethernet_t) + sizeof(struct ip_t);
+
+    if (data + sizeof(struct ethernet_t) + sizeof(struct ip_t) + sizeof(*icmp) > data_end)
+      return RX_DROP;
+
+    #ifdef BPF_TRACE_ICMP
+      bpf_trace_printk("[nat-%d]: ICMP packet type: %d code: %d\n",md->module_id, icmp->type, icmp->code);
+      bpf_trace_printk("[nat-%d]: ICMP packet id: %d seq: %d\n",md->module_id, icmp->id, icmp->seq);
+    #endif
+
+    /*Only manage ICMP Request and Reply*/
+    if ( !( (icmp->type == ICMP_ECHO_REQUEST) || (icmp->type == ICMP_ECHO_REPLY) ) )
+      goto DROP;
+
+    switch (md->in_ifc){
+      case IN_IFC: goto EGRESS_ICMP;
+      case OUT_IFC: goto REVERSE_ICMP;
+    }
+    goto DROP;
+
+    EGRESS_ICMP: ;
+      //Packet exiting the nat, apply nat translation
+
+      struct egress_nat_value *egress_value_p = 0;
+      egress_value_p = get_egress_value(ip->src, ip->dst, icmp->id, 0);
+      if(egress_value_p){
+        #ifdef BPF_TRACE_EGRESS_ICMP
+          bpf_trace_printk("[nat-%d]: EGRESS NAT ICMP icmp->id: %d->%d\n", md->module_id ,icmp->id , egress_value_p->port_src_new);
+        #endif
+
+          //change ICMP id
+          unsigned short old_icmp_id = icmp->id;
+          icmp->id = egress_value_p->port_src_new;
+          bpf_l4_csum_replace(skb, ICMP_CSUM_OFFSET, old_icmp_id ,icmp->id, sizeof(unsigned short));
+
+          //change IP
+          bpf_l3_csum_replace(skb, IP_CSUM_OFFSET , bpf_htonl(ip->src), bpf_htonl(egress_value_p->ip_src_new), 4);
+          ip->src = egress_value_p->ip_src_new;
+
+        }else{
+          //bpf_trace_printk("[nat-%d]: EGRESS NAT ICMP LOOKUP FAILED -> DROP packet.\n", md->module_id);
+          goto DROP;
+        }
+
+        //redirect packet
+        pkt_redirect(skb,md,OUT_IFC);
+        return RX_REDIRECT;
+
+      REVERSE_ICMP: ;
+        //Packet coming back, apply reverse nat translaton
+        struct reverse_nat_key reverse_key = {};
+        reverse_key.ip_src = ip->src;
+        reverse_key.ip_dst = ip->dst;
+        reverse_key.port_src = 0;
+        reverse_key.port_dst = icmp->id;
+
+        struct reverse_nat_value *reverse_value_p = 0;
+        reverse_value_p = reverse_nat_table.lookup(&reverse_key);
+        if(reverse_value_p){
+        #ifdef BPF_TRACE_REVERSE_ICMP
+          bpf_trace_printk("[nat-%d]: REVERSE NAT ICMP icmp->id: %d->%d\n", md->module_id , icmp->id , reverse_value_p->port_dst_new);
+        #endif
+
+          //change ICMP id
+          unsigned short old_icmp_id = icmp->id;
+          icmp->id = reverse_value_p->port_dst_new;
+          bpf_l4_csum_replace(skb, ICMP_CSUM_OFFSET, old_icmp_id ,icmp->id, sizeof(unsigned short));
+
+          //change IP
+          bpf_l3_csum_replace(skb, IP_CSUM_OFFSET , bpf_htonl(ip->dst), bpf_htonl(reverse_value_p->ip_dst_new), 4);
+          ip->dst = reverse_value_p->ip_dst_new;
+
+          pkt_redirect(skb,md,IN_IFC);
+          return RX_REDIRECT;
+
+        }else{
+          // bpf_trace_printk("[nat-%d]: REVERSE NAT UDP NO MATCH -> DROP packet.\n", md->module_id);
+          goto DROP;
+        }
+    /*END ICMP*/
+    goto EOP;
+  }
+
 
   udp: {
       struct udp_t *udp = cursor_advance(cursor, sizeof(*udp));
