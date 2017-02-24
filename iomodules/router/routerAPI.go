@@ -35,9 +35,11 @@ type RouterModule struct {
 	RoutingTable      []RoutingTableEntry
 	routingTableCount int // number of elements in the routing table
 	Interfaces        map[string]*RouterModuleInterface
+	OutputBuffer      map[uint32]*BufferQueue
+	PktCounter        int
 
-	deployed  bool
-	hc *hover.Client // used to send commands to hover
+	deployed bool
+	hc       *hover.Client // used to send commands to hover
 }
 
 type RouterModuleInterface struct {
@@ -65,6 +67,8 @@ func Create(hc *hover.Client) *RouterModule {
 
 	r := new(RouterModule)
 	r.Interfaces = make(map[string]*RouterModuleInterface)
+	r.OutputBuffer = make(map[uint32]*BufferQueue)
+	r.PktCounter = 0
 	r.RoutingTable = make([]RoutingTableEntry, 10)
 	r.hc = hc
 	r.deployed = false
@@ -90,6 +94,9 @@ func (r *RouterModule) Deploy() (err error) {
 	log.Noticef("POST Router IOModule %s\n", routerHover.Id)
 	r.ModuleId = routerHover.Id
 	r.deployed = true
+
+	id, _ := strconv.Atoi(r.ModuleId[2:])
+	r.hc.GetController().RegisterCallBack(uint16(id), r.ProcessPacket)
 
 	return nil
 }

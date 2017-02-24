@@ -21,7 +21,6 @@ import (
 
 	"github.com/mvbpolito/gosexy/to"
 
-	"github.com/iovisor/iovisor-ovn/config"
 	"github.com/iovisor/iovisor-ovn/hover"
 	l "github.com/op/go-logging"
 )
@@ -30,8 +29,7 @@ var log = l.MustGetLogger("iomodules-switch")
 
 type L2SwitchModule struct {
 	ModuleId   string
-	PortsArray [config.SwitchPortsNumber + 1]int // Saves the network interfaces file ids used to implement the broadcast
-	PortsCount int                               // number of allocated ports
+	PortsCount int // number of allocated ports
 
 	Interfaces map[string]*L2SwitchModuleInterface
 
@@ -40,11 +38,9 @@ type L2SwitchModule struct {
 }
 
 type L2SwitchModuleInterface struct {
-	IfaceIdRedirectHover  int    //Iface id inside hover (relative to the m:1234 the interface is attached to ...) and provided my the extended hover /links/ API
-	IfaceIdArrayBroadcast int    //Interface Id in the array for broadcast (id->fd for broadcast)
-	IfaceFd               int    //Interface Fd inside External_Ids (42, etc...)
-	LinkIdHover           string //iomodules Link Id
-	IfaceName             string
+	IfaceId      int    // Iface id inside hover
+	LinkIdHover  string // iomodules Link Id
+	IfaceName    string
 }
 
 func Create(hc *hover.Client) *L2SwitchModule {
@@ -121,34 +117,12 @@ func (sw *L2SwitchModule) AttachExternalInterface(ifaceName string) (err error) 
 		return linkError
 	}
 
-	portNumber, err := sw.FindFirstFreeLogicalPort()
 	if err != nil {
 		log.Errorf("Error in finding free port: %s\n", err)
 		return err
 	}
 
-	_, external_interfaces := sw.hc.ExternalInterfacesListGET()
-
-	// We are assuming that this process is made only once... If fails it could be a problem.
-
-	iface := new(L2SwitchModuleInterface)
-
-	// Configuring broadcast on the switch module
-	iface.IfaceIdArrayBroadcast = portNumber
-	iface.IfaceFd, _ = strconv.Atoi(external_interfaces[ifaceName].Id)
-
-	tablePutError, _ := sw.hc.TableEntryPUT(sw.ModuleId, "ports",
-		strconv.Itoa(portNumber), external_interfaces[ifaceName].Id)
-	if tablePutError != nil {
-		log.Warningf("Error in PUT entry into ports table... ",
-			"Probably problems with broadcast in the module. Error: %s\n", tablePutError)
-		return tablePutError
-	}
-
-	sw.PortsArray[portNumber] = iface.IfaceFd
-	sw.PortsCount++
-
-	// Saving IfaceIdRedirectHover for this port. The number will be used by security policies
+	// get interface id
 	ifacenumber := -1
 	if linkHover.From[0:2] == "m:" {
 		ifacenumber = linkHover.FromId
@@ -157,15 +131,17 @@ func (sw *L2SwitchModule) AttachExternalInterface(ifaceName string) (err error) 
 		ifacenumber = linkHover.ToId
 	}
 	if ifacenumber == -1 {
-		log.Warningf("IfaceIdRedirectHover == -1 something wrong happened...\n")
+		log.Warningf("IfaceId == -1 something wrong happened...\n")
 	}
-	iface.IfaceIdRedirectHover = ifacenumber
 
+	iface := new(L2SwitchModuleInterface)
+
+	iface.IfaceId = ifacenumber
 	iface.LinkIdHover = linkHover.Id
-
 	iface.IfaceName = ifaceName
-
 	sw.Interfaces[ifaceName] = iface
+
+	sw.PortsCount++
 
 	// TODO: security policies
 
@@ -192,28 +168,15 @@ func (sw *L2SwitchModule) DetachExternalInterface(ifaceName string) (err error) 
 	linkDeleteError, _ := sw.hc.LinkDELETE(iface.LinkIdHover)
 
 	if linkDeleteError != nil {
-		//log.Debug("REMOVE Interface %s %s (1/1) LINK REMOVED\n", currentInterface.Name, currentInterface.IfaceIdExternalIds)
 		log.Warningf("Problem removing iface '%s' from switch '%s'\n",
 			ifaceName, sw.ModuleId)
 		return linkDeleteError
 	}
 
-	// Complete the link deletion...
-	iface.LinkIdHover = ""
-
-	// cleanup broadcast tables
-	if sw.PortsArray[iface.IfaceIdArrayBroadcast] != 0 {
-		sw.hc.TableEntryPUT(sw.ModuleId, "ports", strconv.Itoa(iface.IfaceIdArrayBroadcast), "0")
-		// TODO: if not successful retry
-
-		sw.PortsArray[iface.IfaceIdArrayBroadcast] = 0
-		sw.PortsCount--
-	}
-
 	// TODO: clean up port security tables
-
 	delete(sw.Interfaces, ifaceName)
 
+	sw.PortsCount--
 	return nil
 }
 
@@ -229,29 +192,13 @@ func (sw *L2SwitchModule) AttachToIoModule(ifaceId int, ifaceName string) (err e
 
 	iface := new(L2SwitchModuleInterface)
 
-	sw.PortsCount++
-
-	portNumber := config.SwitchPortsNumber - 1
-
-	iface.IfaceIdRedirectHover = ifaceId
+	iface.IfaceId = ifaceId
 	iface.IfaceName = ifaceName
-	iface.IfaceIdArrayBroadcast = portNumber
-	iface.IfaceFd = ifaceId
 
 	sw.Interfaces[ifaceName] = iface
+	sw.PortsCount++
 
 	// TODO: security policies
-
-	tablePutError, _ := sw.hc.TableEntryPUT(sw.ModuleId, "ports",
-		strconv.Itoa(portNumber), strconv.Itoa(ifaceId))
-	if tablePutError != nil {
-		log.Warningf("Error in PUT entry into ports table... ",
-			"Probably problems with broadcast in the module. Error: %s\n", tablePutError)
-		return tablePutError
-	}
-
-	sw.PortsArray[portNumber] = ifaceId
-
 	return nil
 }
 
@@ -272,21 +219,13 @@ func (sw *L2SwitchModule) DetachFromIoModule(ifaceName string) (err error) {
 		return errors.New(errString)
 	}
 
-	sw.PortsCount--
-
 	// TODO: clean up port security tables
 
 	delete(sw.Interfaces, ifaceName)
-	return nil
-}
 
-func (sw *L2SwitchModule) FindFirstFreeLogicalPort() (portNumber int, err error) {
-	for i := 0; i < config.SwitchPortsNumber; i++ {
-		if sw.PortsArray[i] == 0 {
-			return i, nil
-		}
-	}
-	return -1, errors.New("No free port found")
+	sw.PortsCount--
+
+	return nil
 }
 
 // adds a entry in the forwarding table of the switch
@@ -304,7 +243,7 @@ func (sw *L2SwitchModule) AddForwardingTableEntry(mac string, ifaceName string) 
 	macString := "{" + macToHexadecimalString(mac) + "}"
 
 	sw.hc.TableEntryPOST(sw.ModuleId, "fwdtable", macString,
-		strconv.Itoa(swIface.IfaceIdRedirectHover))
+		strconv.Itoa(swIface.IfaceId))
 
 	return nil
 }
@@ -322,7 +261,7 @@ func (sw *L2SwitchModule) AddPortSecurityMac(mac string, ifaceName string) (err 
 	macString := macToHexadecimalString(mac)
 
 	sw.hc.TableEntryPOST(sw.ModuleId, "securitymac",
-		"{0x"+strconv.Itoa(swIface.IfaceIdRedirectHover)+"}", macString)
+		"{0x"+strconv.Itoa(swIface.IfaceId)+"}", macString)
 	return nil
 }
 

@@ -25,8 +25,10 @@ import (
 
 	"github.com/iovisor/iovisor-ovn/iomodules"
 	"github.com/iovisor/iovisor-ovn/iomodules/dhcp"
+	"github.com/iovisor/iovisor-ovn/iomodules/dhcp_user"
 	"github.com/iovisor/iovisor-ovn/iomodules/l2switch"
 	"github.com/iovisor/iovisor-ovn/iomodules/nat"
+	"github.com/iovisor/iovisor-ovn/iomodules/null"
 	"github.com/iovisor/iovisor-ovn/iomodules/onetoonenat"
 	"github.com/iovisor/iovisor-ovn/iomodules/router"
 
@@ -70,6 +72,8 @@ func deployModules(modulesRequested []interface{}) error {
 		switch mtype {
 		case "dhcp":
 			m = dhcp.Create(dataplane)
+		case "dhcp_user":
+			m = dhcp_user.Create(dataplane)
 		case "router":
 			m = router.Create(dataplane)
 		case "switch":
@@ -78,6 +82,8 @@ func deployModules(modulesRequested []interface{}) error {
 			m = nat.Create(dataplane)
 		case "onetoonenat":
 			m = onetoonenat.Create(dataplane)
+		case "null_node": // "null" can not be used because it causes an issue
+			m = null.Create(dataplane)
 		default:
 			errString := fmt.Sprintf("Invalid module type '%s' for module '%s'",
 				mtype, name)

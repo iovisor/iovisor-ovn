@@ -47,6 +47,9 @@ var RouterCode = `
 #define MAC_BROADCAST 0xffffffffffff
 #define MAC_MULTICAST_MASK 0x010000000000
 
+#define SLOWPATH_ARP_REPLY 1
+#define SLOWPATH_ARP_LOOKUP_MISS 2
+
 /* Routing Table Entry */
 struct rt_entry {
   u32 network;  //network: e.g. 192.168.1.0
@@ -201,7 +204,7 @@ static int handle_rx(void *skb, struct metadata *md) {
 
   DROP:
     #ifdef BPF_LOG
-      bpf_trace_printk("[router-%d]: in: %d out: -- DROP\n", md->module_id, md->in_ifc);
+      // bpf_trace_printk("[router-%d]: in: %d out: -- DROP\n", md->module_id, md->in_ifc);
     #endif
     return RX_DROP;
 
@@ -235,6 +238,24 @@ static int handle_rx(void *skb, struct metadata *md) {
     u64 *mac_entry = arp_table.lookup(&dst_ip);
     if (mac_entry) {
       new_dst_mac = *mac_entry;
+    }else{
+      #ifdef BPF_LOG
+        // bpf_trace_printk("[router-%d]: arp lookup failed. Send to controller",md->module_id);
+      #endif
+
+      //Set metadata and send packet to slowpath
+      u32 mdata[3];
+      mdata[0] = dst_ip;
+      mdata[1] = out_port;
+      r_port_p = router_port.lookup(&out_port);
+      u32 ip = 0;
+      if (r_port_p) {
+        ip = r_port_p->ip;
+      }
+      mdata[2] = ip;
+      pkt_set_metadata(skb, mdata);
+      pkt_controller(skb, md, SLOWPATH_ARP_LOOKUP_MISS);
+      return RX_CONTROLLER;
     }
 
     ethernet->dst = new_dst_mac;
@@ -255,8 +276,9 @@ static int handle_rx(void *skb, struct metadata *md) {
   ARP: ; //arp packet
     struct arp_t *arp = cursor_advance(cursor, sizeof(*arp));
     if (arp->oper == 1) {	// arp request?
-      //bpf_trace_printk("[arp]: packet is arp request\n");
-
+    #ifdef BPF_LOG
+      bpf_trace_printk("[router-%d]: packet is arp request\n",md->module_id);
+    #endif
       struct r_port *port = router_port.lookup(&md->in_ifc);
       if (!port)
         return RX_DROP;
@@ -290,19 +312,26 @@ static int handle_rx(void *skb, struct metadata *md) {
 
         pkt_redirect(skb, md, md->in_ifc);
         return RX_REDIRECT;
+
+        //TODO make sense to send the arp packet to the slowpath
+        //in order to notify some arp entries updated?
       }
     }
-    else if (arp->oper == 2) { //arp reply
-      bpf_trace_printk("[router-%d]: packet is arp reply\n", md->module_id);
-
+    if (arp->oper == 2) { //arp reply
+    #ifdef BPF_LOG
+      bpf_trace_printk("[router-%d]: packet is arp reply\n",md->module_id);
+    #endif
       struct r_port *port = router_port.lookup(&md->in_ifc);
-      if (!port)
+      if (!port){
         return RX_DROP;
-      if (arp->sha == port->mac && arp->spa == port->ip) {
-        u64 mac_ = port->mac;
-        u32 ip_ = port->ip;
+      }else{
+        u64 mac_ = arp->sha;
+        u32 ip_  = arp->spa;
         arp_table.update(&ip_, &mac_);
-        return RX_DROP;
+
+        //notify the slowpath. New arp reply received.
+        pkt_controller(skb, md, SLOWPATH_ARP_REPLY);
+        return RX_CONTROLLER;
       }
     }
   return RX_DROP;

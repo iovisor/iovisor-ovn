@@ -24,7 +24,7 @@ import (
 	l "github.com/op/go-logging"
 )
 
-var log = l.MustGetLogger("iovisor-ovn-daemon")
+var log = l.MustGetLogger("hover")
 
 func (d *Client) sendObject(method string, url string, requestObj interface{}, responseObj interface{}) (err error) {
 	b, er := json.Marshal(requestObj)
@@ -429,4 +429,20 @@ func (d *Client) TableEntryDELETE(moduleId string, tableId string, entryId strin
 	log.Debugf("table entry DELETE /modules/" + moduleId + "/tables/" + tableId + "/entries/" + entryId + " OK\n")
 
 	return nil, tableEntry
+}
+
+func (d *Client) ControllerPOST(addr string) (error) {
+	log.Infof("controller POST %s\n", addr)
+
+	req := map[string]interface{}{
+		"addr":  addr,
+	}
+
+	err := d.sendObject("POST", "/controllers/", req, nil)
+	if err != nil {
+		log.Warning(err)
+		return err
+	}
+
+	return nil
 }

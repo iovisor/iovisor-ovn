@@ -1,0 +1,30 @@
+#modules:
+#  - name: myswitch
+#    type: switch
+#  - name: mynull1
+#    type: null_node
+#  - name: mynull2
+#    type: null_node
+#  - name: mynull3
+#    type: null_node
+#
+#links:
+#  - from: myswitch
+#    to: mynull1
+#  - from: myswitch
+#    to: mynull2
+#  - from: myswitch
+#    to: mynull3
+#
+#external_interfaces:
+#  - module: myswitch
+#    iface: veth1
+
+modules:
+  - name: mynull1
+    type: null_node
+
+external_interfaces:
+  - module: mynull1
+    iface: veth1
+
