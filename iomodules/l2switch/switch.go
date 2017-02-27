@@ -14,11 +14,22 @@
 package l2switch
 
 var SwitchSecurityPolicy = `
+#include <bcc/proto.h>
+#include <bcc/helpers.h>
+
+#include <uapi/linux/bpf.h>
+#include <uapi/linux/if_ether.h>
+#include <uapi/linux/if_packet.h>
+#include <uapi/linux/ip.h>
+#include <uapi/linux/in.h>
+#include <uapi/linux/filter.h>
+#include <uapi/linux/pkt_cls.h>
+
 #define BPF_TRACE
 
 #define IP_SECURITY_INGRESS
 #define MAC_SECURITY_INGRESS
-#undef MAC_SECURITY_EGRESS
+#define MAC_SECURITY_EGRESS
 
 #define MAX_PORTS 32
 
@@ -62,12 +73,23 @@ BPF_TABLE("hash", struct ifindex, struct mac_t, securitymac, MAX_PORTS + 1);
 */
 BPF_TABLE("hash", struct ifindex, struct ip_leaf, securityip, MAX_PORTS + 1);
 
+struct eth_hdr {
+  u64   dst:48;
+  u64   src:48;
+  u16   proto;
+} __attribute__((packed));
+
 static int handle_rx(void *skb, struct metadata *md) {
-  u8 *cursor = 0;
-  struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
+  struct __sk_buff *skb2 = (struct __sk_buff *)skb;
+  void *data = (void *)(long)skb2->data;
+  void *data_end = (void *)(long)skb2->data_end;
+  struct eth_hdr *eth = data;
+
+  if (data + sizeof(*eth) > data_end)
+    return RX_DROP;
 
   #ifdef BPF_TRACE
-    // bpf_trace_printk("[switch-%d]: in_ifc=%d\n", md->module_id, md->in_ifc);
+    bpf_trace_printk("[switch-%d]: in_ifc=%d\n", md->module_id, md->in_ifc);
   #endif
 
   //set in-interface for lookup ports security
@@ -79,10 +101,10 @@ static int handle_rx(void *skb, struct metadata *md) {
   struct mac_t * mac_lookup;
   mac_lookup = securitymac.lookup(&in_iface);
   if (mac_lookup)
-    if (ethernet->src != mac_lookup->mac) {
+    if (eth->src != mac_lookup->mac) {
       #ifdef BPF_TRACE
         bpf_trace_printk("[switch-%d]: mac INGRESS %lx mismatch %lx -> DROP\n",
-          md->module_id, ethernet->src, mac_lookup->mac);
+          md->module_id, eth->src, mac_lookup->mac);
       #endif
       return RX_DROP;
     }
@@ -90,11 +112,13 @@ static int handle_rx(void *skb, struct metadata *md) {
 
   //port security on source ip
   #ifdef IP_SECURITY_INGRESS
-  if (ethernet->type == 0x0800) {
-    struct ip_leaf *ip_lookup;
-    ip_lookup = securityip.lookup(&in_iface);
+  if (eth->proto == bpf_htons(ETH_P_IP)) {
+    struct ip_leaf *ip_lookup = securityip.lookup(&in_iface);
     if (ip_lookup) {
-      struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
+      struct ip_t *ip = data + sizeof(*eth);
+      if (data + sizeof(*eth) + sizeof(*ip) > data_end)
+        return RX_DROP;
+
       if (ip->src != ip_lookup->ip) {
         #ifdef BPF_TRACE
           bpf_trace_printk("[switch-%d]: IP INGRESS %x mismatch %x -> DROP\n", md->module_id, ip->src, ip_lookup->ip);
@@ -106,7 +130,7 @@ static int handle_rx(void *skb, struct metadata *md) {
   #endif
 
   #ifdef BPF_TRACE
-    bpf_trace_printk("[switch-%d]: mac src:%lx dst:%lx\n", md->module_id, ethernet->src, ethernet->dst);
+    bpf_trace_printk("[switch-%d]: mac src:%lx dst:%lx\n", md->module_id, eth->src, eth->dst);
   #endif
 
   //LEARNING PHASE: mapping in_iface with src_interface
@@ -114,7 +138,7 @@ static int handle_rx(void *skb, struct metadata *md) {
   struct interface interface = {};
 
   //set in_iface as key
-  src_key.mac = ethernet->src;
+  src_key.mac = (u64) eth->src;
 
   //set in_ifc, and 0 counters as leaf
   interface.ifindex = md->in_ifc;
@@ -127,7 +151,7 @@ static int handle_rx(void *skb, struct metadata *md) {
     interface_lookup->ifindex = md->in_ifc;
 
   //FORWARDING PHASE: select interface(s) to send the packet
-  struct mac_t dst_mac = {ethernet->dst};
+  struct mac_t dst_mac = {(u64) eth->dst};
 
   //lookup in forwarding table fwdtable
   struct interface *dst_interface = fwdtable.lookup(&dst_mac);
@@ -142,10 +166,10 @@ static int handle_rx(void *skb, struct metadata *md) {
     out_iface.ifindex = dst_interface->ifindex;
     mac_lookup = securitymac.lookup(&out_iface);
     if (mac_lookup)
-      if (ethernet->dst != mac_lookup->mac){
+      if (eth->dst != mac_lookup->mac){
         #ifdef BPF_TRACE
           bpf_trace_printk("[switch-%d]: mac EGRESS %lx mismatch %lx -> DROP\n",
-            md->module_id, ethernet->dst, mac_lookup->mac);
+            md->module_id, eth->dst, mac_lookup->mac);
         #endif
         return RX_DROP;
       }
@@ -158,8 +182,7 @@ static int handle_rx(void *skb, struct metadata *md) {
     pkt_redirect(skb, md, dst_interface->ifindex);
 
     #ifdef BPF_TRACE
-      // bpf_trace_printk("[switch-%d]: redirect out_ifc=%d\n", md->module_id, dst_interface->ifindex);
-      bpf_trace_printk("[switch-0]: in: %d out: %d  REDIRECT\n", md->in_ifc, dst_interface->ifindex);
+      bpf_trace_printk("[switch-%d]: redirect out_ifc=%d\n", md->module_id, dst_interface->ifindex);
     #endif
 
     return RX_REDIRECT;
