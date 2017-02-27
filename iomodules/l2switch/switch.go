@@ -33,50 +33,33 @@ var SwitchSecurityPolicy = `
 
 #define MAX_PORTS 32
 
-struct mac_t {
-  u64 mac;
-};
-
-struct interface {
-  u32 ifindex;
-};
-
-struct ifindex{
-  u32 ifindex;
-};
-
-struct ip_leaf{
-  u32 ip;
-};
+#define PRINT_MAC(x) (bpf_htonll(x)>>16)
 
 /*
-  The Forwarding Table (fwdtable) contains the association between mac Addresses
-  and	ports learned by the switch in the learning phase.
-  This table is used also in the forwarding phase when the switch has to decide
-  the port to use for forwarding the packet.
-  The interface number uses the convention of hover, so is an incremental number
-  given by hover daemon each time a port is attached to the IOModule (1, 2,..).
+  Fowarding Table: MAC Address to port association.  This table is filled
+  in the learning phase and then is used in the forwarding phase to decide
+  where to send a packet
 */
-BPF_TABLE("hash", struct mac_t, struct interface, fwdtable, 1024);
+BPF_TABLE("hash", __be64, u32, fwdtable, 1024);
 
 /*
   The Security Mac Table (securitymac) associate to each port the allowed mac
   address. If no entry is associated with the port, the port security is not
   applied to the port.
 */
-BPF_TABLE("hash", struct ifindex, struct mac_t, securitymac, MAX_PORTS + 1);
+BPF_TABLE("hash", u32, __be64, securitymac, MAX_PORTS);
 
 /*
-  The Security Ip Table (securityip) associate to each port the allowed ip
+  The Security Ip Table (securityip) associates to each port the allowed ip
   address. If no entry is associated with the port, the port security is not
   applied to the port.
 */
-BPF_TABLE("hash", struct ifindex, struct ip_leaf, securityip, MAX_PORTS + 1);
+BPF_TABLE("hash", u32, __be32, securityip, MAX_PORTS);
 
 struct eth_hdr {
-  u64   dst:48;
-  u64   src:48;
-  u16   proto;
+  __be64   dst:48;
+  __be64   src:48;
+  __be16   proto;
 } __attribute__((packed));
 
 static int handle_rx(void *skb, struct metadata *md) {
@@ -88,40 +71,38 @@ static int handle_rx(void *skb, struct metadata *md) {
   if (data + sizeof(*eth) > data_end)
     return RX_DROP;
 
+  u32 in_ifc = md->in_ifc;
+
   #ifdef BPF_TRACE
-    bpf_trace_printk("[switch-%d]: in_ifc=%d\n", md->module_id, md->in_ifc);
+    bpf_trace_printk("[switch-%d]: in_ifc=%d\n", md->module_id, in_ifc);
   #endif
 
-  //set in-interface for lookup ports security
-  struct ifindex in_iface = {};
-  in_iface.ifindex = md->in_ifc;
-
-  //port security on source mac
+  // port security on source mac
   #ifdef MAC_SECURITY_INGRESS
-  struct mac_t * mac_lookup;
-  mac_lookup = securitymac.lookup(&in_iface);
+  __be64 *mac_lookup = securitymac.lookup(&in_ifc);
   if (mac_lookup)
-    if (eth->src != mac_lookup->mac) {
+    if (eth->src != *mac_lookup) {
       #ifdef BPF_TRACE
         bpf_trace_printk("[switch-%d]: mac INGRESS %lx mismatch %lx -> DROP\n",
-          md->module_id, eth->src, mac_lookup->mac);
+          md->module_id, PRINT_MAC(eth->src), PRINT_MAC(*mac_lookup));
       #endif
       return RX_DROP;
     }
   #endif
 
-  //port security on source ip
+  // port security on source ip
   #ifdef IP_SECURITY_INGRESS
   if (eth->proto == bpf_htons(ETH_P_IP)) {
-    struct ip_leaf *ip_lookup = securityip.lookup(&in_iface);
+    __be32 *ip_lookup = securityip.lookup(&in_ifc);
     if (ip_lookup) {
       struct ip_t *ip = data + sizeof(*eth);
       if (data + sizeof(*eth) + sizeof(*ip) > data_end)
         return RX_DROP;
 
-      if (ip->src != ip_lookup->ip) {
+      if (ip->src != *ip_lookup) {
         #ifdef BPF_TRACE
-          bpf_trace_printk("[switch-%d]: IP INGRESS %x mismatch %x -> DROP\n", md->module_id, ip->src, ip_lookup->ip);
+          bpf_trace_printk("[switch-%d]: IP INGRESS %x mismatch %x -> DROP\n",
+            md->module_id, bpf_htonl(ip->src), bpf_htonl(*ip_lookup));
         #endif
         return RX_DROP;
       }
@@ -130,59 +111,51 @@ static int handle_rx(void *skb, struct metadata *md) {
   #endif
 
   #ifdef BPF_TRACE
-    bpf_trace_printk("[switch-%d]: mac src:%lx dst:%lx\n", md->module_id, eth->src, eth->dst);
+    bpf_trace_printk("[switch-%d]: mac src:%lx dst:%lx\n",
+      md->module_id, PRINT_MAC(eth->src), PRINT_MAC(eth->dst));
   #endif
 
-  //LEARNING PHASE: mapping in_iface with src_interface
-  struct mac_t src_key = {};
-  struct interface interface = {};
-
-  //set in_iface as key
-  src_key.mac = (u64) eth->src;
-
-  //set in_ifc, and 0 counters as leaf
-  interface.ifindex = md->in_ifc;
+  //LEARNING PHASE: mapping in_ifc with src_interface
+  __be64 src_key = eth->src;
 
   //lookup in fwdtable. if no key present initialize with interface
-  struct interface *interface_lookup = fwdtable.lookup_or_init(&src_key, &interface);
+  u32 *interface_lookup = fwdtable.lookup_or_init(&src_key, &in_ifc);
 
   //if the same mac has changed interface, update it
-  if (interface_lookup->ifindex != md->in_ifc)
-    interface_lookup->ifindex = md->in_ifc;
+  if (*interface_lookup != in_ifc)
+    *interface_lookup = in_ifc;
 
   //FORWARDING PHASE: select interface(s) to send the packet
-  struct mac_t dst_mac = {(u64) eth->dst};
+  __be64 dst_mac = eth->dst;
 
   //lookup in forwarding table fwdtable
-  struct interface *dst_interface = fwdtable.lookup(&dst_mac);
+  u32 *dst_interface = fwdtable.lookup(&dst_mac);
 
   if (dst_interface) {
     //HIT in forwarding table
     //redirect packet to dst_interface
 
     #ifdef MAC_SECURITY_EGRESS
-    struct mac_t * mac_lookup;
-    struct ifindex out_iface = {};
-    out_iface.ifindex = dst_interface->ifindex;
-    mac_lookup = securitymac.lookup(&out_iface);
+    u32 out_iface = *dst_interface;
+    __be64 *mac_lookup = securitymac.lookup(&out_iface);
     if (mac_lookup)
-      if (eth->dst != mac_lookup->mac){
+      if (eth->dst != *mac_lookup){
         #ifdef BPF_TRACE
           bpf_trace_printk("[switch-%d]: mac EGRESS %lx mismatch %lx -> DROP\n",
-            md->module_id, eth->dst, mac_lookup->mac);
+            md->module_id, PRINT_MAC(eth->dst), PRINT_MAC(*mac_lookup));
         #endif
         return RX_DROP;
       }
     #endif
 
     /* do not send packet back on the ingress interface */
-    if (dst_interface->ifindex == md->in_ifc)
+    if (*dst_interface == in_ifc)
       return RX_DROP;
 
-    pkt_redirect(skb, md, dst_interface->ifindex);
+    pkt_redirect(skb, md, *dst_interface);
 
     #ifdef BPF_TRACE
-      bpf_trace_printk("[switch-%d]: redirect out_ifc=%d\n", md->module_id, dst_interface->ifindex);
+      bpf_trace_printk("[switch-%d]: redirect out_ifc=%d\n", md->module_id, *dst_interface);
     #endif
 
     return RX_REDIRECT;
