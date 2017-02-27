@@ -27,15 +27,25 @@ var RouterCode = `
 
 #undef BPF_TRACE
 #define BPF_LOG
+#undef BPF_TRACE_ICMP_ECHO_REPLY
 
 #undef CHECK_MAC_DST
 
-#define ROUTING_TABLE_DIM 10
+#define ROUTING_TABLE_DIM  9
 #define ROUTER_PORT_N     10
 #define ARP_TABLE_DIM     10
 
 #define IP_TTL_OFFSET  8
 #define IP_CSUM_OFFSET 10
+#define IP_SRC_OFF 26
+#define IP_DST_OFF 30
+#define IP_CKSUM_OFF 24
+#define ICMP_CSUM_OFFSET (sizeof(struct ethernet_t) + sizeof(struct ip_t) + offsetof(struct icmp_hdr, checksum))
+
+#define IP_ICMP 0x01
+
+#define ICMP_ECHO_REQUEST 0x8
+#define ICMP_ECHO_REPLY 0x0
 
 #define ETH_DST_OFFSET  0
 #define ETH_SRC_OFFSET  6
@@ -49,6 +59,15 @@ var RouterCode = `
 
 #define SLOWPATH_ARP_REPLY 1
 #define SLOWPATH_ARP_LOOKUP_MISS 2
+
+/*Only for ICMP echo req, reply*/
+struct icmp_hdr {
+  unsigned char type;
+  unsigned char code;
+  unsigned short checksum;
+  unsigned short id;
+  unsigned short seq;
+} __attribute__((packed));
 
 /* Routing Table Entry */
 struct rt_entry {
@@ -143,10 +162,54 @@ static int handle_rx(void *skb, struct metadata *md) {
     struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
 
     #ifdef BPF_TRACE
-      bpf_trace_printk("[router-%d]: ttl:%u ip_scr:%x ip_dst:%x \n",
-        md->module_id, ip->ttl, ip->src, ip->dst);
+      bpf_trace_printk("[router-%d]: ttl:%u ip_scr:%x ip_dst:%x \n", md->module_id, ip->ttl, ip->src, ip->dst);
       // bpf_trace_printk("[router-%d]: (before) ttl: %d checksum: %x\n", ip->ttl, ip->hchecksum);
     #endif
+
+    /* ICMP Echo Responder for router ports */
+    if ( ip->nextp == IP_ICMP) {
+      struct __sk_buff * skb2 = (struct __sk_buff *)skb;
+      void *data = (void *)(long)skb2->data;
+      void *data_end = (void *)(long)skb2->data_end;
+      struct icmp_hdr *icmp = data + sizeof(struct ethernet_t) + sizeof(struct ip_t);
+
+      if (data + sizeof(struct ethernet_t) + sizeof(struct ip_t) + sizeof(*icmp) > data_end)
+        return RX_DROP;
+
+      /*Only manage ICMP Request*/
+      if ( icmp->type == ICMP_ECHO_REQUEST ){
+        struct r_port *r_port_p = 0;
+        r_port_p = router_port.lookup(&md->in_ifc);
+        if (r_port_p) {
+          if (r_port_p->ip == ip->dst) {
+            //Reply to ICMP Echo request
+
+            unsigned short type = ICMP_ECHO_REPLY;
+            bpf_l4_csum_replace(skb,36, icmp->type, type,sizeof(type));
+            bpf_skb_store_bytes(skb, 34, &type, sizeof(type),0);
+
+            unsigned int old_src = bpf_ntohl(ip->src);
+            unsigned int old_dst = bpf_ntohl(ip->dst);
+            bpf_l3_csum_replace(skb, IP_CKSUM_OFF, old_src, old_dst, sizeof(old_dst));
+
+             bpf_skb_store_bytes(skb, IP_SRC_OFF, &old_dst, sizeof(old_dst), 0);
+             bpf_l3_csum_replace(skb, IP_CKSUM_OFF, old_dst, old_src, sizeof(old_src));
+             bpf_skb_store_bytes(skb, IP_DST_OFF, &old_src, sizeof(old_src), 0);
+
+             unsigned long long old_src_mac = ethernet->src;
+             unsigned long long old_dst_mac = ethernet->dst;
+             ethernet->src = old_dst_mac;
+             ethernet->dst = old_src_mac;
+
+           #ifdef BPF_TRACE_ICMP_ECHO_REPLY
+              bpf_trace_printk("[router-%d]: ICMP ECHO Request from 0x%x port %d . Generating Reply ...\n", md->module_id, ip->src, md->in_ifc);
+           #endif
+             pkt_redirect(skb, md, md->in_ifc);
+             return RX_REDIRECT;
+          }
+        }
+      }
+    }
 
     /*
       decrement TTL and recompute packet checksum (l3 recompute checksum).
