@@ -3,7 +3,7 @@
 In this example a dhcp and a switch modules are deployed, three virtual network interfaces are connected to the switch.
 
 The three virtual network interfaces are in different network namespaces and they do not have an IP address, this is provided then by the dhcp server.
- 
+
 <center><a href="../../images/dhcp_tutorial.png"><img src="../../images/dhcp_tutorial.png" width=500></a></center>
 
 ## Preparing the network namespaces
@@ -38,13 +38,21 @@ $GOPATH/bin/iovisorovnd -file dhcp.yaml -hover http://127.0.0.1:5002
 
 ## Testing connectivity
 
-Before pinging between the network interfaces, they have to receive an IP address from the DHCP client. 
+Before pinging between the network interfaces, they have to receive an IP address from the DHCP client.
 Execute the following commands to request ip addresses to the server:
 
 ```bash
 sudo ip netns exec ns1 dhclient
-sudo ip netns exec ns1 dhclient
+sudo ip netns exec ns2 dhclient
 sudo ip netns exec ns3 dhclient
+```
+
+In order to know the IP address assigned to each interface execute:
+
+```bash
+sudo ip netns exec ns1 ifconfig
+sudo ip netns exec ns2 ifconfig
+sudo ip netns exec ns3 ifconfig
 ```
 
 Now you are able to test the connectivity pinging between the network interfaces
@@ -52,11 +60,11 @@ in the different network spaces, for example:
 
 ```bash
 # ping ns2 from ns1
-sudo ip netns exec ns1 ping 192.168.1.102
+sudo ip netns exec ns1 ping <IP address of veth2_ in ns2>
 # ping ns3 from ns1
-sudo ip netns exec ns1 ping 192.168.1.103
+sudo ip netns exec ns1 ping <IP address of veth3_ in ns3>
 # ping ns1 from ns3
-sudo ip netns exec ns3 ping 192.168.1.101
+sudo ip netns exec ns3 ping <IP address of veth1_ in ns1>
 ```
 
 ## Debugging

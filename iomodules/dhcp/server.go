@@ -1,5 +1,5 @@
 // This file is a slight modified version of https://github.com/krolaw/dhcp4/blob/master/example_test.go
-package dhcp_user
+package dhcp
 
 import (
 	dhcp "github.com/mvbpolito/dhcp4"

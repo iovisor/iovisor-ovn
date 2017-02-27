@@ -25,7 +25,6 @@ import (
 
 	"github.com/iovisor/iovisor-ovn/iomodules"
 	"github.com/iovisor/iovisor-ovn/iomodules/dhcp"
-	"github.com/iovisor/iovisor-ovn/iomodules/dhcp_user"
 	"github.com/iovisor/iovisor-ovn/iomodules/l2switch"
 	"github.com/iovisor/iovisor-ovn/iomodules/nat"
 	"github.com/iovisor/iovisor-ovn/iomodules/null"
@@ -72,8 +71,6 @@ func deployModules(modulesRequested []interface{}) error {
 		switch mtype {
 		case "dhcp":
 			m = dhcp.Create(dataplane)
-		case "dhcp_user":
-			m = dhcp_user.Create(dataplane)
 		case "router":
 			m = router.Create(dataplane)
 		case "switch":

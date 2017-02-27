@@ -1,6 +1,7 @@
 # DHCP Server IOModule
 
-This module implements a basic version of a DHCP server.
+This module implements a basic version of a DHCP server in user space.
+
 
 ## API
 
@@ -50,6 +51,6 @@ The following is an example of the configuration of a dhcp server:
 
 ## Limitations
 
-- Maximum 10 addresses can be assigend by the DHCP server.
-- There is not support for address rebinding.
-- There is not support for address releasing.
+- This module only can be connected to a single port
+- Packets are always sent to the L2 broadcast address, this is supported
+by some client implementations but is not full protocol compliant.
