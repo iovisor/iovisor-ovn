@@ -33,8 +33,8 @@ type NatModule struct {
 	PortsCount int //number of allocated ports
 	Interfaces map[string]*NatModuleInterface
 
-	deployed  bool
-	hc *hover.Client // used to send commands to hover
+	deployed bool
+	hc       *hover.Client // used to send commands to hover
 }
 
 type NatModuleInterface struct {
@@ -240,7 +240,7 @@ func (n *NatModule) Configure(conf interface{}) (err error) {
 		return
 	}
 
-	return nil;
+	return nil
 }
 
 func ipToHexadecimalString(ip string) string {
