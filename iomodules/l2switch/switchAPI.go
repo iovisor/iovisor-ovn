@@ -86,10 +86,6 @@ func (sw *L2SwitchModule) Destroy() (err error) {
 		return nil
 	}
 
-	// TODO:
-	// All interfaces must be detached before destroying the module.
-	// Should it be done automatically here, or should be the application responsible for that?
-
 	moduleDeleteError, _ := sw.hc.ModuleDELETE(sw.ModuleId)
 	if moduleDeleteError != nil {
 		log.Errorf("Error in destrying Switch IOModule: %s\n", moduleDeleteError)
@@ -176,10 +172,6 @@ func (sw *L2SwitchModule) DetachExternalInterface(ifaceName string) (err error) 
 	return nil
 }
 
-// This function is still experimental
-// Adds an interface that is connected to another IOModule, the connection must
-// be already been created by an external component.
-// TODO: How to handle broadcast in this case?
 func (sw *L2SwitchModule) AttachToIoModule(ifaceId int, ifaceName string) (err error) {
 	if !sw.deployed {
 		log.Errorf("Trying to attach port in undeployed switch\n")
@@ -197,8 +189,6 @@ func (sw *L2SwitchModule) AttachToIoModule(ifaceId int, ifaceName string) (err e
 	return nil
 }
 
-// This is also experimental, same considerations as previous function should
-// be considered
 func (sw *L2SwitchModule) DetachFromIoModule(ifaceName string) (err error) {
 	if !sw.deployed {
 		log.Errorf("Trying to detach port in undeployed switch\n")
