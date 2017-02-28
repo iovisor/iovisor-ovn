@@ -27,6 +27,7 @@ import (
 
 const SLOWPATH_ARP_REPLY = 1
 const SLOWPATH_ARP_LOOKUP_MISS = 2
+const SLOWPATH_TTL_EXCEEDED = 3
 
 const CLEANUP_EVERY_N_PACKETS = 5
 
@@ -74,6 +75,21 @@ func (r *RouterModule) ProcessPacket(p *hover.PacketIn) (err error) {
 	// }
 
 	switch p.Md.Reason {
+	case SLOWPATH_TTL_EXCEEDED:
+		log.Infof("[router-%d]: Reason -> SLOWPATH_TTL_EXCEEDED\n", p.Md.Module_id)
+
+		pkt, _ := buildIcmpTtlExceeded(p.Data[:p.Md.Packet_len], p.Md)
+
+		icmp_pkt := hover.PacketOut{}
+		icmp_pkt.Data = pkt
+		icmp_pkt.Module_id = p.Md.Module_id
+		icmp_pkt.Sense = hover.INGRESS
+		icmp_pkt.Port_id = p.Md.Port_id
+
+		log.Infof("[router-%d]: sending ICMP TTL Exceeded' \n", p.Md.Module_id)
+		ctrl := r.hc.GetController()
+		ctrl.SendPacketOut(&icmp_pkt)
+
 	case SLOWPATH_ARP_LOOKUP_MISS:
 		log.Infof("[router-%d]: Reason -> ARP_LOOKUP_MISS\n", p.Md.Module_id)
 
@@ -214,6 +230,62 @@ func (r *RouterModule) ProcessPacket(p *hover.PacketIn) (err error) {
 		}
 	}
 	return nil
+}
+
+func buildIcmpTtlExceeded(pkt []byte, md hover.PacketInMd) ([]byte, error) {
+
+	packet := gopacket.NewPacket(pkt, layers.LayerTypeEthernet, gopacket.Default)
+
+	if ethlayer := packet.Layer(layers.LayerTypeEthernet); ethlayer != nil {
+		// log.Infof("ETHERNET \n")
+		eth, _ := ethlayer.(*layers.Ethernet)
+		// log.Infof("srcmac:%s dstmac:%s eth_type:%s \n", eth.SrcMAC.String(), eth.DstMAC.String(), eth.EthernetType.String())
+
+		if iplayer := packet.Layer(layers.LayerTypeIPv4); iplayer != nil {
+			// log.Infof("IP \n")
+			ip, _ := iplayer.(*layers.IPv4)
+			// log.Infof("srcIP:%s dstIP:%s\n", ip.SrcIP.String(), ip.DstIP.String())
+
+			eth_ := layers.Ethernet{
+				EthernetType: layers.EthernetTypeIPv4,
+				SrcMAC:       eth.DstMAC, /*Computed by Dataplane l2 forwarding*/
+				DstMAC:       eth.SrcMAC, /*Computed by Dataplane l2 forwarding*/
+			}
+
+			// Get Ip address of router port
+			new_src_ip := int2ip(md.Metadata[0])
+
+			ip_ := layers.IPv4{
+				SrcIP:    new_src_ip, /* It's the router address port */
+				DstIP:    ip.SrcIP,   /* It's the source ip of the packet */
+				Version:  4,
+				TTL:      64,
+				Protocol: layers.IPProtocolICMPv4,
+			}
+
+			icmp_ := layers.ICMPv4{
+				TypeCode: layers.CreateICMPv4TypeCode(layers.ICMPv4TypeTimeExceeded, layers.ICMPv4CodeTTLExceeded),
+			}
+
+			buf := gopacket.NewSerializeBuffer()
+			opts := gopacket.SerializeOptions{
+				FixLengths:       true,
+				ComputeChecksums: true,
+			}
+
+			gopacket.SerializeLayers(buf, opts,
+				&eth_,
+				&ip_,
+				&icmp_,
+				ip,
+				gopacket.Payload(pkt[34:42]),
+			)
+
+			log.Debugf("\nGenerated ICMP Packet\n%s\n", hex.Dump(buf.Bytes()))
+			return buf.Bytes(), nil
+		}
+	}
+	return nil, nil
 }
 
 func buildArpPacket(srcmac net.HardwareAddr, dstmac net.HardwareAddr, srcip net.IP, dstip net.IP, operation uint16) ([]byte, error) {

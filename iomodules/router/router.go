@@ -1,4 +1,4 @@
-// Copyright 2016 Politecnico di Torino
+// Copyright 2017 Politecnico di Torino
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ var RouterCode = `
 
 #undef CHECK_MAC_DST
 
-#define ROUTING_TABLE_DIM  9
+#define ROUTING_TABLE_DIM  8
 #define ROUTER_PORT_N     10
 #define ARP_TABLE_DIM     10
 
@@ -59,6 +59,7 @@ var RouterCode = `
 
 #define SLOWPATH_ARP_REPLY 1
 #define SLOWPATH_ARP_LOOKUP_MISS 2
+#define SLOWPATH_TTL_EXCEEDED 3
 
 /*Only for ICMP echo req, reply*/
 struct icmp_hdr {
@@ -221,13 +222,6 @@ static int handle_rx(void *skb, struct metadata *md) {
     __u8 old_ttl = ip->ttl;
     __u8 new_ttl;
 
-    if (old_ttl <= 1) {
-      #ifdef BPF_TRACE
-        bpf_trace_printk("[router-%d]: packet DROP (ttl <= 1)\n", md->module_id);
-      #endif
-      return RX_DROP;
-    }
-
     new_ttl = old_ttl - 1;
     bpf_l3_csum_replace(skb, sizeof(*ethernet) + IP_CSUM_OFFSET , old_ttl, new_ttl, sizeof(__u16));
     bpf_skb_store_bytes(skb, sizeof(*ethernet) + IP_TTL_OFFSET , &new_ttl, sizeof(old_ttl), 0);
@@ -235,6 +229,27 @@ static int handle_rx(void *skb, struct metadata *md) {
     #ifdef BPF_TRACE
       // bpf_trace_printk("[router-%d]: (after ) ttl: %d checksum: %x\n",ip->ttl,ip->hchecksum);
     #endif
+
+    if (new_ttl == 0) {
+      #ifdef BPF_TRACE
+        bpf_trace_printk("[router-%d]: packet DROP (ttl = 0)\n", md->module_id);
+      #endif
+
+      //Set router port ip address as metadata[0]
+      u32 mdata[3];
+      struct r_port *r_port_p = 0;
+      r_port_p = router_port.lookup(&md->in_ifc);
+      u32 ip = 0;
+      if (r_port_p) {
+        ip = r_port_p->ip;
+      }
+      mdata[0] = ip;
+      pkt_set_metadata(skb, mdata);
+
+      //Send packet to slowpath
+      pkt_controller(skb, md, SLOWPATH_TTL_EXCEEDED);
+      return RX_CONTROLLER;
+    }
 
     /*
       ROUTING ALGORITHM (simplified)
