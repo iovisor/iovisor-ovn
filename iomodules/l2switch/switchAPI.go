@@ -224,7 +224,7 @@ func (sw *L2SwitchModule) AddForwardingTableEntry(mac net.HardwareAddr, ifaceNam
 		return errors.New(errString)
 	}
 
-	macString := "{" + iomodules.MacToHexadecimalString(mac) + "}"
+	macString := "{" + iomodules.MacToHexadecimalStringBigEndian(mac) + "}"
 
 	sw.hc.TableEntryPOST(sw.ModuleId, "fwdtable", macString,
 		strconv.Itoa(swIface.IfaceId))
@@ -242,7 +242,7 @@ func (sw *L2SwitchModule) AddPortSecurityMac(mac net.HardwareAddr, ifaceName str
 		return errors.New(errString)
 	}
 
-	macString := iomodules.MacToHexadecimalString(mac)
+	macString := iomodules.MacToHexadecimalStringBigEndian(mac)
 
 	sw.hc.TableEntryPOST(sw.ModuleId, "securitymac",
 		"{0x"+strconv.Itoa(swIface.IfaceId)+"}", macString)

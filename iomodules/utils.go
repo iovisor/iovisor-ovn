@@ -33,3 +33,18 @@ func MacToHexadecimalString(mac net.HardwareAddr) string {
 
 	return buffer.String()
 }
+
+func MacToHexadecimalStringBigEndian(mac net.HardwareAddr) string {
+	s := mac.String()
+
+	var buffer bytes.Buffer
+	buffer.WriteString("0x")
+	buffer.WriteString(s[15:17])
+	buffer.WriteString(s[12:14])
+	buffer.WriteString(s[9:11])
+	buffer.WriteString(s[6:8])
+	buffer.WriteString(s[3:5])
+	buffer.WriteString(s[0:2])
+
+	return buffer.String()
+}
