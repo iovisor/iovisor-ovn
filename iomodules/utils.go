@@ -16,6 +16,7 @@ package iomodules
 
 import (
 	"bytes"
+	"fmt"
 	"net"
 )
 
@@ -47,4 +48,34 @@ func MacToHexadecimalStringBigEndian(mac net.HardwareAddr) string {
 	buffer.WriteString(s[0:2])
 
 	return buffer.String()
+}
+
+func IpToHex(ip net.IP) string {
+	if ip.To4() != nil {
+		ba := []byte(ip.To4())
+		ipv4HexStr := fmt.Sprintf("0x%02x%02x%02x%02x",
+			ba[0], ba[1], ba[2], ba[3])
+		return ipv4HexStr
+	}
+
+	return ""
+}
+
+func IpToHexBigEndian(ip net.IP) string {
+	if ip.To4() != nil {
+		ba := []byte(ip.To4())
+		ipv4HexStr := fmt.Sprintf("0x%02x%02x%02x%02x",
+			ba[3], ba[2], ba[1], ba[0])
+		return ipv4HexStr
+	}
+
+	return ""
+}
+
+func ParseIPv4Mask(s string) net.IPMask {
+	mask := net.ParseIP(s)
+	if mask == nil {
+		return nil
+	}
+	return net.IPv4Mask(mask[12], mask[13], mask[14], mask[15])
 }
