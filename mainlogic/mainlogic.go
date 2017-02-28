@@ -320,7 +320,12 @@ func updatePort(sw *L2Switch, lport *ovnmonitor.LogicalSwitchPort) {
 				// avoid problems with the broadcast.
 				// (this issue will be solved soon)
 				// Mac address of the router is present through this interface
-				sw.swIomodule.AddForwardingTableEntry(lrp.Mac, port.Name)
+				mac, err := net.ParseMAC(lrp.Mac)
+				if err != nil {
+					log.Errorf("Error configuring router: Non valid mac")
+					return
+				}
+				sw.swIomodule.AddForwardingTableEntry(mac, port.Name)
 			}
 		}
 	}

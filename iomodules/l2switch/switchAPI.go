@@ -14,12 +14,14 @@
 package l2switch
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 
 	"github.com/mvbpolito/gosexy/to"
+
+	"github.com/iovisor/iovisor-ovn/iomodules"
 
 	"github.com/iovisor/iovisor-ovn/hover"
 	l "github.com/op/go-logging"
@@ -212,8 +214,7 @@ func (sw *L2SwitchModule) DetachFromIoModule(ifaceName string) (err error) {
 }
 
 // adds a entry in the forwarding table of the switch
-// mac MUST be in the format xx:xx:xx:xx:xx:xx
-func (sw *L2SwitchModule) AddForwardingTableEntry(mac string, ifaceName string) (err error) {
+func (sw *L2SwitchModule) AddForwardingTableEntry(mac net.HardwareAddr, ifaceName string) (err error) {
 
 	swIface, ok := sw.Interfaces[ifaceName]
 	if !ok {
@@ -223,7 +224,7 @@ func (sw *L2SwitchModule) AddForwardingTableEntry(mac string, ifaceName string) 
 		return errors.New(errString)
 	}
 
-	macString := "{" + macToHexadecimalString(mac) + "}"
+	macString := "{" + iomodules.MacToHexadecimalString(mac) + "}"
 
 	sw.hc.TableEntryPOST(sw.ModuleId, "fwdtable", macString,
 		strconv.Itoa(swIface.IfaceId))
@@ -231,7 +232,7 @@ func (sw *L2SwitchModule) AddForwardingTableEntry(mac string, ifaceName string) 
 	return nil
 }
 
-func (sw *L2SwitchModule) AddPortSecurityMac(mac string, ifaceName string) (err error) {
+func (sw *L2SwitchModule) AddPortSecurityMac(mac net.HardwareAddr, ifaceName string) (err error) {
 
 	swIface, ok := sw.Interfaces[ifaceName]
 	if !ok {
@@ -241,7 +242,7 @@ func (sw *L2SwitchModule) AddPortSecurityMac(mac string, ifaceName string) (err 
 		return errors.New(errString)
 	}
 
-	macString := macToHexadecimalString(mac)
+	macString := iomodules.MacToHexadecimalString(mac)
 
 	sw.hc.TableEntryPOST(sw.ModuleId, "securitymac",
 		"{0x"+strconv.Itoa(swIface.IfaceId)+"}", macString)
@@ -260,38 +261,29 @@ func (sw *L2SwitchModule) Configure(conf interface{}) (err error) {
 		for _, entry := range to.List(fwd_table) {
 			entryMap := to.Map(entry)
 
-			port, ok1 := entryMap["port"]
-			mac, ok2 := entryMap["mac"]
+			port_, ok1 := entryMap["port"]
+			mac_, ok2 := entryMap["mac"]
 			if !ok1 || !ok2 {
 				log.Errorf("Skipping non valid forwarding table entry")
 				continue
 			}
 
 			log.Infof("Adding forwardig table entry '%s' -> '%s'",
-				mac.(string), port.(string))
+				mac_.(string), port_.(string))
 
-			err := sw.AddForwardingTableEntry(mac.(string), port.(string))
+			mac, err1 := net.ParseMAC(mac_.(string))
+			if err1 != nil {
+				log.Errorf("'%s' is not a valid mac address", mac_)
+				continue
+			}
+
+			err := sw.AddForwardingTableEntry(mac, port_.(string))
 			if err != nil {
 				return err
 			}
 		}
 	}
 	return nil
-}
-
-// TODO: this function should be smarter
-func macToHexadecimalString(s string) string {
-	var buffer bytes.Buffer
-
-	buffer.WriteString("0x")
-	buffer.WriteString(s[0:2])
-	buffer.WriteString(s[3:5])
-	buffer.WriteString(s[6:8])
-	buffer.WriteString(s[9:11])
-	buffer.WriteString(s[12:14])
-	buffer.WriteString(s[15:17])
-
-	return buffer.String()
 }
 
 // TODO: port security policies
