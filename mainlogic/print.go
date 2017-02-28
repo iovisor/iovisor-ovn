@@ -27,7 +27,7 @@ func PrintL2Switch(name string) {
 		if sw.swIomodule != nil {
 			// table = tablewriter.NewWriter(os.Stdout)
 			table.SetHeader([]string{"SWITCH", "MODULE-ID", "PORTS#"})
-			table.Append([]string{sw.Name, sw.swIomodule.ModuleId, strconv.Itoa(sw.swIomodule.PortsCount)})
+			table.Append([]string{sw.Name, sw.swIomodule.ModuleId, strconv.Itoa(len(sw.swIomodule.Interfaces))})
 			table.Render()
 		} else {
 			// table = tablewriter.NewWriter(os.Stdout)
@@ -60,7 +60,7 @@ func PrintL2Switches(verbose bool) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"SWITCHES", "MODULE-ID", "PORTS#"})
 	for swname, sw := range switches {
-		table.Append([]string{swname, sw.swIomodule.ModuleId, strconv.Itoa(sw.swIomodule.PortsCount)})
+		table.Append([]string{swname, sw.swIomodule.ModuleId, strconv.Itoa(len(sw.swIomodule.Interfaces))})
 	}
 	table.Render()
 

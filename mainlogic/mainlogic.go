@@ -282,7 +282,7 @@ func updatePort(sw *L2Switch, lport *ovnmonitor.LogicalSwitchPort) {
 
 			// should this port be bound to a VIF interface?
 			if port.IfaceName != "" {
-				if sw.swIomodule.PortsCount == 0 {
+				if len(sw.swIomodule.Interfaces) == 0 {
 					sw.swIomodule.Deploy()
 				}
 				sw.swIomodule.AttachExternalInterface(port.IfaceName)
@@ -298,7 +298,7 @@ func updatePort(sw *L2Switch, lport *ovnmonitor.LogicalSwitchPort) {
 
 			log.Noticef("lsp '%s' is connected to lrp '%s'", port.Name, lrp.Name)
 
-			if sw.swIomodule.PortsCount == 0 {
+			if len(sw.swIomodule.Interfaces) == 0 {
 				sw.swIomodule.Deploy()
 			}
 

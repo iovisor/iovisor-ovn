@@ -29,7 +29,6 @@ var log = l.MustGetLogger("iomodules-switch")
 
 type L2SwitchModule struct {
 	ModuleId   string
-	PortsCount int // number of allocated ports
 
 	Interfaces map[string]*L2SwitchModuleInterface
 
@@ -141,8 +140,6 @@ func (sw *L2SwitchModule) AttachExternalInterface(ifaceName string) (err error) 
 	iface.IfaceName = ifaceName
 	sw.Interfaces[ifaceName] = iface
 
-	sw.PortsCount++
-
 	// TODO: security policies
 
 	return nil
@@ -176,7 +173,6 @@ func (sw *L2SwitchModule) DetachExternalInterface(ifaceName string) (err error) 
 	// TODO: clean up port security tables
 	delete(sw.Interfaces, ifaceName)
 
-	sw.PortsCount--
 	return nil
 }
 
@@ -196,7 +192,6 @@ func (sw *L2SwitchModule) AttachToIoModule(ifaceId int, ifaceName string) (err e
 	iface.IfaceName = ifaceName
 
 	sw.Interfaces[ifaceName] = iface
-	sw.PortsCount++
 
 	// TODO: security policies
 	return nil
@@ -222,8 +217,6 @@ func (sw *L2SwitchModule) DetachFromIoModule(ifaceName string) (err error) {
 	// TODO: clean up port security tables
 
 	delete(sw.Interfaces, ifaceName)
-
-	sw.PortsCount--
 
 	return nil
 }
