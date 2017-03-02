@@ -79,3 +79,8 @@ func ParseIPv4Mask(s string) net.IPMask {
 	}
 	return net.IPv4Mask(mask[12], mask[13], mask[14], mask[15])
 }
+
+func NetmaskToHexBigEndian(netmask net.IPMask) string {
+	//ip := net.ParseIP(netmask.String())
+	return IpToHexBigEndian(net.IP(netmask))
+}

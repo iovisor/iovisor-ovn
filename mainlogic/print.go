@@ -80,7 +80,7 @@ func PrintRouter(name string) {
 			if r.rIoModule != nil {
 				// table = tablewriter.NewWriter(os.Stdout)
 				table.SetHeader([]string{"ROUTER", "MODULE-ID", "PORTS#"})
-				table.Append([]string{r.Name, r.rIoModule.ModuleId, strconv.Itoa(r.rIoModule.PortsCount)})
+				table.Append([]string{r.Name, r.rIoModule.ModuleId, strconv.Itoa(len(r.rIoModule.Interfaces))})
 				table.Render()
 			} else {
 				// table = tablewriter.NewWriter(os.Stdout)
@@ -100,7 +100,7 @@ func PrintRouter(name string) {
 				table = tablewriter.NewWriter(os.Stdout)
 				table.SetHeader([]string{"ROUTER", "NAME", "LINK", "FD", "REDIRECT", "IP", "NETMASK", "MAC"})
 				for _, iface := range r.rIoModule.Interfaces {
-					table.Append([]string{r.Name, iface.IfaceName, iface.LinkIdHover, strconv.Itoa(iface.IfaceIdRedirectHover), iface.IP, iface.Netmask, iface.IP})
+					table.Append([]string{r.Name, iface.IfaceName, iface.LinkIdHover, strconv.Itoa(iface.IfaceIdRedirectHover), iface.IP.String(), iface.Netmask.String(), iface.IP.String()})
 				}
 				table.Render()
 			}
@@ -112,7 +112,7 @@ func PrintRouters(verbose bool) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"ROUTER", "MODULE-ID", "PORTS#"})
 	for _, r := range routers {
-		table.Append([]string{r.Name, r.rIoModule.ModuleId, strconv.Itoa(r.rIoModule.PortsCount)})
+		table.Append([]string{r.Name, r.rIoModule.ModuleId, strconv.Itoa(len(r.rIoModule.Interfaces))})
 	}
 	table.Render()
 
