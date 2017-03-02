@@ -72,11 +72,20 @@ func (c *Controller) RegisterCallBack(id uint16, cb SlowPathCallBack) (err error
 func (c *Controller) Run() (err error) {
 	ln, err1 := net.Listen("tcp", c.listenaddr)
 	if err1 != nil {
+		log.Error(err1)
 		return err1
 	}
 
 	c.conn, err = ln.Accept()
 	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	// our work is done
+	err = ln.Close()
+	if err != nil {
+		log.Error(err)
 		return
 	}
 
