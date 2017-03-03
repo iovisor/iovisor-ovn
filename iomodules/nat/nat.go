@@ -37,16 +37,16 @@ var NatCode = `
 
 #ifdef BPF_TRACE
 // #define BPF_TRACE_INGRESS
+// #define BPF_TRACE_UDP
 // #define BPF_TRACE_EGRESS_UDP
 // #define BPF_TRACE_REVERSE_UDP
+// #define BPF_TRACE_TCP
 // #define BPF_TRACE_EGRESS_TCP
 // #define BPF_TRACE_REVERSE_TCP
-// #define BPF_TRACE_DROP
 // #define BPF_TRACE_ICMP
-// #define BPF_TRACE_UDP
-// #define BPF_TRACE_TCP
 // #define BPF_TRACE_EGRESS_ICMP
 // #define BPF_TRACE_REVERSE_ICMP
+// #define BPF_TRACE_DROP
 #endif
 
 #define EGRESS_NAT_TABLE_DIM  1024
@@ -250,7 +250,7 @@ static int handle_rx(void *skb, struct metadata *md) {
       struct egress_nat_value *egress_value_p = get_egress_value(ip->saddr, ip->daddr, icmp->un.echo.id, 0);
       if (egress_value_p) {
       #ifdef BPF_TRACE_EGRESS_ICMP
-        bpf_trace_printk("[nat-%d]: EGRESS NAT ICMP icmp->id translation: %d->%d\n", md->module_id, bpf_htons(icmp->id), bpf_htons(egress_value_p->port_src_new));
+        bpf_trace_printk("[nat-%d]: EGRESS NAT ICMP icmp->id translation: %d->%d\n", md->module_id, bpf_htons(icmp->un.echo.id), bpf_htons(egress_value_p->port_src_new));
       #endif
 
         // change icmp id
@@ -306,6 +306,7 @@ static int handle_rx(void *skb, struct metadata *md) {
         bpf_l4_csum_replace(skb2, ICMP_CSUM_OFFSET, 0, l4sum, 0);
         bpf_l3_csum_replace(skb2, IP_CSUM_OFFSET ,0, l3sum, 0);
 
+        // redirect packet
         pkt_redirect(skb, md, IN_IFC);
         return RX_REDIRECT;
       } else {
@@ -323,7 +324,7 @@ static int handle_rx(void *skb, struct metadata *md) {
     if (data + sizeof(*eth) + sizeof(*ip) + sizeof(*udp) > data_end)
       return RX_DROP;
 
-  #ifdef BPF_TRACE_ICMP
+  #ifdef BPF_TRACE_UDP
     bpf_trace_printk("[nat-%d]: UDP packet. source:%d dest:%d\n", md->module_id, bpf_ntohs(udp->source), bpf_ntohs(udp->dest));
   #endif
 
@@ -338,7 +339,7 @@ static int handle_rx(void *skb, struct metadata *md) {
       struct egress_nat_value *egress_value_p = get_egress_value(ip->saddr, ip->daddr, udp->source, udp->dest);
       if(egress_value_p){
       #ifdef BPF_TRACE_EGRESS_UDP
-        bpf_trace_printk("[nat-0]: EGRESS NAT UDP port->source translation: %d->%d\n", bpf_ntohs(udp->source), bpf_ntohs(egress_value_p->port_src_new));
+        bpf_trace_printk("[nat-%d]: EGRESS NAT UDP port->source translation: %d->%d\n", md->module_id, bpf_ntohs(udp->source), bpf_ntohs(egress_value_p->port_src_new));
       #endif
 
         // change udp source
@@ -376,7 +377,7 @@ static int handle_rx(void *skb, struct metadata *md) {
       struct reverse_nat_value *reverse_value_p = reverse_nat_table.lookup(&reverse_key);
       if (reverse_value_p) {
       #ifdef BPF_TRACE_REVERSE_UDP
-        bpf_trace_printk("[nat-0]: REVERSE NAT UDP port->dest translation: %d->%d\n", bpf_ntohs(udp->dest), bpf_ntohs(reverse_value_p->port_dst_new));
+        bpf_trace_printk("[nat-%d]: REVERSE NAT UDP port->dest translation: %d->%d\n", md->module_id, bpf_ntohs(udp->dest), bpf_ntohs(reverse_value_p->port_dst_new));
       #endif
 
         // change udp dest
@@ -429,7 +430,7 @@ static int handle_rx(void *skb, struct metadata *md) {
       struct egress_nat_value *egress_value_p = get_egress_value(ip->saddr, ip->daddr, tcp->source, tcp->dest);
       if (egress_value_p) {
       #ifdef BPF_TRACE_EGRESS_TCP
-        bpf_trace_printk("[nat-0]: EGRESS NAT TCP port->source translation: %d->%d\n", bpf_ntohs(tcp->source), bpf_ntohs(egress_value_p->port_src_new));
+        bpf_trace_printk("[nat-%d]: EGRESS NAT TCP port->source translation: %d->%d\n", md->module_id, bpf_ntohs(tcp->source), bpf_ntohs(egress_value_p->port_src_new));
       #endif
 
         // change tcp source
@@ -452,7 +453,7 @@ static int handle_rx(void *skb, struct metadata *md) {
         // redirect packet
         pkt_redirect(skb, md, OUT_IFC);
         return RX_REDIRECT;
-      }else{
+      } else {
         goto DROP;
       }
 
@@ -467,7 +468,7 @@ static int handle_rx(void *skb, struct metadata *md) {
       struct reverse_nat_value *reverse_value_p = reverse_nat_table.lookup(&reverse_key);
       if (reverse_value_p) {
       #ifdef BPF_TRACE_REVERSE_TCP
-        bpf_trace_printk("[nat-0]: REVERSE NAT TCP port->dest translation: %d->%d\n", bpf_ntohs(tcp->dest), bpf_ntohs(reverse_value_p->port_dst_new));
+        bpf_trace_printk("[nat-%d]: REVERSE NAT TCP port->dest translation: %d->%d\n", md->module_id, bpf_ntohs(tcp->dest), bpf_ntohs(reverse_value_p->port_dst_new));
       #endif
 
         // change udp dest

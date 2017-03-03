@@ -207,14 +207,14 @@ func (n *NatModule) AttachToIoModule(ifaceId int, ifaceName string) (err error) 
 	return nil
 }
 
-func (n *NatModule) SetPublicIp(ip string) (err error) {
+func (n *NatModule) SetPublicIp(ip net.IP) (err error) {
 	if !n.deployed {
 		errString := "undeployed nat"
 		log.Errorf(errString)
 		return errors.New(errString)
 	}
 
-	n.hc.TableEntryPUT(n.ModuleId, "public_ip", "0", iomodules.IpToHexBigEndian(net.ParseIP(ip).To4()))
+	n.hc.TableEntryPUT(n.ModuleId, "public_ip", "0", iomodules.IpToHexBigEndian(ip.To4()))
 
 	return nil
 }
@@ -233,7 +233,7 @@ func (n *NatModule) Configure(conf interface{}) (err error) {
 		return errors.New("Missing public_ip")
 	}
 
-	err = n.SetPublicIp(public_ip.(string))
+	err = n.SetPublicIp(net.ParseIP(public_ip.(string)))
 	if err != nil {
 		return
 	}
