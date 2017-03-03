@@ -1,11 +1,15 @@
 #! /bin/bash
 
 set -x
+set -e
 
 for i in `seq 1 2`;
 do
-	sudo ip netns del ns${i} > /dev/null 2>&1	# remove ns if already existed
-	sudo ip link del veth${i} > /dev/null 2>&1
+	# remove ns and veth pairs if already created
+	if [ -e /var/run/netns/ns${i} ]; then
+		sudo ip netns del ns${i}
+		sudo ip link del veth${i}
+	fi
 
 	sudo ip netns add ns${i}
 	sudo ip link add veth${i}_ type veth peer name veth${i}
