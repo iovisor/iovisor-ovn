@@ -14,7 +14,6 @@
 package nat
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"net"
@@ -23,6 +22,7 @@ import (
 	"github.com/mvbpolito/gosexy/to"
 
 	"github.com/iovisor/iovisor-ovn/hover"
+	"github.com/iovisor/iovisor-ovn/iomodules"
 	l "github.com/op/go-logging"
 )
 
@@ -207,14 +207,14 @@ func (n *NatModule) AttachToIoModule(ifaceId int, ifaceName string) (err error) 
 	return nil
 }
 
-func (n *NatModule) SetPublicIp(ip string) (err error) {
+func (n *NatModule) SetPublicIp(ip net.IP) (err error) {
 	if !n.deployed {
 		errString := "undeployed nat"
 		log.Errorf(errString)
 		return errors.New(errString)
 	}
 
-	n.hc.TableEntryPUT(n.ModuleId, "public_ip", "0", ipToHexadecimalString(ip))
+	n.hc.TableEntryPUT(n.ModuleId, "public_ip", "0", iomodules.IpToHexBigEndian(ip.To4()))
 
 	return nil
 }
@@ -224,8 +224,6 @@ func (n *NatModule) DetachFromIoModule(ifaceName string) (err error) {
 }
 
 func (n *NatModule) Configure(conf interface{}) (err error) {
-	// conf is a map that contains:
-	//		public_ip: ip that is put as src address on the ongoing packets
 
 	log.Infof("Configuring NAT module")
 	confMap := to.Map(conf)
@@ -235,38 +233,10 @@ func (n *NatModule) Configure(conf interface{}) (err error) {
 		return errors.New("Missing public_ip")
 	}
 
-	err = n.SetPublicIp(public_ip.(string))
+	err = n.SetPublicIp(net.ParseIP(public_ip.(string)))
 	if err != nil {
 		return
 	}
 
 	return nil
-}
-
-func ipToHexadecimalString(ip string) string {
-
-	trial := net.ParseIP(ip)
-	if trial.To4() != nil {
-		ba := []byte(trial.To4())
-		// log.Debugf("0x%02x%02x%02x%02x\n", ba[0], ba[1], ba[2], ba[3])
-		ipv4HexStr := fmt.Sprintf("0x%02x%02x%02x%02x", ba[0], ba[1], ba[2], ba[3])
-		return ipv4HexStr
-	}
-
-	return ""
-}
-
-// TODO: this function should be smarter
-func macToHexadecimalString(s string) string {
-	var buffer bytes.Buffer
-
-	buffer.WriteString("0x")
-	buffer.WriteString(s[0:2])
-	buffer.WriteString(s[3:5])
-	buffer.WriteString(s[6:8])
-	buffer.WriteString(s[9:11])
-	buffer.WriteString(s[12:14])
-	buffer.WriteString(s[15:17])
-
-	return buffer.String()
 }

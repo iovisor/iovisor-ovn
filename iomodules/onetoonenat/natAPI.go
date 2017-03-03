@@ -14,7 +14,6 @@
 package onetoonenat
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"net"
@@ -23,6 +22,7 @@ import (
 	"github.com/mvbpolito/gosexy/to"
 
 	"github.com/iovisor/iovisor-ovn/hover"
+	"github.com/iovisor/iovisor-ovn/iomodules"
 	l "github.com/op/go-logging"
 )
 
@@ -33,8 +33,8 @@ type NatModule struct {
 	PortsCount int //number of allocated ports
 	Interfaces map[string]*NatModuleInterface
 
-	deployed  bool
-	hc *hover.Client // used to send commands to hover
+	deployed bool
+	hc       *hover.Client // used to send commands to hover
 }
 
 type NatModuleInterface struct {
@@ -206,7 +206,7 @@ func (n *NatModule) AttachToIoModule(ifaceId int, ifaceName string) (err error) 
 	return nil
 }
 
-func (n *NatModule) SetAddressAssociation(internal_ip string, external_ip string) (err error) {
+func (n *NatModule) SetAddressAssociation(internal_ip net.IP, external_ip net.IP) (err error) {
 	if !n.deployed {
 		errString := "undeployed nat"
 		log.Errorf(errString)
@@ -214,9 +214,9 @@ func (n *NatModule) SetAddressAssociation(internal_ip string, external_ip string
 	}
 
 	n.hc.TableEntryPOST(n.ModuleId, "egress_nat_table",
-		"{"+ipToHexadecimalString(internal_ip)+"}", ipToHexadecimalString(external_ip))
+		"{"+iomodules.IpToHexBigEndian(internal_ip.To4())+"}", iomodules.IpToHexBigEndian(external_ip.To4()))
 	n.hc.TableEntryPOST(n.ModuleId, "reverse_nat_table",
-		"{"+ipToHexadecimalString(external_ip)+"}", ipToHexadecimalString(internal_ip))
+		"{"+iomodules.IpToHexBigEndian(external_ip.To4())+"}", iomodules.IpToHexBigEndian(internal_ip.To4()))
 
 	return nil
 }
@@ -247,7 +247,7 @@ func (n *NatModule) Configure(conf interface{}) (err error) {
 				return errors.New("Missing external_ip")
 			}
 
-			err = n.SetAddressAssociation(internal_ip.(string), external_ip.(string))
+			err = n.SetAddressAssociation(net.ParseIP(internal_ip.(string)), net.ParseIP(external_ip.(string)))
 			if err != nil {
 				return
 			}
@@ -256,32 +256,4 @@ func (n *NatModule) Configure(conf interface{}) (err error) {
 	}
 
 	return nil
-}
-
-func ipToHexadecimalString(ip string) string {
-
-	trial := net.ParseIP(ip)
-	if trial.To4() != nil {
-		ba := []byte(trial.To4())
-		// log.Debugf("0x%02x%02x%02x%02x\n", ba[0], ba[1], ba[2], ba[3])
-		ipv4HexStr := fmt.Sprintf("0x%02x%02x%02x%02x", ba[0], ba[1], ba[2], ba[3])
-		return ipv4HexStr
-	}
-
-	return ""
-}
-
-// TODO: this function should be smarter
-func macToHexadecimalString(s string) string {
-	var buffer bytes.Buffer
-
-	buffer.WriteString("0x")
-	buffer.WriteString(s[0:2])
-	buffer.WriteString(s[3:5])
-	buffer.WriteString(s[6:8])
-	buffer.WriteString(s[9:11])
-	buffer.WriteString(s[12:14])
-	buffer.WriteString(s[15:17])
-
-	return buffer.String()
 }
