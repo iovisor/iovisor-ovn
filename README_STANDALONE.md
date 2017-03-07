@@ -60,13 +60,33 @@ In this case the configuration and topology of the service topology to be deploy
 
 ### Launching IOVisor-OVN in Standalone Mode
 
-In order to deploy a service topology from a file, the -file parameter should be passed to the IOVisor-OVN daemon.
+Before start, launch hover daemon.
+
+```bash
+#launch iovisor-ovn in standalone mode.
+./examples/run_hoverd.sh
+
+#or launch it manually
+export GOPATH=$HOME/go
+sudo $GOPATH/bin/hoverd -listen 127.0.0.1:5002
 
 ```
+
+In order to deploy a service topology from a file, the -file parameter should be passed to the IOVisor-OVN daemon.  
+
+
+```bash
+#launch iovisor-ovn in standalone mode.
+./examples/run_iovisorovnd_file.sh <file.yaml>
+
+#or launch it manually
 export GOPATH=$HOME/go
 cd $GOPATH/src/github.com/iovisor/iovisor-ovn/examples/switch
 $GOPATH/bin/iovisorovnd -file <file.yaml> -hover <hover_url>
+
 ```
+
+If you want to know more, please refers to [/examples](./examples) subfolders.
 
 ### Configuration File
 

@@ -58,5 +58,6 @@ go install github.com/iovisor/iomodules/hover/hoverd
 
 echo "installing iovisor ovn"
 go get github.com/iovisor/iovisor-ovn/iovisorovnd
+go install github.com/iovisor/iovisor-ovn/iovisorovnd
 
 cd $_pwd
