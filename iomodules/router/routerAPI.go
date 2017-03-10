@@ -17,7 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"sort"
 	"strconv"
 
 	"github.com/mvbpolito/gosexy/to"
@@ -30,10 +29,13 @@ import (
 
 var log = l.MustGetLogger("iomodules-router")
 
+const (
+	ROUTING_TABLE_DIM  int = 256
+)
+
 type RouterModule struct {
 	ModuleId          string
-	RoutingTable      []RoutingTableEntry
-	routingTableCount int // number of elements in the routing table
+	RoutingTable      map[string]RoutingTableEntry
 	Interfaces        map[string]*RouterModuleInterface
 	OutputBuffer      map[uint32]*BufferQueue
 	PktCounter        int
@@ -68,7 +70,7 @@ func Create(hc *hover.Client) *RouterModule {
 	r.Interfaces = make(map[string]*RouterModuleInterface)
 	r.OutputBuffer = make(map[uint32]*BufferQueue)
 	r.PktCounter = 0
-	r.RoutingTable = make([]RoutingTableEntry, 10)
+	r.RoutingTable = make(map[string]RoutingTableEntry, ROUTING_TABLE_DIM)
 	r.hc = hc
 	r.deployed = false
 	return r
@@ -277,20 +279,14 @@ func (r *RouterModule) AddRoutingTableEntryLocal(network net.IPNet,
 	return r.AddRoutingTableEntry(network, outputIface, net.ParseIP("0.0.0.0"))
 }
 
-// Routes in the routing table have to be ordered according to the netmask length.
-// This is because of a limitation in the eBPF datapath (no way to perform LPM there)
-// next hop is a string indicating the ip address of the nexthop, 0.0.0.0 indicates that
-// the network is directly attached to the router.
 func (r *RouterModule) AddRoutingTableEntry(network net.IPNet,
 	outputIface string, nexthop net.IP) (err error) {
 
 	log.Infof("add routing table entry: '%s' -> '%d'", network.String(), outputIface)
 
-	if r.routingTableCount == 6 {
+	if len(r.RoutingTable) == ROUTING_TABLE_DIM {
 		return errors.New("Routing table is full")
 	}
-
-	index := r.routingTableCount
 
 	iface, ok := r.Interfaces[outputIface]
 
@@ -301,65 +297,21 @@ func (r *RouterModule) AddRoutingTableEntry(network net.IPNet,
 		return errors.New(errString)
 	}
 
-	r.RoutingTable[index].network = network
-	r.RoutingTable[index].outputIface = iface
-	r.RoutingTable[index].nexthop = nexthop
+	var entry RoutingTableEntry
+	entry.network = network
+	entry.outputIface = iface
+	entry.nexthop = nexthop
 
-	r.routingTableCount++
+	r.RoutingTable[network.String()] = entry
 
-	r.sortRoutingTable()
-	r.sendRoutingTable()
+	network_ := iomodules.IpToHexBigEndian(network.IP)
+	ones, _ := network.Mask.Size()
+	key := "{" + strconv.FormatUint(uint64(ones), 10) + " " + network_ + "}"
 
-	return nil
-}
+	value := "0x" + strconv.FormatUint(uint64(iface.IfaceIdRedirectHover), 16) + " " +
+		iomodules.IpToHexBigEndian(nexthop)
 
-// implement sort.Interface in order to use the sort function
-
-type ByMaskLen []RoutingTableEntry
-
-func (s ByMaskLen) Len() int {
-	return len(s)
-}
-
-func (s ByMaskLen) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-func (s ByMaskLen) Less(i, j int) bool {
-	neti := s[i].network.Mask
-	netj := s[j].network.Mask
-
-	si, _ := neti.Size()
-	sj, _ := netj.Size()
-
-	return si > sj
-}
-
-// sort routing table entries according to the length of the netmas, the longest
-// ones are first
-func (r *RouterModule) sortRoutingTable() {
-	sort.Sort(ByMaskLen(r.RoutingTable))
-}
-
-func (r *RouterModule) sendRoutingTable() (err error) {
-
-	index := 0
-	for _, i := range r.RoutingTable {
-		if len(i.network.IP) == 0 {
-			break
-		}
-
-		stringIndex := strconv.Itoa(index)
-
-		toSend := iomodules.IpToHexBigEndian(i.network.IP) + " " +
-			iomodules.NetmaskToHexBigEndian(i.network.Mask) + " " +
-			"0x" + strconv.FormatUint(uint64(i.outputIface.IfaceIdRedirectHover), 16) + " " +
-			iomodules.IpToHexBigEndian(i.nexthop)
-
-		r.hc.TableEntryPOST(r.ModuleId, "routing_table", stringIndex, toSend)
-
-		index++
-	}
+	r.hc.TableEntryPOST(r.ModuleId, "routing_table", key, value)
 
 	return nil
 }

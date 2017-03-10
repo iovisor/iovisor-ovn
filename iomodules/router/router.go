@@ -46,7 +46,7 @@ var RouterCode = `
 
 //#define CHECK_MAC_DST
 
-#define ROUTING_TABLE_DIM  6
+#define ROUTING_TABLE_DIM  256
 #define ROUTER_PORT_N     32
 #define ARP_TABLE_DIM     32
 
@@ -61,12 +61,16 @@ enum {
   SLOWPATH_TTL_EXCEEDED
 };
 
-/* Routing Table Entry */
-struct rt_entry {
+/* Routing Table Key */
+struct rt_k {
+  u32 netmask_len;
   __be32 network;
-  __be32 netmask;
-  u16 port;
-  __be32 nexthop;  // ip address of next hop, 0 is locally reachable
+};
+
+/* Routing Table Value */
+struct rt_v {
+  u32 port;
+  __be32 nexthop;
 };
 
 /* Router Port */
@@ -76,14 +80,7 @@ struct r_port {
   __be64 mac:48;
 };
 
-/*
-  The Routing table is implemented as an array of struct rt_entry (Routing Table Entry)
-  the longest prefix matching algorithm (at least a simplified version)
-  is implemented performing a bounded loop over the entries of the routing table.
-  We assume that the control plane puts entry ordered from the longest netmask
-  to the shortest one.
-*/
-BPF_TABLE("array", u32, struct rt_entry, routing_table, ROUTING_TABLE_DIM);
+BPF_F_TABLE("lpm_trie", struct rt_k, struct rt_v, routing_table, ROUTING_TABLE_DIM, BPF_F_NO_PREALLOC);
 
 /*
   Router Port table provides a way to simulate the physical interface of the router
@@ -226,44 +223,15 @@ IP: ; // ipv4 packet
     return RX_CONTROLLER;
   }
 
-  /*
-    ROUTING ALGORITHM (simplified)
-
-    for each item in the routing table (upbounded loop)
-    apply the netmask on dst_ip_address
-    (possible optimization, not recompute if at next iteration the netmask is the same)
-    if masked address == network in the routing table
-      1- change src mac to otuput port mac
-      2- change dst mac to lookup arp table (or send to fffffffffffff)
-      3- forward the packet to dst port
-  */
-
-  int i = 0;
-  struct rt_entry *rt_entry_p = 0;
-
-  #pragma unroll
-  for (i = 0; i < ROUTING_TABLE_DIM; i++) {
-    u32 t = i;
-    rt_entry_p = routing_table.lookup(&t);
-      if (rt_entry_p) {
-      if ((ip->daddr & rt_entry_p->netmask) == rt_entry_p->network) {
-        goto FORWARD;
-      }
-    }
+  struct rt_k k = {32, ip->daddr};
+  struct rt_v *rt_entry_p = routing_table.lookup(&k);
+  if (!rt_entry_p) {
+    #ifdef BPF_TRACE_ROUTING
+    bpf_trace_printk("[router-%d]: no routing table match for %x\n",
+      md->module_id, bpf_htonl(ip->daddr));
+    #endif
+    goto DROP;
   }
-
-  #ifdef BPF_TRACE_ROUTING
-  bpf_trace_printk("[router-%d]: no routing table match for %x\n",
-    md->module_id, bpf_htonl(ip->daddr));
-  #endif
-
-  goto DROP;
-
-FORWARD: ;
-  #ifdef BPF_TRACE_ROUTING
-  bpf_trace_printk("[router-%d]: routing table match (#%d) network: %x\n",
-    md->module_id, i, bpf_htonl(rt_entry_p->network));
-  #endif
 
   // Select out interface
   u16 out_port = rt_entry_p->port;
